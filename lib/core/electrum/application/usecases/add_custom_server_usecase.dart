@@ -53,19 +53,6 @@ class AddCustomServerUsecase {
 
       // Fetch app settings to get Tor configuration
       final appSettings = await _settingsRepository.fetch();
-      // Probe with the user's own validateDomain setting: accepting a
-      // certificate the sync would refuse saves a server that can never be
-      // used, and the failure only surfaces later as a broken sync.
-      final ElectrumSettings electrumSettings;
-      switch (await _electrumSettingsRepository.fetchByNetwork(
-        server.network,
-      )) {
-        case Ok(:final value):
-          electrumSettings = value;
-        case Err(:final failure):
-          return Err(failure);
-      }
-
       final route = await _torSessionPort.open(
         network: server.network,
         serverUrl: server.url,
@@ -87,7 +74,9 @@ class AddCustomServerUsecase {
         final protocolStatus = await _serverStatusPort.checkElectrum(
           url: server.url,
           network: server.network,
-          validateDomain: electrumSettings.validateDomain,
+          // Custom servers commonly use locally trusted certificates. Once
+          // saved, the active custom-server tier uses the same relaxed policy.
+          validateDomain: false,
           proxyEndpoint: route?.endpoint,
         );
         if (protocolStatus == ElectrumServerStatus.offline) {
@@ -97,9 +86,46 @@ class AddCustomServerUsecase {
         await route?.close();
       }
 
-      // Both checks passed — persist the server.
-      final saveResult = await _electrumServerRepository.save(server);
-      return saveResult.map((_) => ElectrumServerStatus.online);
+      final ElectrumSettings electrumSettings;
+      switch (await _electrumSettingsRepository.fetchByNetwork(
+        server.network,
+      )) {
+        case Ok(:final value):
+          electrumSettings = value;
+        case Err(:final failure):
+          return Err(failure);
+      }
+
+      // A custom server is usable only after both it and the relaxed policy
+      // used by the probe have been persisted.
+      switch (await _electrumServerRepository.save(server)) {
+        case Ok():
+          break;
+        case Err(:final failure):
+          return Err(failure);
+      }
+
+      if (electrumSettings.validateDomain) {
+        electrumSettings.update(newValidateDomain: false);
+        switch (await _electrumSettingsRepository.save(electrumSettings)) {
+          case Ok():
+            break;
+          case Err(:final failure):
+            final rollback = await _electrumServerRepository.delete(
+              url: server.url,
+            );
+            if (rollback case Err(:final failure)) {
+              log.severe(
+                message: 'Failed to roll back custom electrum server',
+                error: failure,
+                trace: StackTrace.current,
+              );
+            }
+            return Err(failure);
+        }
+      }
+
+      return const Ok(ElectrumServerStatus.online);
     } catch (e, st) {
       log.severe(
         message: 'Failed to add custom electrum server',

@@ -52,7 +52,18 @@ ElectrumSettings _settings({bool validateDomain = true}) => ElectrumSettings(
 );
 
 void main() {
-  setUpAll(() => registerFallbackValue(_network));
+  setUpAll(() {
+    registerFallbackValue(_network);
+    registerFallbackValue(_settings());
+    registerFallbackValue(
+      ElectrumServer.existing(
+        url: 'ssl://fallback:50002',
+        network: _network,
+        isCustom: true,
+        priority: 0,
+      ),
+    );
+  });
 
   group('DeleteCustomServerUsecase', () {
     test('propagates the sanitized failure from the repository', () async {
@@ -87,6 +98,38 @@ void main() {
         priority: 0,
       ),
     );
+
+    void stubNewServerChecks({
+      ElectrumServerStatus socketStatus = ElectrumServerStatus.online,
+      ElectrumServerStatus protocolStatus = ElectrumServerStatus.online,
+    }) {
+      when(
+        () => serverRepo.fetchByUrl(any()),
+      ).thenAnswer((_) async => Ok(null));
+      when(() => appSettingsRepo.fetch()).thenAnswer(
+        (_) async => SettingsEntity(
+          environment: Environment.mainnet,
+          bitcoinUnit: BitcoinUnit.sats,
+          currencyCode: 'USD',
+          useTorProxy: false,
+          torProxyPort: 9050,
+        ),
+      );
+      when(
+        () => statusPort.checkSocket(
+          url: any(named: 'url'),
+          proxyEndpoint: any(named: 'proxyEndpoint'),
+        ),
+      ).thenAnswer((_) async => socketStatus);
+      when(
+        () => statusPort.checkElectrum(
+          url: any(named: 'url'),
+          network: _network,
+          validateDomain: any(named: 'validateDomain'),
+          proxyEndpoint: any(named: 'proxyEndpoint'),
+        ),
+      ).thenAnswer((_) async => protocolStatus);
+    }
 
     setUp(() {
       serverRepo = _MockServerRepository();
@@ -146,27 +189,7 @@ void main() {
     test(
       'returns Unreachable failure when the socket check is offline',
       () async {
-        when(
-          () => serverRepo.fetchByUrl(any()),
-        ).thenAnswer((_) async => Ok(null));
-        when(() => appSettingsRepo.fetch()).thenAnswer(
-          (_) async => SettingsEntity(
-            environment: Environment.mainnet,
-            bitcoinUnit: BitcoinUnit.sats,
-            currencyCode: 'USD',
-            useTorProxy: false,
-            torProxyPort: 9050,
-          ),
-        );
-        when(
-          () => electrumSettingsRepo.fetchByNetwork(_network),
-        ).thenAnswer((_) async => Ok(_settings()));
-        when(
-          () => statusPort.checkSocket(
-            url: any(named: 'url'),
-            proxyEndpoint: any(named: 'proxyEndpoint'),
-          ),
-        ).thenAnswer((_) async => ElectrumServerStatus.offline);
+        stubNewServerChecks(socketStatus: ElectrumServerStatus.offline);
 
         final result = await usecase.execute(request());
 
@@ -178,74 +201,26 @@ void main() {
       },
     );
 
-    test(
-      'probes with the user validateDomain setting, not a fixed one',
-      () async {
-        when(
-          () => serverRepo.fetchByUrl(any()),
-        ).thenAnswer((_) async => Ok(null));
-        when(() => appSettingsRepo.fetch()).thenAnswer(
-          (_) async => SettingsEntity(
-            environment: Environment.mainnet,
-            bitcoinUnit: BitcoinUnit.sats,
-            currencyCode: 'USD',
-            useTorProxy: false,
-            torProxyPort: 9050,
-          ),
-        );
-        when(
-          () => statusPort.checkSocket(
-            url: any(named: 'url'),
-            proxyEndpoint: any(named: 'proxyEndpoint'),
-          ),
-        ).thenAnswer((_) async => ElectrumServerStatus.online);
-        when(
-          () => electrumSettingsRepo.fetchByNetwork(_network),
-        ).thenAnswer((_) async => Ok(_settings(validateDomain: false)));
-        when(
-          () => statusPort.checkElectrum(
-            url: any(named: 'url'),
-            network: _network,
-            validateDomain: any(named: 'validateDomain'),
-            proxyEndpoint: any(named: 'proxyEndpoint'),
-          ),
-        ).thenAnswer((_) async => ElectrumServerStatus.offline);
+    test('probes custom servers without domain validation', () async {
+      stubNewServerChecks(protocolStatus: ElectrumServerStatus.offline);
 
-        final result = await usecase.execute(request());
+      final result = await usecase.execute(request());
 
-        expect(result, isA<Err>());
-        verify(
-          () => statusPort.checkElectrum(
-            url: any(named: 'url'),
-            network: _network,
-            validateDomain: false,
-            proxyEndpoint: any(named: 'proxyEndpoint'),
-          ),
-        ).called(1);
-      },
-    );
+      expect(result, isA<Err>());
+      verify(
+        () => statusPort.checkElectrum(
+          url: any(named: 'url'),
+          network: _network,
+          validateDomain: false,
+          proxyEndpoint: any(named: 'proxyEndpoint'),
+        ),
+      ).called(1);
+    });
 
     test(
       'propagates the load failure when electrum settings are unreadable',
       () async {
-        when(
-          () => serverRepo.fetchByUrl(any()),
-        ).thenAnswer((_) async => Ok(null));
-        when(() => appSettingsRepo.fetch()).thenAnswer(
-          (_) async => SettingsEntity(
-            environment: Environment.mainnet,
-            bitcoinUnit: BitcoinUnit.sats,
-            currencyCode: 'USD',
-            useTorProxy: false,
-            torProxyPort: 9050,
-          ),
-        );
-        when(
-          () => statusPort.checkSocket(
-            url: any(named: 'url'),
-            proxyEndpoint: any(named: 'proxyEndpoint'),
-          ),
-        ).thenAnswer((_) async => ElectrumServerStatus.online);
+        stubNewServerChecks();
         when(() => electrumSettingsRepo.fetchByNetwork(_network)).thenAnswer(
           (_) async => const Err(ElectrumLoadFailure('raw db error')),
         );
@@ -254,14 +229,38 @@ void main() {
 
         expect(result, isA<Err>());
         expect((result as Err).failure, isA<ElectrumLoadFailure>());
-        verifyNever(
-          () => statusPort.checkElectrum(
-            url: any(named: 'url'),
-            network: _network,
-            validateDomain: any(named: 'validateDomain'),
-            proxyEndpoint: any(named: 'proxyEndpoint'),
-          ),
+        verifyNever(() => serverRepo.save(any()));
+      },
+    );
+
+    test(
+      'rolls back the server when the relaxed policy cannot be saved',
+      () async {
+        stubNewServerChecks();
+        when(
+          () => electrumSettingsRepo.fetchByNetwork(_network),
+        ).thenAnswer((_) async => Ok(_settings()));
+        when(
+          () => serverRepo.save(any()),
+        ).thenAnswer((_) async => const Ok(null));
+        when(() => electrumSettingsRepo.save(any())).thenAnswer(
+          (_) async => const Err(ElectrumSaveFailure('raw db error')),
         );
+        when(
+          () => serverRepo.delete(url: any(named: 'url')),
+        ).thenAnswer((_) async => const Ok(null));
+
+        final result = await usecase.execute(request());
+
+        expect(result, isA<Err>());
+        expect((result as Err).failure, isA<ElectrumSaveFailure>());
+        final savedSettings =
+            verify(
+                  () => electrumSettingsRepo.save(captureAny()),
+                ).captured.single
+                as ElectrumSettings;
+        expect(savedSettings.validateDomain, isFalse);
+        verify(() => serverRepo.delete(url: 'ssl://a.example:50002')).called(1);
       },
     );
 
@@ -280,9 +279,6 @@ void main() {
           torProxyPort: 9050,
         ),
       );
-      when(
-        () => electrumSettingsRepo.fetchByNetwork(_network),
-      ).thenAnswer((_) async => Ok(_settings()));
       when(
         () => torSessionPort.open(
           network: _network,
