@@ -2,9 +2,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-// Security audit reproducer for https://github.com/SatoshiPortal/bullbitcoin-mobile/issues/2658
-// Finding: fee requests construct a direct Dio client without consulting Tor.
-// Regression test for the fix.
+// Fee requests must keep using the configured Tor route rather than falling
+// back to the direct Dio transport.
 void main() {
   group('Security audit #2658 fee transport bypasses Tor', () {
     test('fee datasource configures Tor-aware transport', () {
@@ -13,7 +12,8 @@ void main() {
       ).readAsStringSync();
       expect(source, contains('useTorProxy'));
       expect(source, contains('torProxyPort'));
-      expect(source, contains('SOCKS5'));
+      expect(source, contains('TorHttpClientFactory'));
+      expect(source, contains('TorProxyEndpoint'));
     });
   });
 }

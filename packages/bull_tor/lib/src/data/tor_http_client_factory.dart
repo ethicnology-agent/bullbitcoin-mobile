@@ -8,15 +8,20 @@ import '../domain/tor_failure.dart';
 /// Builds an HTTP client for an already-selected Tor route.
 ///
 /// [endpoint] is deliberately non-nullable. Accepting null meant "return a
-/// plain, unproxied client", and the only consumer is the RecoverBull key
-/// server — an onion address. A caller that passed null would have shipped its
-/// request over clearnet to a hidden-service name, so the route is a
-/// requirement the compiler enforces rather than a default the caller can
-/// forget.
+/// plain, unproxied client". A caller that passed null could ship a request over
+/// clearnet, so the route is a requirement the compiler enforces rather than a
+/// default the caller can forget.
 final class TorHttpClientFactory {
   const TorHttpClientFactory();
 
-  HttpClient create(TorProxyEndpoint endpoint) {
+  /// Creates a client that can only connect through [endpoint].
+  ///
+  /// Certificate validation stays enabled unless [allowBadCertificate] is
+  /// explicitly selected for a user-controlled server.
+  HttpClient create(
+    TorProxyEndpoint endpoint, {
+    bool allowBadCertificate = false,
+  }) {
     // `ProxySettings` takes a resolved address, but `TorProxyEndpoint` accepts
     // any non-empty host because the Electrum advanced options let one be typed
     // by hand. Rejecting a non-literal here as a modeled failure keeps that
@@ -31,9 +36,9 @@ final class TorHttpClientFactory {
     }
 
     final client = HttpClient();
-    SocksTCPClient.assignToHttpClient(client, [
+    SocksTCPClient.assignToHttpClientWithSecureOptions(client, [
       ProxySettings(address, endpoint.port, password: null),
-    ]);
+    ], onBadCertificate: allowBadCertificate ? (_) => true : null);
     return client;
   }
 }

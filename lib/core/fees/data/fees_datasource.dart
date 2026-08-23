@@ -6,65 +6,65 @@ import 'package:bb_mobile/core/fees/data/models/mempool_fees_model.dart';
 import 'package:bb_mobile/core/mempool/application/usecases/get_active_mempool_server_usecase.dart';
 import 'package:bb_mobile/core/mempool/domain/repositories/mempool_settings_repository.dart';
 import 'package:bb_mobile/core/mempool/domain/value_objects/mempool_server_network.dart';
+import 'package:bb_mobile/core/settings/data/settings_repository.dart';
 import 'package:bb_mobile/core/utils/constants.dart';
+import 'package:bull_tor/tor.dart';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
-import 'package:bb_mobile/core/settings/data/settings_repository.dart';
-import 'package:socks5_proxy/socks_client.dart';
 
 class FeesDatasource {
   final GetActiveMempoolServerUsecase _getActiveMempoolServerUsecase;
   final MempoolSettingsRepository _mempoolSettingsRepository;
   final SettingsRepository? _settingsRepository;
+  final TorHttpClientFactory _torHttpClientFactory;
 
   /// Builds the HTTP client for a resolved base URL. Injected so tests can
   /// supply a mock; defaults to a real Dio. The base URL is only known at
   /// call time (custom server vs BB, mainnet vs testnet), so this is a
   /// builder rather than a pre-built client.
-  final Dio Function(String baseUrl) _dioBuilder;
+  final Dio Function(String baseUrl, bool validateDomain) _dioBuilder;
 
   FeesDatasource({
     required this._getActiveMempoolServerUsecase,
     required this._mempoolSettingsRepository,
     this._settingsRepository,
-    Dio Function(String baseUrl)? dioBuilder,
+    this._torHttpClientFactory = const TorHttpClientFactory(),
+    Dio Function(String baseUrl, bool validateDomain)? dioBuilder,
   }) : _dioBuilder = dioBuilder ?? _defaultDioBuilder;
 
-  static Dio _defaultDioBuilder(String baseUrl) => Dio(
-    BaseOptions(
-      baseUrl: baseUrl,
-      connectTimeout: const Duration(seconds: 10),
-      sendTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 15),
-      followRedirects: false,
-      validateStatus: (status) => status == 200,
-    ),
-  );
+  static Dio _defaultDioBuilder(String baseUrl, bool validateDomain) {
+    final http = Dio(
+      BaseOptions(
+        baseUrl: baseUrl,
+        connectTimeout: const Duration(seconds: 10),
+        sendTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 15),
+        followRedirects: false,
+        validateStatus: (status) => status == 200,
+      ),
+    );
+    if (!validateDomain) {
+      (http.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () =>
+          HttpClient()..badCertificateCallback = (_, _, _) => true;
+    }
+    return http;
+  }
 
-  Future<Dio> _buildHttp(String baseUrl) async {
-    final http = _dioBuilder(baseUrl);
+  Future<Dio> _buildHttp(String baseUrl, {required bool validateDomain}) async {
+    final http = _dioBuilder(baseUrl, validateDomain);
     final settings = _settingsRepository == null
         ? null
         : await _settingsRepository.fetch();
     if (settings?.useTorProxy == true) {
       final proxyPort = settings!.torProxyPort;
       final adapter = IOHttpClientAdapter(
-        createHttpClient: () {
-          final client = HttpClient();
-          // `HttpClient.findProxy` only understands the PAC vocabulary
-          // (`DIRECT` / `PROXY host:port`); a `SOCKS5 …` directive is not a
-          // proxy configuration at all and leaves every request failing.
-          // Route the sockets through a real SOCKS5 client instead, the same
-          // way TorDatasource does.
-          SocksTCPClient.assignToHttpClient(client, [
-            ProxySettings(
-              InternetAddress.loopbackIPv4,
-              proxyPort,
-              password: null,
-            ),
-          ]);
-          return client;
-        },
+        createHttpClient: () => _torHttpClientFactory.create(
+          TorProxyEndpoint(
+            host: InternetAddress.loopbackIPv4.address,
+            port: proxyPort,
+          ),
+          allowBadCertificate: !validateDomain,
+        ),
       );
       http.httpClientAdapter = adapter;
     }
@@ -94,6 +94,7 @@ class FeesDatasource {
 
     // Determine which mempool server to use.
     String baseUrl;
+    var validateDomain = true;
     if (settings.useForFeeEstimation) {
       // Use custom or default mempool server from settings
       final server =
@@ -105,6 +106,7 @@ class FeesDatasource {
             (_) => throw Exception('Failed to fetch active mempool server'),
           );
       baseUrl = server.fullUrl;
+      validateDomain = server.validateDomain;
     } else {
       // Fall back to BB's mempool.
       baseUrl = isTestnet
@@ -112,7 +114,7 @@ class FeesDatasource {
           : 'https://${ApiServiceConstants.bbMempoolUrlPath}';
     }
 
-    final http = await _buildHttp(baseUrl);
+    final http = await _buildHttp(baseUrl, validateDomain: validateDomain);
 
     final fees =
         await _getFees(http, ApiServiceConstants.mempoolPreciseFeesPath) ??

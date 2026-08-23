@@ -1,5 +1,9 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:bb_mobile/core/fees/data/fees_datasource.dart';
 import 'package:bb_mobile/core/mempool/application/usecases/get_active_mempool_server_usecase.dart';
+import 'package:bb_mobile/core/mempool/domain/entities/mempool_server.dart';
 import 'package:bb_mobile/core/mempool/domain/entities/mempool_settings.dart';
 import 'package:bb_mobile/core/mempool/domain/repositories/mempool_settings_repository.dart';
 import 'package:bb_mobile/core/mempool/domain/value_objects/mempool_server_network.dart';
@@ -8,6 +12,8 @@ import 'package:bb_mobile/core/utils/result.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../utils/self_signed_certificate_fixture.dart';
 
 class _MockDio extends Mock implements Dio {}
 
@@ -45,12 +51,16 @@ void main() {
   late _MockSettingsRepo settingsRepo;
   late _MockActiveServerUsecase activeServer;
   late FeesDatasource datasource;
+  late SelfSignedCertificateFixture certificateFixture;
 
-  setUpAll(() {
+  setUpAll(() async {
     registerFallbackValue(
       MempoolServerNetwork.fromEnvironment(isTestnet: false, isLiquid: false),
     );
+    certificateFixture = await SelfSignedCertificateFixture.create();
   });
+
+  tearDownAll(() => certificateFixture.dispose());
 
   setUp(() {
     dio = _MockDio();
@@ -59,7 +69,7 @@ void main() {
     datasource = FeesDatasource(
       getActiveMempoolServerUsecase: activeServer,
       mempoolSettingsRepository: settingsRepo,
-      dioBuilder: (_) => dio,
+      dioBuilder: (_, _) => dio,
     );
     // Use BB's mempool (no custom server) so the active-server usecase isn't
     // involved — keeps the test focused on the precise/recommended fallback.
@@ -77,6 +87,56 @@ void main() {
   });
 
   group('FeesDatasource.fetchBitcoinNetworkFees', () {
+    Future<FeesDatasource> buildTlsDatasource({
+      required bool validateDomain,
+    }) async {
+      final server = await HttpServer.bindSecure(
+        InternetAddress.loopbackIPv4,
+        0,
+        certificateFixture.securityContext,
+      );
+      addTearDown(() => server.close(force: true));
+      server.listen((request) async {
+        request.response
+          ..statusCode = HttpStatus.ok
+          ..headers.contentType = ContentType.json
+          ..write(
+            jsonEncode({
+              'fastestFee': 1,
+              'halfHourFee': 1,
+              'hourFee': 1,
+              'economyFee': 1,
+              'minimumFee': 1,
+            }),
+          );
+        await request.response.close();
+      });
+      when(() => settingsRepo.fetchByNetwork(any())).thenAnswer(
+        (_) async => Ok(
+          MempoolSettings.existing(
+            network: MempoolServerNetwork.bitcoinMainnet,
+            useForFeeEstimation: true,
+          ),
+        ),
+      );
+      when(
+        () => activeServer.execute(isTestnet: false, isLiquid: false),
+      ).thenAnswer(
+        (_) async => Ok(
+          MempoolServer.existing(
+            url: '127.0.0.1:${server.port}',
+            network: MempoolServerNetwork.bitcoinMainnet,
+            isCustom: true,
+            validateDomain: validateDomain,
+          ),
+        ),
+      );
+      return FeesDatasource(
+        getActiveMempoolServerUsecase: activeServer,
+        mempoolSettingsRepository: settingsRepo,
+      );
+    }
+
     test('uses precise endpoint when it returns 200 with decimals', () async {
       when(() => dio.get<dynamic>(_precise)).thenAnswer(
         (_) async => _ok(_precise, {
@@ -94,6 +154,25 @@ void main() {
       expect(fees.hourFee, 0.65);
       expect(fees.economyFee, 0.2);
       verifyNever(() => dio.get<dynamic>(_recommended));
+    });
+
+    test('rejects self-signed fee servers by default', () async {
+      final customDatasource = await buildTlsDatasource(validateDomain: true);
+
+      await expectLater(
+        customDatasource.fetchBitcoinNetworkFees(isTestnet: false),
+        throwsA(isA<MempoolFeesException>()),
+      );
+    });
+
+    test('accepts an explicitly allowed self-signed fee server', () async {
+      final customDatasource = await buildTlsDatasource(validateDomain: false);
+
+      final fees = await customDatasource.fetchBitcoinNetworkFees(
+        isTestnet: false,
+      );
+
+      expect(fees.fastestFee, 1);
     });
 
     test('falls back to recommended when precise 404s', () async {

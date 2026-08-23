@@ -14680,5 +14680,9 @@
   "settingsScreenPrivacyDisabledMessage": "Screenshots are now allowed on sensitive screens",
   "@settingsScreenPrivacyDisabledMessage": {
     "description": "Snackbar shown when the user turns off Screen Privacy, warning that screenshots/recording are now allowed on sensitive screens such as the recovery phrase"
+  },
+  "mempoolCustomServerValidateDomain": "Validate Domain",
+  "@mempoolCustomServerValidateDomain": {
+    "description": "Certificate validation switch for a custom mempool server."
   }
 }

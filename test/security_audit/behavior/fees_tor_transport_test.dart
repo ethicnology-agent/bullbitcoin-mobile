@@ -1,16 +1,12 @@
-// Behavioral proof for the audit finding on the fee datasource Tor transport
-// (issue #2658 fix).
-//
-// `fix(fees)` configures Tor by assigning `'SOCKS5 host:port'` to
-// `HttpClient.findProxy`. dart:io only understands the browser PAC vocabulary
-// (`DIRECT`, `PROXY host:port`), so this string is not a usable proxy
-// directive. The second test runs a real SOCKS5 proxy in front of the fee
-// oracle: a Tor-aware client must succeed through it.
+// Behavioral coverage for fee requests routed through a SOCKS5 proxy. The
+// proxy must carry both the TCP connection and the selected TLS certificate
+// policy without permitting a direct-network fallback.
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:bb_mobile/core/fees/data/fees_datasource.dart';
 import 'package:bb_mobile/core/mempool/application/usecases/get_active_mempool_server_usecase.dart';
+import 'package:bb_mobile/core/mempool/domain/entities/mempool_server.dart';
 import 'package:bb_mobile/core/mempool/domain/entities/mempool_settings.dart';
 import 'package:bb_mobile/core/mempool/domain/repositories/mempool_settings_repository.dart';
 import 'package:bb_mobile/core/mempool/domain/value_objects/mempool_server_network.dart';
@@ -20,6 +16,8 @@ import 'package:bb_mobile/core/utils/result.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../../core_test/utils/self_signed_certificate_fixture.dart';
 
 class _MockMempoolSettingsRepository extends Mock
     implements MempoolSettingsRepository {}
@@ -116,16 +114,24 @@ class _Socks5Proxy {
 void main() {
   late HttpServer feeServer;
   late int directHits;
+  late SelfSignedCertificateFixture certificateFixture;
 
-  setUpAll(() {
+  setUpAll(() async {
     registerFallbackValue(
       MempoolServerNetwork.fromEnvironment(isTestnet: false, isLiquid: false),
     );
+    certificateFixture = await SelfSignedCertificateFixture.create();
   });
+
+  tearDownAll(() => certificateFixture.dispose());
 
   setUp(() async {
     directHits = 0;
-    feeServer = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    feeServer = await HttpServer.bindSecure(
+      InternetAddress.loopbackIPv4,
+      0,
+      certificateFixture.securityContext,
+    );
     feeServer.listen((request) async {
       directHits++;
       request.response
@@ -148,7 +154,10 @@ void main() {
     await feeServer.close(force: true);
   });
 
-  FeesDatasource buildDatasource({required int torPort}) {
+  FeesDatasource buildDatasource({
+    required int torPort,
+    bool validateDomain = false,
+  }) {
     final settingsRepository = _MockSettingsRepository();
     when(() => settingsRepository.fetch()).thenAnswer(
       (_) async => SettingsEntity(
@@ -168,18 +177,31 @@ void main() {
             isTestnet: false,
             isLiquid: false,
           ),
-          useForFeeEstimation: false,
+          useForFeeEstimation: true,
+        ),
+      ),
+    );
+    final activeServer = _MockActiveServerUsecase();
+    when(
+      () => activeServer.execute(isTestnet: false, isLiquid: false),
+    ).thenAnswer(
+      (_) async => Ok(
+        MempoolServer.existing(
+          url: '${feeServer.address.address}:${feeServer.port}',
+          network: MempoolServerNetwork.bitcoinMainnet,
+          isCustom: true,
+          validateDomain: validateDomain,
         ),
       ),
     );
 
     return FeesDatasource(
-      getActiveMempoolServerUsecase: _MockActiveServerUsecase(),
+      getActiveMempoolServerUsecase: activeServer,
       mempoolSettingsRepository: mempoolSettings,
       settingsRepository: settingsRepository,
-      dioBuilder: (_) => Dio(
+      dioBuilder: (_, _) => Dio(
         BaseOptions(
-          baseUrl: 'http://${feeServer.address.address}:${feeServer.port}',
+          baseUrl: 'https://${feeServer.address.address}:${feeServer.port}',
           connectTimeout: const Duration(seconds: 2),
           receiveTimeout: const Duration(seconds: 2),
           followRedirects: false,
@@ -207,19 +229,43 @@ void main() {
     );
   });
 
-  test('fee fetch succeeds through a running SOCKS5 proxy', () async {
-    final proxy = await _Socks5Proxy.start();
-    addTearDown(proxy.close);
+  test(
+    'self-signed fee fetch succeeds through a SOCKS5 proxy when allowed',
+    () async {
+      final proxy = await _Socks5Proxy.start();
+      addTearDown(proxy.close);
 
-    final datasource = buildDatasource(torPort: proxy.port);
+      final datasource = buildDatasource(torPort: proxy.port);
 
-    final fees = await datasource.fetchBitcoinNetworkFees(isTestnet: false);
+      final fees = await datasource.fetchBitcoinNetworkFees(isTestnet: false);
 
-    expect(fees.fastestFee, 4);
-    expect(
-      proxy.connections,
-      greaterThan(0),
-      reason: 'the Tor setting must route fee traffic through the SOCKS5 proxy',
-    );
-  });
+      expect(fees.fastestFee, 4);
+      expect(
+        proxy.connections,
+        greaterThan(0),
+        reason:
+            'the Tor setting must route fee traffic through the SOCKS5 proxy',
+      );
+    },
+  );
+
+  test(
+    'self-signed fee fetch through SOCKS5 stays strict by default',
+    () async {
+      final proxy = await _Socks5Proxy.start();
+      addTearDown(proxy.close);
+      final datasource = buildDatasource(
+        torPort: proxy.port,
+        validateDomain: true,
+      );
+
+      await expectLater(
+        datasource.fetchBitcoinNetworkFees(isTestnet: false),
+        throwsA(isA<MempoolFeesException>()),
+      );
+
+      expect(proxy.connections, greaterThan(0));
+      expect(directHits, 0);
+    },
+  );
 }
