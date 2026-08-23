@@ -250,7 +250,7 @@ void main() {
   );
 
   test(
-    'self-signed fee fetch through SOCKS5 stays strict by default',
+    'rejects invalid certificates through SOCKS5 when validation is enabled',
     () async {
       final proxy = await _Socks5Proxy.start();
       addTearDown(proxy.close);

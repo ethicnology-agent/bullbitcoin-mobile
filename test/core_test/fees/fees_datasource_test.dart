@@ -156,24 +156,32 @@ void main() {
       verifyNever(() => dio.get<dynamic>(_recommended));
     });
 
-    test('rejects self-signed fee servers by default', () async {
-      final customDatasource = await buildTlsDatasource(validateDomain: true);
+    test(
+      'rejects self-signed fee servers when validation is enabled',
+      () async {
+        final customDatasource = await buildTlsDatasource(validateDomain: true);
 
-      await expectLater(
-        customDatasource.fetchBitcoinNetworkFees(isTestnet: false),
-        throwsA(isA<MempoolFeesException>()),
-      );
-    });
+        await expectLater(
+          customDatasource.fetchBitcoinNetworkFees(isTestnet: false),
+          throwsA(isA<MempoolFeesException>()),
+        );
+      },
+    );
 
-    test('accepts an explicitly allowed self-signed fee server', () async {
-      final customDatasource = await buildTlsDatasource(validateDomain: false);
+    test(
+      'accepts a self-signed fee server when validation is disabled',
+      () async {
+        final customDatasource = await buildTlsDatasource(
+          validateDomain: false,
+        );
 
-      final fees = await customDatasource.fetchBitcoinNetworkFees(
-        isTestnet: false,
-      );
+        final fees = await customDatasource.fetchBitcoinNetworkFees(
+          isTestnet: false,
+        );
 
-      expect(fees.fastestFee, 1);
-    });
+        expect(fees.fastestFee, 1);
+      },
+    );
 
     test('falls back to recommended when precise 404s', () async {
       when(
