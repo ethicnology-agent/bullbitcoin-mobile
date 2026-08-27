@@ -14804,5 +14804,17 @@
   "onboardingBackupVerificationError": "Your wallet was recovered, but the backup verification could not be completed. Please try again.",
   "@onboardingBackupVerificationError": {
     "description": "Shown when the wallet was recovered successfully but marking the physical backup as verified failed."
+  },
+  "coinsSweep": "Sweep",
+  "@coinsSweep": {
+    "description": "Action label for spending every satoshi from the selected coins to one recipient."
+  },
+  "coinsSweepTitle": "Sweep coins",
+  "@coinsSweepTitle": {
+    "description": "Title shown throughout the selected-coins sweep flow."
+  },
+  "sendErrorSelectedCoinsUnavailable": "One or more selected coins are no longer available.",
+  "@sendErrorSelectedCoinsUnavailable": {
+    "description": "Shown when a selected coin was frozen, spent, or disappeared before the sweep transaction could be built."
   }
 }

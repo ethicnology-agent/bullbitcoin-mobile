@@ -35,6 +35,8 @@ extension SendFailureL10n on SendFailure {
     SendRateLimitedFailure(:final retryAfter) =>
       context.loc.swapErrorRateLimited(retryAfter?.inSeconds ?? 30),
     SendTransactionBuildFailure() => context.loc.sendErrorBuildFailed,
+    SendSelectedCoinsUnavailableFailure() =>
+      context.loc.sendErrorSelectedCoinsUnavailable,
     SendTransactionConfirmationFailure(:final isBroadcastFailure) =>
       isBroadcastFailure
           ? context.loc.sendErrorBroadcastFailed

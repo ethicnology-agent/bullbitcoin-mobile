@@ -5,6 +5,7 @@ import 'package:bb_mobile/core/wallet/domain/no_spendable_utxo_exception.dart';
 import 'package:bb_mobile/core/wallet/data/repositories/bitcoin_wallet_repository.dart';
 import 'package:bb_mobile/core/wallet/domain/entities/wallet_utxo.dart';
 import 'package:bb_mobile/core/wallet/domain/repositories/wallet_utxo_repository.dart';
+import 'package:bb_mobile/core/wallet/domain/selected_inputs_unavailable_exception.dart';
 import 'package:bb_mobile/core/wallet/domain/usecases/prepare_bitcoin_send_usecase.dart';
 import 'package:bull_payjoin/bull_payjoin.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -61,6 +62,7 @@ void main() {
         drain: any(named: 'drain'),
         unspendable: any(named: 'unspendable'),
         selected: any(named: 'selected'),
+        selectedOnly: any(named: 'selectedOnly'),
         replaceByFee: any(named: 'replaceByFee'),
       ),
     ).thenAnswer((_) async => 'psbt');
@@ -86,6 +88,7 @@ void main() {
         drain: any(named: 'drain'),
         unspendable: captureAny(named: 'unspendable'),
         selected: any(named: 'selected'),
+        selectedOnly: any(named: 'selectedOnly'),
         replaceByFee: any(named: 'replaceByFee'),
       ),
     ).captured;
@@ -102,6 +105,7 @@ void main() {
         drain: any(named: 'drain'),
         unspendable: any(named: 'unspendable'),
         selected: captureAny(named: 'selected'),
+        selectedOnly: any(named: 'selectedOnly'),
         replaceByFee: any(named: 'replaceByFee'),
       ),
     ).captured;
@@ -160,6 +164,7 @@ void main() {
           drain: captureAny(named: 'drain'),
           unspendable: captureAny(named: 'unspendable'),
           selected: any(named: 'selected'),
+          selectedOnly: any(named: 'selectedOnly'),
           replaceByFee: any(named: 'replaceByFee'),
         ),
       ).captured;
@@ -188,6 +193,7 @@ void main() {
           drain: any(named: 'drain'),
           unspendable: any(named: 'unspendable'),
           selected: any(named: 'selected'),
+          selectedOnly: any(named: 'selectedOnly'),
           replaceByFee: any(named: 'replaceByFee'),
         ),
       ).thenThrow(NoSpendableUtxoException('all frozen'));
@@ -222,6 +228,7 @@ void main() {
           drain: any(named: 'drain'),
           unspendable: any(named: 'unspendable'),
           selected: any(named: 'selected'),
+          selectedOnly: any(named: 'selectedOnly'),
           replaceByFee: any(named: 'replaceByFee'),
         ),
       ).thenThrow(Exception('insufficient funds'));
@@ -291,6 +298,73 @@ void main() {
     expect(selected.any((u) => u.txId == 'tx-frozen'), isFalse);
   });
 
+  test('selected-only drain rejects a Payjoin-reserved input', () async {
+    when(() => walletUtxo.getAllFrozenOutpoints()).thenAnswer((_) async => []);
+    when(() => payjoin.reservedOutpoints()).thenAnswer(
+      (_) async => const Ok(<Outpoint>{(txId: 'tx-reserved', vout: 0)}),
+    );
+
+    await expectLater(
+      usecase.execute(
+        walletId: walletId,
+        address: address,
+        networkFee: networkFee,
+        drain: true,
+        selectedInputs: [_utxo(txId: 'tx-reserved', vout: 0)],
+        selectedOnly: true,
+      ),
+      throwsA(isA<SelectedInputsUnavailableException>()),
+    );
+    verifyNever(
+      () => bitcoinWallet.buildPsbt(
+        walletId: any(named: 'walletId'),
+        address: any(named: 'address'),
+        amountSat: any(named: 'amountSat'),
+        networkFee: any(named: 'networkFee'),
+        drain: any(named: 'drain'),
+        unspendable: any(named: 'unspendable'),
+        selected: any(named: 'selected'),
+        selectedOnly: any(named: 'selectedOnly'),
+        replaceByFee: any(named: 'replaceByFee'),
+      ),
+    );
+  });
+
+  test('selected-only drain rejects a partially reserved selection', () async {
+    when(() => walletUtxo.getAllFrozenOutpoints()).thenAnswer((_) async => []);
+    when(() => payjoin.reservedOutpoints()).thenAnswer(
+      (_) async => const Ok(<Outpoint>{(txId: 'tx-reserved', vout: 0)}),
+    );
+
+    await expectLater(
+      usecase.execute(
+        walletId: walletId,
+        address: address,
+        networkFee: networkFee,
+        drain: true,
+        selectedInputs: [
+          _utxo(txId: 'tx-reserved', vout: 0),
+          _utxo(txId: 'tx-spendable', vout: 1),
+        ],
+        selectedOnly: true,
+      ),
+      throwsA(isA<SelectedInputsUnavailableException>()),
+    );
+    verifyNever(
+      () => bitcoinWallet.buildPsbt(
+        walletId: any(named: 'walletId'),
+        address: any(named: 'address'),
+        amountSat: any(named: 'amountSat'),
+        networkFee: any(named: 'networkFee'),
+        drain: any(named: 'drain'),
+        unspendable: any(named: 'unspendable'),
+        selected: any(named: 'selected'),
+        selectedOnly: any(named: 'selectedOnly'),
+        replaceByFee: any(named: 'replaceByFee'),
+      ),
+    );
+  });
+
   test(
     'happy path (no frozen) builds identically with empty unspendable',
     () async {
@@ -326,6 +400,7 @@ void main() {
           drain: any(named: 'drain'),
           unspendable: captureAny(named: 'unspendable'),
           selected: captureAny(named: 'selected'),
+          selectedOnly: any(named: 'selectedOnly'),
           replaceByFee: any(named: 'replaceByFee'),
         ),
       ).captured;

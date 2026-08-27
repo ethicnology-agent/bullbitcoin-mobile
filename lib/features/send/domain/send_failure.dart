@@ -74,6 +74,10 @@ final class SendTransactionBuildFailure extends SendFailure {
   const SendTransactionBuildFailure([super.logMessage]);
 }
 
+final class SendSelectedCoinsUnavailableFailure extends SendFailure {
+  const SendSelectedCoinsUnavailableFailure([super.logMessage]);
+}
+
 final class SendTransactionConfirmationFailure extends SendFailure {
   final bool isBroadcastFailure;
 
