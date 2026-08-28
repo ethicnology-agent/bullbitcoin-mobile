@@ -7,6 +7,7 @@ import 'package:bb_mobile/core/storage/sqlite_database.dart';
 import 'package:bb_mobile/core/wallet/domain/no_spendable_utxo_exception.dart';
 import 'package:bb_mobile/core/wallet/data/datasources/frozen_wallet_utxo_datasource.dart';
 import 'package:bb_mobile/core/wallet/data/repositories/wallet_repository.dart';
+import 'package:bb_mobile/core/wallet/domain/entities/bitcoin_transaction_recipient.dart';
 import 'package:bb_mobile/core/wallet/domain/entities/wallet.dart';
 import 'package:bb_mobile/core/wallet/data/repositories/wallet_address_repository.dart';
 import 'package:bb_mobile/core/wallet/domain/repositories/wallet_utxo_repository.dart';
@@ -225,8 +226,9 @@ Future<void> main({bool isInitialized = false}) async {
         await expectLater(
           prepareBitcoinSendUsecase.execute(
             walletId: wallet.id,
-            address: receive.address,
-            drain: true,
+            recipients: [
+              BitcoinTransactionRecipient.remainder(address: receive.address),
+            ],
             networkFee: NetworkFee.relativeFromSatPerVbyte(2),
           ),
           throwsA(isA<NoSpendableUtxoException>()),

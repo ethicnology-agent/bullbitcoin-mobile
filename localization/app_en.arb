@@ -14816,5 +14816,51 @@
   "sendErrorSelectedCoinsUnavailable": "One or more selected coins are no longer available.",
   "@sendErrorSelectedCoinsUnavailable": {
     "description": "Shown when a selected coin was frozen, spent, or disappeared before the sweep transaction could be built."
+  },
+  "sendRemainingBalance": "Send remaining balance",
+  "@sendRemainingBalance": {
+    "description": "Toggle label that assigns the balance left after fixed outputs and fees to a recipient"
+  },
+  "sendRemaining": "Remaining",
+  "@sendRemaining": {
+    "description": "Amount-field value for the recipient receiving the balance left after fixed outputs and fees"
+  },
+  "sendRecipientNumber": "Recipient {number}",
+  "@sendRecipientNumber": {
+    "description": "Numbered recipient heading in the multi-recipient amount form",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "sendRecipientAddressNumber": "Recipient {number} address",
+  "@sendRecipientAddressNumber": {
+    "description": "Numbered address-field heading in the multi-recipient form",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "sendToRecipientNumber": "To {number}",
+  "@sendToRecipientNumber": {
+    "description": "Numbered recipient destination label on transaction confirmation",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "sendAddRecipient": "Add Recipient",
+  "@sendAddRecipient": {
+    "description": "Button label for adding another on-chain send recipient"
+  },
+  "sendRemoveRecipient": "Remove Recipient",
+  "@sendRemoveRecipient": {
+    "description": "Tooltip for removing an on-chain send recipient"
   }
 }
