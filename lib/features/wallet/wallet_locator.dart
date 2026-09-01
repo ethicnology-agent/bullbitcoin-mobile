@@ -12,10 +12,17 @@ import 'package:bb_mobile/core/wallet/domain/usecases/get_wallets_usecase.dart';
 import 'package:bb_mobile/core/wallet/domain/usecases/watch_electrum_sync_results_usecase.dart';
 import 'package:bb_mobile/core/wallet/domain/usecases/watch_finished_wallet_syncs_usecase.dart';
 import 'package:bb_mobile/core/wallet/domain/usecases/watch_started_wallet_syncs_usecase.dart';
+import 'package:bb_mobile/core/wallet/domain/usecases/check_private_wallet_session_usecase.dart';
+import 'package:bb_mobile/core/wallet/domain/usecases/delete_wallet_public_projection_usecase.dart';
+import 'package:bb_mobile/core/wallet/domain/usecases/lock_private_wallet_session_usecase.dart';
+import 'package:bb_mobile/core/wallet/domain/usecases/mount_wallet_with_private_capability_usecase.dart';
+import 'package:bb_mobile/core/wallet/domain/usecases/update_wallet_label_usecase.dart';
+import 'package:bb_mobile/core/wallet/domain/usecases/watch_visible_wallet_catalog_usecase.dart';
 import 'package:bb_mobile/features/wallet/domain/usecase/get_unconfirmed_incoming_balance_usecase.dart';
 import 'package:bb_mobile/features/wallet/domain/usecases/delete_wallet_usecase.dart';
 import 'package:bb_mobile/features/swap/public/swap_facade.dart';
 import 'package:bb_mobile/features/wallet/presentation/bloc/wallet_bloc.dart';
+import 'package:bb_mobile/features/wallet/public/wallet_facade.dart';
 import 'package:get_it/get_it.dart';
 
 class WalletLocator {
@@ -33,6 +40,17 @@ class WalletLocator {
       () => DeleteWalletUsecase(
         locator<core.DeleteWalletUsecase>(),
         locator<SwapFacade>(),
+      ),
+    );
+    // Public surface
+    locator.registerLazySingleton<WalletFacade>(
+      () => WalletFacade(
+        locator<MountWalletWithPrivateCapabilityUsecase>(),
+        locator<LockPrivateWalletSessionUsecase>(),
+        locator<CheckPrivateWalletSessionUsecase>(),
+        locator<WatchVisibleWalletCatalogUsecase>(),
+        locator<DeleteWalletPublicProjectionUsecase>(),
+        locator<UpdateWalletLabelUsecase>(),
       ),
     );
     // Bloc
@@ -55,6 +73,7 @@ class WalletLocator {
         deleteWalletUsecase: locator<DeleteWalletUsecase>(),
         seedStoreTypeDatasource: locator<SeedStoreTypeDatasource>(),
         checkBackupNeededUsecase: locator<CheckBackupNeededUsecase>(),
+        walletFacade: locator<WalletFacade>(),
       ),
     );
   }
