@@ -1,3 +1,4 @@
+import 'package:bull_logger/bull_logger.dart';
 import 'package:bull_payjoin/bull_payjoin.dart';
 import 'package:primitives/primitives.dart';
 
@@ -24,9 +25,15 @@ class GetPayjoinUsecase {
   /// all rather than risk double-spending reserved inputs.
   Future<PayjoinSession?> execute(String sessionId) async {
     final result = await _sessions.byId(sessionId);
-    return switch (result) {
-      Ok(:final value) => value,
-      Err() => null,
-    };
+    switch (result) {
+      case Ok(:final value):
+        return value;
+      case Err(:final failure):
+        log.warning(
+          'Could not read the Payjoin session; treating it as absent',
+          error: '${failure.runtimeType}: ${failure.logMessage ?? "-"}',
+        );
+        return null;
+    }
   }
 }
