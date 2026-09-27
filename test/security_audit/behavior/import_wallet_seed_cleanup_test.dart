@@ -198,7 +198,10 @@ void main() {
     test(
       'keeps a stored secret when the failure precedes the import',
       () async {
-        await secrets.import(words: words);
+        expect(
+          await secrets.import(words: words),
+          isA<Ok<Secret, SecretFailure>>(),
+        );
         when(
           () => settingsRepository.fetch(),
         ).thenThrow(Exception('settings unavailable'));
@@ -211,7 +214,10 @@ void main() {
     );
 
     test('keeps a secret already referenced by an existing wallet', () async {
-      await secrets.import(words: words);
+      expect(
+        await secrets.import(words: words),
+        isA<Ok<Secret, SecretFailure>>(),
+      );
       when(() => settingsRepository.fetch()).thenAnswer((_) async => settings);
       failCreateWalletWith(
         const WalletAlreadyExistsException('existing-wallet-id'),
