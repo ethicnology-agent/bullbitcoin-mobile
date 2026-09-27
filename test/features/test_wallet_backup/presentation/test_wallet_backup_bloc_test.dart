@@ -97,36 +97,33 @@ void main() {
       await bloc.close();
     });
 
-    test(
-      'records the backup once the sealed challenge has judged it',
-      () async {
-        // The comparison no longer happens here: `MnemonicChallenge` runs it
-        // through `Secret.verifyWords`, inside the package, and the event that
-        // reaches this bloc carries no words at all. What is left to test is
-        // the bookkeeping.
-        when(() => completeUsecase.execute()).thenAnswer((_) async {});
-        final bloc = buildBloc();
-        bloc.seed(
-          TestWalletBackupState(
-            selectedWallet: _wallet(isDefault: true, origin: 'a'),
-          ),
-        );
+    test('records the backup once the sealed challenge has judged it', () async {
+      // The comparison no longer happens here: `MnemonicChallenge` runs it
+      // through `secret.verify.mnemonic`, inside the package, and the event that
+      // reaches this bloc carries no words at all. What is left to test is
+      // the bookkeeping.
+      when(() => completeUsecase.execute()).thenAnswer((_) async {});
+      final bloc = buildBloc();
+      bloc.seed(
+        TestWalletBackupState(
+          selectedWallet: _wallet(isDefault: true, origin: 'a'),
+        ),
+      );
 
-        final expectation = expectLater(
-          bloc.stream,
-          emits(
-            predicate<TestWalletBackupState>(
-              (s) => s.verificationStatus == BackupVerificationStatus.success,
-            ),
+      final expectation = expectLater(
+        bloc.stream,
+        emits(
+          predicate<TestWalletBackupState>(
+            (s) => s.verificationStatus == BackupVerificationStatus.success,
           ),
-        );
-        bloc.add(const VerifyPhysicalBackup());
-        await expectation;
+        ),
+      );
+      bloc.add(const VerifyPhysicalBackup());
+      await expectation;
 
-        verify(() => completeUsecase.execute()).called(1);
-        await bloc.close();
-      },
-    );
+      verify(() => completeUsecase.execute()).called(1);
+      await bloc.close();
+    });
 
     test('refuses to record a backup with no wallet selected', () async {
       final bloc = buildBloc();
