@@ -1,25 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Wallet secrets live in secure storage encrypted under hardware-bound Android
-  Keystore keys that never leave the device. If the encrypted files are copied
-  to another device by a cloud restore or a phone-to-phone transfer, they
-  arrive without the keys that decrypt them, and the app can no longer read its
-  own secure storage. Exclude all app data from both vectors so a new device
-  starts clean and the user restores from their recovery phrase or backup.
-  allowBackup="false" already blocks these on Android 11 and below; these rules
-  are what cover device transfer on Android 12+ (targetSdk 36).
+  Wallet secrets are encrypted under Android Keystore keys that do not migrate with app data. Restoring the encrypted files without their keys makes secure storage unreadable. Exclude app data so a new device starts clean and the user restores from their recovery phrase or backup.
+
+  Flutter's app_flutter/ directory contains wallet databases and belongs to the root domain, outside the file and database domains. Exclude all of these domains together so wallet data cannot be restored without its secrets.
+
+  allowBackup="false" blocks cloud backup and covers Android 11 and below. Explicit device-transfer rules also cover Android 12+ (targetSdk 36), where some manufacturers ignore allowBackup for transfers.
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <exclude domain="sharedpref" />
-        <exclude domain="database" />
-        <exclude domain="file" />
-        <exclude domain="external" />
+        <exclude domain="root" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="external" path="." />
     </cloud-backup>
     <device-transfer>
-        <exclude domain="sharedpref" />
-        <exclude domain="database" />
-        <exclude domain="file" />
-        <exclude domain="external" />
+        <exclude domain="root" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="external" path="." />
     </device-transfer>
 </data-extraction-rules>
