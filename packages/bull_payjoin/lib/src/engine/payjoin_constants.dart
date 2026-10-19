@@ -17,8 +17,9 @@ abstract final class PayjoinConstants {
   // session. Each wait is drawn uniformly from this range with a secure
   // random source: a fixed cadence is a timing fingerprint of this wallet
   // at the directory and at the OHTTP relays, which see every poll. The
-  // maximum is also the worst-case delay before a session notices its own
-  // expiry, which the fallback countdowns in the UI add to the expiry time.
+  // maximum is the longest a session idles between two polls, so a session
+  // notices its own expiry at most that long plus one poll's round trip after
+  // it; the fallback countdowns in the UI add the maximum to the expiry time.
   static const minDirectoryPollingInterval = 1;
   static const maxDirectoryPollingInterval = 5;
   static const defaultExpireAfterSec = 60 * 60 * 24;

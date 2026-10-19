@@ -333,7 +333,10 @@ void main() {
     );
     // nextInt(max) returns [0, max), so these draws hit the two bounds.
     const drawMin = 0;
-    const drawMax = 4000;
+    const drawMax =
+        (PayjoinConstants.maxDirectoryPollingInterval -
+            PayjoinConstants.minDirectoryPollingInterval) *
+        1000;
 
     test('the wait between polls is drawn from the whole 1 to 5 s range', () {
       final datasource = PdkPayjoinDatasource(

@@ -745,6 +745,7 @@ class PdkPayjoinDatasource {
   Duration nextPollingDelay() {
     const minMs = PayjoinConstants.minDirectoryPollingInterval * 1000;
     const maxMs = PayjoinConstants.maxDirectoryPollingInterval * 1000;
+    assert(minMs <= maxMs, 'the polling interval bounds are out of order');
     return Duration(milliseconds: minMs + _random.nextInt(maxMs - minMs + 1));
   }
 
