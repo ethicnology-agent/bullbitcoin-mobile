@@ -270,7 +270,7 @@ class PayjoinInProgressPage extends StatelessWidget {
                           until: payjoinExpiresAt.add(
                             const Duration(
                               seconds:
-                                  PayjoinConstants.directoryPollingInterval,
+                                  PayjoinConstants.maxDirectoryPollingInterval,
                             ),
                           ),
                           onTimeout: () {},

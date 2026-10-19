@@ -1803,7 +1803,8 @@ class SendSendingScreen extends StatelessWidget {
                       BullCountdown(
                         until: payjoinExpiresAt.add(
                           const Duration(
-                            seconds: PayjoinConstants.directoryPollingInterval,
+                            seconds:
+                                PayjoinConstants.maxDirectoryPollingInterval,
                           ),
                         ),
                         onTimeout: () {},

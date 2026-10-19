@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:bull_payjoin/src/data/payjoin_model.dart';
@@ -12,6 +13,30 @@ import 'package:payjoin/payjoin.dart';
 import 'package:test/test.dart';
 
 class _MockDio extends Mock implements Dio {}
+
+/// Hands out the scripted [nextInt] values in order and remembers every
+/// upper bound it was asked for, so a test can pin both the delay a poll
+/// waited and how many polls were armed.
+class _ScriptedRandom implements Random {
+  final List<int> _values;
+  final List<int> maxes = [];
+
+  _ScriptedRandom(this._values);
+
+  int get draws => maxes.length;
+
+  @override
+  int nextInt(int max) {
+    maxes.add(max);
+    return _values.removeAt(0);
+  }
+
+  @override
+  bool nextBool() => throw UnimplementedError();
+
+  @override
+  double nextDouble() => throw UnimplementedError();
+}
 
 final _ohttpKeysBytes = Uint8List.fromList([
   0x01,
@@ -276,11 +301,134 @@ void main() {
         datasource.stopPolling(model.id);
         async.elapse(
           const Duration(
-            seconds: PayjoinConstants.directoryPollingInterval * 3,
+            seconds: PayjoinConstants.maxDirectoryPollingInterval * 3,
           ),
         );
 
         expect(events, isEmpty);
+        datasource.dispose();
+        async.flushMicrotasks();
+      });
+    });
+
+    PayjoinSenderModel pendingSender() =>
+        PayjoinModel.sender(
+              uri: 'bitcoin:tb1qsender?pj=https://payjo.in',
+              isTestnet: true,
+              sender: '[]',
+              walletId: 'w1',
+              originalPsbt: 'cHNidP8=',
+              originalTxId: 'orig-txid',
+              amountSat: 50000,
+              createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+              expireAfterSec: PayjoinConstants.defaultExpireAfterSec,
+            )
+            as PayjoinSenderModel;
+
+    const minDelay = Duration(
+      seconds: PayjoinConstants.minDirectoryPollingInterval,
+    );
+    const maxDelay = Duration(
+      seconds: PayjoinConstants.maxDirectoryPollingInterval,
+    );
+    // nextInt(max) returns [0, max), so these draws hit the two bounds.
+    const drawMin = 0;
+    const drawMax = 4000;
+
+    test('the wait between polls is drawn from the whole 1 to 5 s range', () {
+      final datasource = PdkPayjoinDatasource(
+        log: PayjoinLogger.silent,
+        dio: Dio(),
+        random: Random(7),
+      );
+
+      final delays = {
+        for (var i = 0; i < 2000; i++) datasource.nextPollingDelay(),
+      };
+
+      expect(delays, everyElement(greaterThanOrEqualTo(minDelay)));
+      expect(delays, everyElement(lessThanOrEqualTo(maxDelay)));
+      expect(delays.length, greaterThan(1000));
+      datasource.dispose();
+    });
+
+    test('the draw maps its bounds to exactly 1 s and 5 s', () {
+      final random = _ScriptedRandom([drawMin, drawMax]);
+      final datasource = PdkPayjoinDatasource(
+        log: PayjoinLogger.silent,
+        dio: Dio(),
+        random: random,
+      );
+
+      expect(datasource.nextPollingDelay(), minDelay);
+      expect(datasource.nextPollingDelay(), maxDelay);
+      expect(random.maxes, [drawMax + 1, drawMax + 1]);
+      datasource.dispose();
+    });
+
+    test('the first poll waits the drawn delay, not a fixed one', () {
+      fakeAsync((async) {
+        final datasource = PdkPayjoinDatasource(
+          log: PayjoinLogger.silent,
+          dio: Dio(),
+          random: _ScriptedRandom([drawMax]),
+        );
+        final events = <PayjoinModel>[];
+        datasource.expiredPayjoins.listen(events.add);
+
+        datasource.startListeningForProposal(expiredSender());
+        async.elapse(maxDelay - const Duration(milliseconds: 1));
+        expect(events, isEmpty);
+
+        async.elapse(const Duration(milliseconds: 1));
+        expect(events, hasLength(1));
+        datasource.dispose();
+        async.flushMicrotasks();
+      });
+    });
+
+    test('an unresolved poll re-arms itself with a fresh draw', () {
+      fakeAsync((async) {
+        final random = _ScriptedRandom([drawMin, drawMax, drawMin]);
+        final datasource = PdkPayjoinDatasource(
+          log: PayjoinLogger.silent,
+          dio: Dio(),
+          random: random,
+        );
+
+        datasource.startListeningForProposal(pendingSender());
+        expect(random.draws, 1);
+
+        async.elapse(minDelay);
+        expect(random.draws, 2);
+
+        async.elapse(maxDelay - const Duration(milliseconds: 1));
+        expect(random.draws, 2);
+
+        async.elapse(const Duration(milliseconds: 1));
+        expect(random.draws, 3);
+        datasource.dispose();
+        async.flushMicrotasks();
+      });
+    });
+
+    test('stopPolling between two polls stops the re-arming', () {
+      fakeAsync((async) {
+        final random = _ScriptedRandom([drawMin, drawMin, drawMin]);
+        final datasource = PdkPayjoinDatasource(
+          log: PayjoinLogger.silent,
+          dio: Dio(),
+          random: random,
+        );
+        final model = pendingSender();
+
+        datasource.startListeningForProposal(model);
+        async.elapse(minDelay);
+        expect(random.draws, 2);
+
+        datasource.stopPolling(model.id);
+        async.elapse(maxDelay * 3);
+        expect(random.draws, 2);
         datasource.dispose();
         async.flushMicrotasks();
       });

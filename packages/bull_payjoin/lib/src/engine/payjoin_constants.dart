@@ -13,7 +13,14 @@ abstract final class PayjoinConstants {
   }
 
   static const directoryUrl = 'https://payjo.in';
-  static const directoryPollingInterval = 5;
+  // Bounds, in seconds, of the wait between two directory polls of one
+  // session. Each wait is drawn uniformly from this range with a secure
+  // random source: a fixed cadence is a timing fingerprint of this wallet
+  // at the directory and at the OHTTP relays, which see every poll. The
+  // maximum is also the worst-case delay before a session notices its own
+  // expiry, which the fallback countdowns in the UI add to the expiry time.
+  static const minDirectoryPollingInterval = 1;
+  static const maxDirectoryPollingInterval = 5;
   static const defaultExpireAfterSec = 60 * 60 * 24;
   static const defaultMinAmountSat = 10000;
 
