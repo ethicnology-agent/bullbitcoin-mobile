@@ -751,34 +751,39 @@ class PdkPayjoinDatasource {
 
   void startListeningForRequest(PayjoinReceiverModel payjoin) {
     _receiverTimers[payjoin.id]?.cancel();
-    _scheduleReceiverPoll(payjoin);
+    _schedulePoll(_receiverTimers, payjoin, _pollReceiverOnce);
   }
 
   void startListeningForProposal(PayjoinSenderModel payjoin) {
     _senderTimers[payjoin.id]?.cancel();
-    _scheduleSenderPoll(payjoin);
+    _schedulePoll(_senderTimers, payjoin, _pollSenderOnce);
   }
 
-  void _scheduleReceiverPoll(PayjoinReceiverModel payjoin) {
+  /// Arms the next [poll] of [payjoin] after a fresh random delay and records
+  /// it in [timers]. The poll re-arms itself through here as long as it
+  /// reports the session unresolved and it is still the session's armed poll.
+  void _schedulePoll<T extends PayjoinModel>(
+    Map<String, Timer> timers,
+    T payjoin,
+    Future<bool> Function(T payjoin, Timer timer) poll,
+  ) {
     late final Timer timer;
     timer = Timer(nextPollingDelay(), () async {
-      final keepPolling = await _pollReceiverOnce(payjoin, timer);
-      if (keepPolling && identical(_receiverTimers[payjoin.id], timer)) {
-        _scheduleReceiverPoll(payjoin);
+      final keepPolling = await poll(payjoin, timer);
+      if (keepPolling && identical(timers[payjoin.id], timer)) {
+        _schedulePoll(timers, payjoin, poll);
       }
     });
-    _receiverTimers[payjoin.id] = timer;
+    timers[payjoin.id] = timer;
   }
 
-  void _scheduleSenderPoll(PayjoinSenderModel payjoin) {
-    late final Timer timer;
-    timer = Timer(nextPollingDelay(), () async {
-      final keepPolling = await _pollSenderOnce(payjoin, timer);
-      if (keepPolling && identical(_senderTimers[payjoin.id], timer)) {
-        _scheduleSenderPoll(payjoin);
-      }
-    });
-    _senderTimers[payjoin.id] = timer;
+  /// Retires [timer] from [timers] when it is still the armed poll of
+  /// session [id], and says so. False means the session was stopped or
+  /// restarted while this poll ran, so its outcome must be discarded.
+  bool _retirePoll(Map<String, Timer> timers, String id, Timer timer) {
+    if (!identical(timers[id], timer)) return false;
+    timers.remove(id);
+    return true;
   }
 
   /// One directory poll for [receiverModel], armed by [timer]. Returns true
@@ -840,14 +845,12 @@ class PdkPayjoinDatasource {
       // Only stop polling and emit once all fallible work has succeeded: a
       // throw above keeps polling so the next poll retries. Skip the emit if
       // this session's polling was stopped in the meantime.
-      if (!identical(_receiverTimers[receiverModel.id], timer)) return false;
-      _receiverTimers.remove(receiverModel.id);
+      if (!_retirePoll(_receiverTimers, receiverModel.id, timer)) return false;
       _payjoinRequestedController.add(updatedModel);
       return false;
     } on PayjoinExpiredException catch (e) {
       _log.info('[receiver poll] expired for ${receiverModel.id}: $e');
-      if (!identical(_receiverTimers[receiverModel.id], timer)) return false;
-      _receiverTimers.remove(receiverModel.id);
+      if (!_retirePoll(_receiverTimers, receiverModel.id, timer)) return false;
       _expiredController.add(receiverModel.copyWith(isExpired: true));
       return false;
     } catch (e) {
@@ -906,14 +909,12 @@ class PdkPayjoinDatasource {
       // Only stop polling and emit once all fallible work has succeeded: a
       // throw above keeps polling so the next poll retries. Skip the emit if
       // this session's polling was stopped in the meantime.
-      if (!identical(_senderTimers[senderModel.id], timer)) return false;
-      _senderTimers.remove(senderModel.id);
+      if (!_retirePoll(_senderTimers, senderModel.id, timer)) return false;
       _proposalSentController.add(updatedModel);
       return false;
     } on PayjoinExpiredException catch (e) {
       _log.info('[sender poll] expired for $senderLogRef: $e');
-      if (!identical(_senderTimers[senderModel.id], timer)) return false;
-      _senderTimers.remove(senderModel.id);
+      if (!_retirePoll(_senderTimers, senderModel.id, timer)) return false;
       _expiredController.add(senderModel.copyWith(isExpired: true));
       return false;
     } catch (e) {

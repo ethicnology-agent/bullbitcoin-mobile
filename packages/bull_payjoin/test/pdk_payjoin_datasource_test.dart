@@ -273,7 +273,10 @@ void main() {
   });
 
   group('polling lifecycle', () {
-    PayjoinSenderModel expiredSender() =>
+    PayjoinSenderModel sender({
+      required int createdAt,
+      required int expireAfterSec,
+    }) =>
         PayjoinModel.sender(
               uri: 'bitcoin:tb1qsender?pj=https://payjo.in',
               isTestnet: true,
@@ -282,10 +285,18 @@ void main() {
               originalPsbt: 'cHNidP8=',
               originalTxId: 'orig-txid',
               amountSat: 50000,
-              createdAt: 0,
-              expireAfterSec: 300,
+              createdAt: createdAt,
+              expireAfterSec: expireAfterSec,
             )
             as PayjoinSenderModel;
+
+    PayjoinSenderModel expiredSender() =>
+        sender(createdAt: 0, expireAfterSec: 300);
+
+    PayjoinSenderModel pendingSender() => sender(
+      createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      expireAfterSec: PayjoinConstants.defaultExpireAfterSec,
+    );
 
     test('stopPolling prevents a pending expiry event', () {
       fakeAsync((async) {
@@ -310,20 +321,6 @@ void main() {
         async.flushMicrotasks();
       });
     });
-
-    PayjoinSenderModel pendingSender() =>
-        PayjoinModel.sender(
-              uri: 'bitcoin:tb1qsender?pj=https://payjo.in',
-              isTestnet: true,
-              sender: '[]',
-              walletId: 'w1',
-              originalPsbt: 'cHNidP8=',
-              originalTxId: 'orig-txid',
-              amountSat: 50000,
-              createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-              expireAfterSec: PayjoinConstants.defaultExpireAfterSec,
-            )
-            as PayjoinSenderModel;
 
     const minDelay = Duration(
       seconds: PayjoinConstants.minDirectoryPollingInterval,
