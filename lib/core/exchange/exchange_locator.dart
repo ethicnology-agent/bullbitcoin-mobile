@@ -1,3 +1,6 @@
+import 'package:bb_mobile/core/exchange/data/exchange_rate_repository_impl.dart';
+import 'package:bb_mobile/core/exchange/domain/repositories/exchange_rate_repository.dart';
+import 'package:bb_mobile/core/exchange/domain/usecases/get_exchange_rate_usecase.dart';
 import 'package:bb_mobile/core/exchange/data/datasources/bullbitcoin_api_datasource.dart';
 import 'package:bb_mobile/core/exchange/data/datasources/bullbitcoin_api_key_datasource.dart';
 import 'package:bb_mobile/core/exchange/data/datasources/http/authenticated_bullbitcoin_dio_factory.dart';
@@ -140,6 +143,23 @@ class ExchangeLocator {
   }
 
   static void registerRepositories(GetIt locator) {
+    for (final isTestnet in [false, true]) {
+      locator.registerLazySingleton<ExchangeRateRepository>(
+        () => ExchangeRateRepositoryImpl(
+          BullbitcoinApiDatasource(
+            bullbitcoinApiHttpClient: locator<Dio>(
+              instanceName: isTestnet
+                  ? 'authenticatedBullBitcoinApiTestClient'
+                  : 'authenticatedBullBitcoinApiClient',
+            ),
+          ),
+        ),
+        instanceName: isTestnet
+            ? 'testnetExchangeRateRepository'
+            : 'mainnetExchangeRateRepository',
+      );
+    }
+
     locator.registerLazySingleton<ExchangeNotificationRepository>(
       () => ExchangeNotificationRepositoryImpl(
         exchangeNotificationService: locator<ExchangeNotificationService>(),
@@ -224,6 +244,18 @@ class ExchangeLocator {
   }
 
   static void registerUseCases(GetIt locator) {
+    locator.registerFactory<GetExchangeRateUsecase>(
+      () => GetExchangeRateUsecase(
+        mainnetRepository: locator<ExchangeRateRepository>(
+          instanceName: 'mainnetExchangeRateRepository',
+        ),
+        testnetRepository: locator<ExchangeRateRepository>(
+          instanceName: 'testnetExchangeRateRepository',
+        ),
+        settingsRepository: locator<SettingsRepository>(),
+      ),
+    );
+
     locator.registerFactory<GetExchangeUserSummaryUsecase>(
       () => GetExchangeUserSummaryUsecase(
         mainnetExchangeUserRepository: locator<ExchangeUserRepository>(

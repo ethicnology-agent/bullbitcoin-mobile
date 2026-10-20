@@ -1,3 +1,4 @@
+import 'package:bb_mobile/core/exchange/data/models/exchange_rate_model.dart';
 import 'dart:convert' show jsonEncode;
 
 import 'package:bb_mobile/core/errors/exchange_errors.dart';
@@ -22,6 +23,39 @@ class BullbitcoinApiDatasource {
 
   BullbitcoinApiDatasource({required Dio bullbitcoinApiHttpClient})
     : _http = bullbitcoinApiHttpClient;
+
+  /// The authenticated pricer used by exchange flows, with the same pair
+  /// direction as limit orders. Prices are normalized by the repository.
+  Future<ExchangeRateModel> getUserRate(String currencyCode) async {
+    final response = await _http.post<Map<String, dynamic>>(
+      '/public/price',
+      data: {
+        'jsonrpc': '2.0',
+        'id': '0',
+        'method': 'getUserRate',
+        'params': {
+          'element': {'fromCurrency': currencyCode, 'toCurrency': 'BTC'},
+        },
+      },
+    );
+    if (response.statusCode != 200) {
+      throw DioException(
+        requestOptions: response.requestOptions,
+        response: response,
+        type: DioExceptionType.badResponse,
+      );
+    }
+    final body = response.data;
+    final result = body?['result'];
+    if (body?['error'] != null || result is! Map<String, dynamic>) {
+      throw const FormatException('Invalid exchange rate envelope');
+    }
+    final element = result['element'] ?? result;
+    if (element is! Map<String, dynamic>) {
+      throw const FormatException('Missing exchange rate');
+    }
+    return ExchangeRateModel.fromJson(element);
+  }
 
   Future<void> registerResponsibilityConsent(String apiKey) async {
     try {

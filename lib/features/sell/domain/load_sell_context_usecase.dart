@@ -1,5 +1,5 @@
 import 'package:bb_mobile/core/exchange/domain/entity/order.dart';
-import 'package:bb_mobile/core/price/domain/usecases/convert_sats_to_currency_amount_usecase.dart';
+import 'package:bb_mobile/core/exchange/domain/usecases/get_exchange_rate_usecase.dart';
 import 'package:bb_mobile/core/exchange/domain/usecases/get_exchange_user_summary_usecase.dart';
 import 'package:bb_mobile/core/exchange/domain/usecases/get_order_usercase.dart';
 import 'package:bb_mobile/core/fees/domain/fees_entity.dart';
@@ -20,7 +20,7 @@ class LoadSellContextUsecase {
   final GetSettingsUsecase _getSettingsUsecase;
   final GetNetworkFeesUsecase _getNetworkFeesUsecase;
   final GetAddressAtIndexUsecase _getAddressAtIndexUsecase;
-  final ConvertSatsToCurrencyAmountUsecase _convertSatsToCurrencyAmountUsecase;
+  final GetExchangeRateUsecase _getExchangeRateUsecase;
   final GetOrderUsecase _getOrderUsecase;
 
   const LoadSellContextUsecase({
@@ -28,7 +28,7 @@ class LoadSellContextUsecase {
     required this._getSettingsUsecase,
     required this._getNetworkFeesUsecase,
     required this._getAddressAtIndexUsecase,
-    required this._convertSatsToCurrencyAmountUsecase,
+    required this._getExchangeRateUsecase,
     required this._getOrderUsecase,
   });
 
@@ -98,21 +98,20 @@ class LoadSellContextUsecase {
     BigInt? amountSat,
     String? currencyCode,
   }) async {
-    try {
-      return Ok(
-        await _convertSatsToCurrencyAmountUsecase.execute(
-          amountSat: amountSat,
-          currencyCode: currencyCode,
-        ),
-      );
-    } catch (e, st) {
-      log.severe(
-        message: 'Failed to convert sats to the display currency',
-        error: e,
-        trace: st,
-      );
-      return Err(SellUnexpectedFailure('$e'));
-    }
+    final result = await _getExchangeRateUsecase.execute(
+      currencyCode: currencyCode,
+    );
+    return result
+        .map(
+          (rate) =>
+              rate.indexPrice *
+              (amountSat ?? BigInt.from(100000000)).toDouble() /
+              100000000,
+        )
+        .mapErr(
+          (failure) =>
+              SellUnexpectedFailure('Exchange rate: ${failure.runtimeType}'),
+        );
   }
 
   @useResult
