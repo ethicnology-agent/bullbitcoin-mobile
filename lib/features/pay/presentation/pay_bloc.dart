@@ -1532,8 +1532,10 @@ class PayBloc extends Bloc<PayEvent, PayState>
   ) {
     if (!current.isPayinPastDeadline) {
       log.warning(
-        'Pay payin broadcast but the exchange reports the order past its '
-        'deadline: status=${latestOrder.orderStatus.name}, '
+        // Kept short and punctuated: a long run of lowercase words is
+        // redacted from exported logs as a possible mnemonic.
+        'Pay payin broadcast; exchange reports order past deadline: '
+        'status=${latestOrder.orderStatus.name}, '
         'payin=${latestOrder.payinStatus.name}',
       );
       // Still watched, in case the exchange credits it late, but no longer at
