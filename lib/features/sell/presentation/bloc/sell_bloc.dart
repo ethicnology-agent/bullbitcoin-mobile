@@ -1090,24 +1090,26 @@ class SellBloc extends Bloc<SellEvent, SellState>
     // the confirming state and let the poll take the order to success when
     // the payment shows up, rather than celebrating an order the exchange
     // has never seen paid.
+    // The read took seconds: settle only the order still on screen, from the
+    // state as it is now rather than as it was before the request.
+    final current = _currentPaymentState;
+    if (current == null ||
+        current.sellOrder.orderId != paymentState.sellOrder.orderId) {
+      return;
+    }
+
     final payinStatus = latestOrder.payinStatus;
     if (payinStatus != OrderPayinStatus.inProgress &&
         payinStatus != OrderPayinStatus.awaitingConfirmation &&
         payinStatus != OrderPayinStatus.completed) {
-      final current = _currentPaymentState;
-      if (current != null &&
-          current.isPayinBroadcast &&
-          _isPastDeadline(latestOrder)) {
+      if (current.isPayinBroadcast && _isPastDeadline(latestOrder)) {
         _reportPayinPastDeadline(emit, current, latestOrder);
       }
       return;
     }
 
-    await _labelPayjoinSellTransaction(
-      latestOrder,
-      paymentState.selectedWallet?.id,
-    );
-    emit(paymentState.toSuccessState(sellOrder: latestOrder));
+    await _labelPayjoinSellTransaction(latestOrder, current.selectedWallet?.id);
+    emit(current.toSuccessState(sellOrder: latestOrder));
   }
 
   void _emitSendPaymentError(Emitter<SellState> emit, SellFailure error) {
@@ -1211,6 +1213,10 @@ class SellBloc extends Bloc<SellEvent, SellState>
 
       final current = _currentPaymentState;
       if (current == null) return;
+      // The order on screen may have been replaced while this read was out.
+      if (current.sellOrder.orderId != sellPaymentState.sellOrder.orderId) {
+        return;
+      }
       if (!current.isPayinBroadcast) {
         // Fail closed: the polled order must still pay the address the user
         // confirmed, or polling stops and the order is refused.

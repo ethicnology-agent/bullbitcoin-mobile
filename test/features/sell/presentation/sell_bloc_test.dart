@@ -1045,6 +1045,69 @@ void main() {
       );
     });
 
+    test('an old order poll cannot overwrite a replacement order', () async {
+      final poll = Completer<Result<Order, SellFailure>>();
+      when(
+        () => loadSellContext.order(orderId: any(named: 'orderId')),
+      ).thenAnswer((_) => poll.future);
+      final replacementOrder = _MockSellOrder();
+      when(() => replacementOrder.orderId).thenReturn('order-2');
+      when(
+        () => replacementOrder.toAddress,
+      ).thenReturn('bc1q0000000000000000000000000000000000000');
+
+      bloc.add(const SellEvent.pollOrderStatus());
+      await untilCalled(() => loadSellContext.order(orderId: 'order-1'));
+      bloc.seed(
+        (bloc.state as SellPaymentState).copyWith(sellOrder: replacementOrder),
+      );
+      poll.complete(
+        Ok<Order, SellFailure>(
+          polled(
+            status: OrderStatus.expired,
+            payin: OrderPayinStatus.awaitingPayment,
+          ),
+        ),
+      );
+      await pumpEventQueue();
+
+      final state = bloc.state as SellPaymentState;
+      expect(state.sellOrder, same(replacementOrder));
+    });
+
+    test(
+      'a completion read for a replaced order cannot settle the new one',
+      () async {
+        seedBroadcast();
+        final read = Completer<Result<Order, SellFailure>>();
+        when(
+          () => loadSellContext.order(orderId: any(named: 'orderId')),
+        ).thenAnswer((_) => read.future);
+        final replacementOrder = _MockSellOrder();
+        when(() => replacementOrder.orderId).thenReturn('order-2');
+
+        bloc.add(const SellEvent.sendPaymentConfirmed());
+        await untilCalled(() => loadSellContext.order(orderId: 'order-1'));
+        bloc.seed(
+          (bloc.state as SellPaymentState).copyWith(
+            sellOrder: replacementOrder,
+          ),
+        );
+        read.complete(
+          Ok<Order, SellFailure>(
+            polled(
+              status: OrderStatus.inProgress,
+              payin: OrderPayinStatus.inProgress,
+            ),
+          ),
+        );
+        await pumpEventQueue();
+
+        expect(bloc.state, isA<SellPaymentState>());
+      },
+      timeout: const Timeout(Duration(seconds: 20)),
+    );
+
     test(
       'leaving a payin reported past its deadline stops watching it',
       () async {
