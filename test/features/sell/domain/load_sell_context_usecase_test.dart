@@ -1,5 +1,7 @@
+import 'package:bb_mobile/core/exchange/domain/entity/exchange_rate.dart';
+import 'package:bb_mobile/core/exchange/domain/exchange_rate_failure.dart';
 import 'package:bb_mobile/core/exchange/domain/entity/order.dart';
-import 'package:bb_mobile/core/price/domain/usecases/convert_sats_to_currency_amount_usecase.dart';
+import 'package:bb_mobile/core/exchange/domain/usecases/get_exchange_rate_usecase.dart';
 import 'package:bb_mobile/core/exchange/domain/usecases/get_exchange_user_summary_usecase.dart';
 import 'package:bb_mobile/core/exchange/domain/usecases/get_order_usercase.dart';
 import 'package:bb_mobile/core/fees/domain/fees_entity.dart';
@@ -23,7 +25,7 @@ class _MockGetNetworkFees extends Mock implements GetNetworkFeesUsecase {}
 class _MockGetAddressAtIndex extends Mock implements GetAddressAtIndexUsecase {}
 
 class _MockConvertSatsToCurrency extends Mock
-    implements ConvertSatsToCurrencyAmountUsecase {}
+    implements GetExchangeRateUsecase {}
 
 class _MockGetOrder extends Mock implements GetOrderUsecase {}
 
@@ -55,7 +57,7 @@ void main() {
       getSettingsUsecase: getSettings,
       getNetworkFeesUsecase: getNetworkFees,
       getAddressAtIndexUsecase: getAddressAtIndex,
-      convertSatsToCurrencyAmountUsecase: convertSatsToCurrency,
+      getExchangeRateUsecase: convertSatsToCurrency,
       getOrderUsecase: getOrder,
     );
   });
@@ -152,10 +154,13 @@ void main() {
     test('returns the converted amount', () async {
       when(
         () => convertSatsToCurrency.execute(
-          amountSat: any(named: 'amountSat'),
           currencyCode: any(named: 'currencyCode'),
         ),
-      ).thenAnswer((_) async => 42.5);
+      ).thenAnswer(
+        (_) async => Ok(
+          ExchangeRate(currencyCode: 'CAD', indexPrice: 42.5, userPrice: 40),
+        ),
+      );
 
       final result = await usecase.satsToCurrency(currencyCode: 'CAD');
 
@@ -165,10 +170,11 @@ void main() {
     test('sanitizes a conversion failure', () async {
       when(
         () => convertSatsToCurrency.execute(
-          amountSat: any(named: 'amountSat'),
           currencyCode: any(named: 'currencyCode'),
         ),
-      ).thenThrow(Exception(_rawReason));
+      ).thenAnswer(
+        (_) async => const Err(ExchangeRateLimitedFailure(retryAfter: '60')),
+      );
 
       expect(
         await usecase.satsToCurrency(currencyCode: 'CAD'),
@@ -204,4 +210,23 @@ void main() {
       }
     });
   });
+  test(
+    'converts sats using the authenticated index price, not user spread',
+    () async {
+      when(() => convertSatsToCurrency.execute(currencyCode: 'CAD')).thenAnswer(
+        (_) async => Ok(
+          ExchangeRate(
+            currencyCode: 'CAD',
+            indexPrice: 100000,
+            userPrice: 97000,
+          ),
+        ),
+      );
+      final result = await usecase.satsToCurrency(
+        amountSat: BigInt.from(50000000),
+        currencyCode: 'CAD',
+      );
+      expect((result as Ok<double, SellFailure>).value, 50000);
+    },
+  );
 }

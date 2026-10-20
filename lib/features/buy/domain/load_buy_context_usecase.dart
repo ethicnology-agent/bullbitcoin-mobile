@@ -1,5 +1,5 @@
 import 'package:bb_mobile/core/exchange/domain/entity/user_summary.dart';
-import 'package:bb_mobile/core/price/domain/usecases/convert_sats_to_currency_amount_usecase.dart';
+import 'package:bb_mobile/core/exchange/domain/usecases/get_exchange_rate_usecase.dart';
 import 'package:bb_mobile/core/exchange/domain/usecases/get_exchange_user_summary_usecase.dart';
 import 'package:bb_mobile/core/fees/domain/fees_entity.dart';
 import 'package:bb_mobile/core/fees/domain/get_network_fees_usecase.dart';
@@ -20,7 +20,7 @@ class LoadBuyContextUsecase {
   final GetWalletsUsecase _getWalletsUsecase;
   final GetReceiveAddressUsecase _getReceiveAddressUsecase;
   final GetNetworkFeesUsecase _getNetworkFeesUsecase;
-  final ConvertSatsToCurrencyAmountUsecase _convertSatsToCurrencyAmountUsecase;
+  final GetExchangeRateUsecase _getExchangeRateUsecase;
 
   const LoadBuyContextUsecase({
     required this._getExchangeUserSummaryUsecase,
@@ -28,7 +28,7 @@ class LoadBuyContextUsecase {
     required this._getWalletsUsecase,
     required this._getReceiveAddressUsecase,
     required this._getNetworkFeesUsecase,
-    required this._convertSatsToCurrencyAmountUsecase,
+    required this._getExchangeRateUsecase,
   });
 
   /// The exchange account summary and the app settings, which the buy screen
@@ -101,20 +101,19 @@ class LoadBuyContextUsecase {
     BigInt? amountSat,
     String? currencyCode,
   }) async {
-    try {
-      return Ok(
-        await _convertSatsToCurrencyAmountUsecase.execute(
-          amountSat: amountSat,
-          currencyCode: currencyCode,
-        ),
-      );
-    } catch (e, st) {
-      log.severe(
-        message: 'Failed to convert sats to the display currency',
-        error: e,
-        trace: st,
-      );
-      return Err(BuyUnexpectedFailure('$e'));
-    }
+    final result = await _getExchangeRateUsecase.execute(
+      currencyCode: currencyCode,
+    );
+    return result
+        .map(
+          (rate) =>
+              rate.indexPrice *
+              (amountSat ?? BigInt.from(100000000)).toDouble() /
+              100000000,
+        )
+        .mapErr(
+          (failure) =>
+              BuyUnexpectedFailure('Exchange rate: ${failure.runtimeType}'),
+        );
   }
 }

@@ -1,4 +1,4 @@
-import 'package:bb_mobile/core/price/domain/usecases/convert_sats_to_currency_amount_usecase.dart';
+import 'package:bb_mobile/core/exchange/domain/usecases/get_exchange_rate_usecase.dart';
 import 'package:bb_mobile/core/fees/domain/fees_entity.dart';
 import 'package:bb_mobile/core/utils/amount_conversions.dart';
 import 'package:bb_mobile/core/wallet/domain/entities/wallet.dart';
@@ -32,7 +32,7 @@ class EstimatePayPayinFeesUsecase {
   /// 0.1 sat/vByte = 25 sat/kwu — Liquid's network minrelayfee default.
   static const _liquidEstimateFeeRate = RelativeFee(25);
 
-  final ConvertSatsToCurrencyAmountUsecase _convertSatsToCurrencyAmountUsecase;
+  final GetExchangeRateUsecase _getExchangeRateUsecase;
   final GetPayPayinAddressUsecase _getPayPayinAddressUsecase;
   final LoadPayNetworkFeesUsecase _loadPayNetworkFeesUsecase;
   final PreparePayBitcoinPayinUsecase _preparePayBitcoinPayinUsecase;
@@ -40,7 +40,7 @@ class EstimatePayPayinFeesUsecase {
   final CalculatePayAbsoluteFeesUsecase _calculatePayAbsoluteFeesUsecase;
 
   const EstimatePayPayinFeesUsecase({
-    required this._convertSatsToCurrencyAmountUsecase,
+    required this._getExchangeRateUsecase,
     required this._getPayPayinAddressUsecase,
     required this._loadPayNetworkFeesUsecase,
     required this._preparePayBitcoinPayinUsecase,
@@ -55,17 +55,13 @@ class EstimatePayPayinFeesUsecase {
     required String currencyCode,
   }) async {
     final double exchangeRateEstimate;
-    try {
-      exchangeRateEstimate = await _convertSatsToCurrencyAmountUsecase.execute(
-        currencyCode: currencyCode,
-      );
-    } catch (e, st) {
-      log.severe(
-        message: 'Failed to read the exchange rate for the pay payin estimate',
-        error: e,
-        trace: st,
-      );
-      return Err(PayUnexpectedFailure('$e'));
+    switch (await _getExchangeRateUsecase.execute(currencyCode: currencyCode)) {
+      case Ok(:final value):
+        exchangeRateEstimate = value.indexPrice;
+      case Err(:final failure):
+        return Err(
+          PayUnexpectedFailure('Exchange rate: ${failure.runtimeType}'),
+        );
     }
 
     final requiredAmountSat = ConvertAmount.fiatToSats(
