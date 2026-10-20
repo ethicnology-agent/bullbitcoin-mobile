@@ -5,8 +5,53 @@ import 'package:bb_mobile/core/price/data/models/rate_model.dart';
 import 'package:bb_mobile/core/price/data/models/rate_request_model.dart';
 import 'package:bb_mobile/core/price/domain/rate.dart';
 import 'package:bb_mobile/core/utils/constants.dart';
-import 'package:bull_logger/bull_logger.dart' show log;
 import 'package:dio/dio.dart';
+
+/// Thrown by [BullbitcoinPriceDatasource.getPrice] when no usable rate came
+/// back. Caught by the price repository, which maps each case to a
+/// `PriceFailure`; nothing above the repository sees these.
+sealed class PriceException implements Exception {
+  final String message;
+
+  const PriceException(this.message);
+
+  @override
+  String toString() => 'PriceException: $message';
+}
+
+/// HTTP 429. [retryAfter] is the raw `Retry-After` header, if any.
+final class PriceRateLimitedException extends PriceException {
+  final String? retryAfter;
+
+  const PriceRateLimitedException({this.retryAfter})
+    : super('Pricer rate limited (429)');
+}
+
+/// Any other non-200 status.
+final class PriceHttpException extends PriceException {
+  final int? statusCode;
+
+  const PriceHttpException(this.statusCode)
+    : super('Pricer answered with status $statusCode');
+}
+
+/// No HTTP answer at all: connection, timeout, TLS, cancellation.
+final class PriceTransportException extends PriceException {
+  const PriceTransportException(super.message);
+}
+
+/// A 200 whose JSON-RPC envelope carries an `error` instead of a result.
+final class PriceRpcErrorException extends PriceException {
+  final String? code;
+
+  const PriceRpcErrorException(this.code)
+    : super('Pricer returned a JSON-RPC error: $code');
+}
+
+/// A 200 whose body does not describe a finite positive rate.
+final class PriceInvalidResponseException extends PriceException {
+  const PriceInvalidResponseException(super.message);
+}
 
 class BullbitcoinPriceDatasource {
   final Dio _http;
@@ -20,14 +65,21 @@ class BullbitcoinPriceDatasource {
     return CurrencyConstants.supportedFiat;
   }
 
+  /// The price of one bitcoin in [currencyCode], always a finite positive
+  /// number.
+  ///
+  /// Throws a [PriceException] otherwise. A rate of zero used to stand in for
+  /// every failure here, so a rate-limited pricer (#3011) showed up as a
+  /// price of 0 rather than as an error the caller could act on.
   Future<double> getPrice(String currencyCode) async {
-    try {
-      final requestModel = RateRequestModel(
-        fromCurrency: 'BTC',
-        toCurrency: currencyCode.toUpperCase(),
-      );
+    final requestModel = RateRequestModel(
+      fromCurrency: 'BTC',
+      toCurrency: currencyCode.toUpperCase(),
+    );
 
-      final resp = await _http.post(
+    final Response<dynamic> resp;
+    try {
+      resp = await _http.post(
         _pricePath,
         data: {
           'id': 1,
@@ -36,28 +88,77 @@ class BullbitcoinPriceDatasource {
           'params': requestModel.toApiParams(),
         },
       );
-
-      if (resp.statusCode == null || resp.statusCode != 200) {
-        log.warning('Pricer error');
-        return 0.0;
+    } on DioException catch (e) {
+      final response = e.response;
+      if (response != null) throw _statusException(response);
+      // Dio wraps a body it could not decode the same way as a lost
+      // connection; only the former is the pricer's fault.
+      if (e.error is FormatException) {
+        throw PriceInvalidResponseException('Body is not valid JSON');
       }
-      // Parse the response data correctly
-      final data = resp.data as Map<String, dynamic>;
-      final result = data['result'] as Map<String, dynamic>;
-      final element = result['element'] as Map<String, dynamic>;
-
-      // Extract price and precision
-      final price = (element['indexPrice'] as num).toDouble();
-      final precision = element['precision'] as int? ?? 2;
-
-      // Convert price based on precision (e.g., if price is 11751892 and precision is 2, actual price is 117518.92)
-      final rate = price / pow(10, precision);
-
-      return rate;
-    } catch (e) {
-      log.warning('Pricer error', error: e);
-      return 0.0;
+      throw PriceTransportException('Transport failure: ${e.type.name}');
     }
+
+    final statusCode = resp.statusCode;
+    if (statusCode != 200) throw _statusException(resp);
+
+    final data = resp.data;
+    if (data is! Map<String, dynamic>) {
+      throw const PriceInvalidResponseException('Body is not a JSON object');
+    }
+    final error = data['error'];
+    if (error != null) {
+      throw PriceRpcErrorException(_rpcErrorCode(error));
+    }
+    final result = data['result'];
+    final element = result is Map<String, dynamic> ? result['element'] : null;
+    if (element is! Map<String, dynamic>) {
+      throw const PriceInvalidResponseException('Missing result.element');
+    }
+
+    final indexPrice = element['indexPrice'];
+    if (indexPrice is! num) {
+      throw const PriceInvalidResponseException('Missing indexPrice');
+    }
+    final precision = switch (element['precision']) {
+      null => 2,
+      final int value when value >= 0 => value,
+      _ => throw const PriceInvalidResponseException(
+        'precision is not a non-negative int',
+      ),
+    };
+
+    // The API sends the price as an integer scaled by `precision`:
+    // 11751892 with precision 2 is 117518.92. Scaled in doubles: an int
+    // power wraps past 2^63 instead of overflowing to infinity.
+    final rate = indexPrice.toDouble() / pow(10.0, precision);
+    if (!rate.isFinite || rate <= 0) {
+      throw PriceInvalidResponseException('Rate is not positive: $rate');
+    }
+    return rate;
+  }
+
+  /// A non-200 answer: 429 is its own case so the caller can back off.
+  static PriceException _statusException(Response<dynamic> response) {
+    final statusCode = response.statusCode;
+    if (statusCode == 429) {
+      return PriceRateLimitedException(
+        retryAfter: response.headers.value('retry-after'),
+      );
+    }
+    return PriceHttpException(statusCode);
+  }
+
+  static String? _rpcErrorCode(Object error) {
+    if (error is! Map<String, dynamic>) return null;
+    final data = error['data'];
+    final code = data is Map<String, dynamic> ? data['code'] : error['code'];
+    return switch (code) {
+      int value => value.toString(),
+      String value when RegExp(r'^[A-Z][A-Z0-9_]{0,63}$').hasMatch(value) =>
+        value,
+      _ => null,
+    };
   }
 
   Future<List<RateModel>> getPriceHistory({

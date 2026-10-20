@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bb_mobile/core/price/domain/price_failure.dart';
 import 'package:bb_mobile/core/price/domain/repositories/bitcoin_price_repository.dart';
 import 'package:bb_mobile/core/fees/domain/repositories/fees_repository.dart';
 import 'package:bb_mobile/core/recoverbull/domain/usecases/check_server_connection_usecase.dart';
@@ -14,7 +15,7 @@ import 'package:bull_payjoin/bull_payjoin.dart';
 import 'package:bull_tor/tor.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:primitives/primitives.dart' show Ok;
+import 'package:primitives/primitives.dart' show Err, Ok, Result;
 
 class _MockElectrumConnectivityPort extends Mock
     implements ElectrumConnectivityPort {}
@@ -446,6 +447,82 @@ void main() {
       usecase.execute(network: Network.bitcoinMainnet),
       throwsA(isA<StateError>()),
     );
+  });
+
+  group('Pricer probe', () {
+    /// Everything but the pricer is stubbed out of the way: Tor is not
+    /// required, payjoin is off, the other probes fail and are not asserted.
+    CheckAllServiceStatusUsecase usecaseWithPricer(
+      Result<double, PriceFailure> rate,
+    ) {
+      final electrum = _MockElectrumConnectivityPort();
+      when(
+        () => electrum.checkServersInUseAreOnlineForNetwork(any()),
+      ).thenAnswer((_) async => true);
+      final bitcoinPriceRepository = _MockBitcoinPriceRepository();
+      when(
+        () => bitcoinPriceRepository.getCurrencyValue(
+          amountSat: any(named: 'amountSat'),
+          currency: any(named: 'currency'),
+        ),
+      ).thenAnswer((_) async => rate);
+      final feesRepository = _MockFeesRepository();
+      when(
+        () => feesRepository.getNetworkFees(network: any(named: 'network')),
+      ).thenAnswer((_) async => throw Exception('Mempool probe failed'));
+      final payjoinPolicy = _MockPayjoinPolicyAccess();
+      when(payjoinPolicy.load).thenAnswer((_) async => Ok(_allPayjoinOff()));
+      final walletRepository = _MockWalletRepository();
+      when(walletRepository.isTorRequired).thenAnswer((_) async => false);
+      final settingsRepository = _MockSettingsRepository();
+      when(
+        () => settingsRepository.fetch(),
+      ).thenAnswer((_) async => _settings(useTorProxy: false));
+      final tor = _MockTor();
+      when(() => tor.external).thenReturn(_MockExternalTor());
+      return CheckAllServiceStatusUsecase(
+        electrumConnectivityPort: electrum,
+        bitcoinPriceRepository: bitcoinPriceRepository,
+        payjoinPolicy: payjoinPolicy,
+        payjoinDiagnostics: _MockPayjoinDiagnostics(),
+        feesRepository: feesRepository,
+        walletRepository: walletRepository,
+        ensureTorReadyUsecase: _MockEnsureTorReadyUsecase(),
+        checkServerConnectionUsecase: _MockCheckServerConnectionUsecase(),
+        settingsRepository: settingsRepository,
+        tor: tor,
+      );
+    }
+
+    test('a positive rate reports the pricer online', () async {
+      final usecase = usecaseWithPricer(const Ok(117518.92));
+
+      final status = await usecase.execute(network: Network.bitcoinMainnet);
+
+      expect(status.pricer.status, ServiceStatus.online);
+    });
+
+    test('a rate-limited pricer reports offline, not unknown', () async {
+      // The probe used to read a rate of 0 for this case; a typed failure
+      // is still a refusal, so the service is reported offline.
+      final usecase = usecaseWithPricer(
+        const Err(PriceRateLimitedFailure(retryAfter: '30')),
+      );
+
+      final status = await usecase.execute(network: Network.bitcoinMainnet);
+
+      expect(status.pricer.status, ServiceStatus.offline);
+    });
+
+    test('an unreachable pricer reports offline', () async {
+      final usecase = usecaseWithPricer(
+        const Err(PriceUnavailableFailure('connection refused')),
+      );
+
+      final status = await usecase.execute(network: Network.bitcoinMainnet);
+
+      expect(status.pricer.status, ServiceStatus.offline);
+    });
   });
 }
 

@@ -2139,4 +2139,66 @@ void main() {
       expect(cubit.state.txId, 'the-txid');
     });
   });
+
+  group('SendCubit exchange rate failures', () {
+    // A pricer that fails (rate limited under #3011, or unreachable) used to
+    // come back as a rate of 0 and, once the conversion threw instead, the
+    // exception escaped these methods. The rate on screen must survive and
+    // the failure must be reported through the state.
+    const previous = SendState(
+      exchangeRate: 100000,
+      fiatCurrencyCode: 'CAD',
+      inputAmountCurrencyCode: 'CAD',
+    );
+
+    test(
+      'a failed rate on currency change keeps the rate and currency on screen',
+      () async {
+        when(
+          () => convertSatsUsecase.execute(
+            currencyCode: any(named: 'currencyCode'),
+          ),
+        ).thenThrow(Exception('pricer: 429'));
+        final cubit = buildCubit()..setStateForTest(previous);
+        addTearDown(cubit.close);
+
+        await cubit.onCurrencyChanged('USD');
+
+        expect(cubit.state.exchangeRate, 100000);
+        expect(cubit.state.fiatCurrencyCode, 'CAD');
+        expect(cubit.state.inputAmountCurrencyCode, 'CAD');
+        expect(cubit.state.failure, isA<SendUnexpectedFailure>());
+      },
+    );
+
+    test('a failed rate refresh keeps the last valid rate', () async {
+      when(
+        () => convertSatsUsecase.execute(
+          currencyCode: any(named: 'currencyCode'),
+        ),
+      ).thenThrow(Exception('pricer: 429'));
+      final cubit = buildCubit()..setStateForTest(previous);
+      addTearDown(cubit.close);
+
+      await cubit.getExchangeRate();
+
+      expect(cubit.state.exchangeRate, 100000);
+      expect(cubit.state.failure, isA<SendUnexpectedFailure>());
+    });
+
+    test('a rate that loads replaces the previous one', () async {
+      when(
+        () => convertSatsUsecase.execute(currencyCode: 'USD'),
+      ).thenAnswer((_) async => 90000);
+      final cubit = buildCubit()..setStateForTest(previous);
+      addTearDown(cubit.close);
+
+      await cubit.onCurrencyChanged('USD');
+
+      expect(cubit.state.exchangeRate, 90000);
+      expect(cubit.state.fiatCurrencyCode, 'USD');
+      expect(cubit.state.inputAmountCurrencyCode, 'USD');
+      expect(cubit.state.failure, isNull);
+    });
+  });
 }

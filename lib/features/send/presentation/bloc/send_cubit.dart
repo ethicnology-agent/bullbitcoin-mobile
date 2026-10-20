@@ -1,3 +1,5 @@
+import 'package:bb_mobile/core/settings/domain/settings_entity.dart'
+    show BitcoinUnit;
 import 'package:primitives/primitives.dart' show Sats;
 import 'dart:async';
 
@@ -15,7 +17,6 @@ import 'package:bb_mobile/core/wallet/domain/consolidation_required_exception.da
 import 'package:bb_mobile/core/wallet/domain/insufficient_funds_exception.dart';
 import 'package:bb_mobile/core/wallet/domain/no_spendable_utxo_exception.dart';
 import 'package:bb_mobile/core/wallet/domain/usecases/check_liquid_consolidation_usecase.dart';
-import 'package:bb_mobile/core/settings/domain/settings_entity.dart';
 import 'package:bb_mobile/core/swaps/domain/usecases/verify_chain_swap_amount_send_usecase.dart';
 import 'package:bb_mobile/core/utils/amount_conversions.dart';
 import 'package:bb_mobile/core/utils/constants.dart';
@@ -760,10 +761,10 @@ class SendCubit extends Cubit<SendState>
     final settings = await _getSettingsUsecase.execute();
     final payjoinEnabled = await _getSendPayjoinEnabledUsecase.execute();
 
-    final (exchangeRate, fiatCurrencies) = await (
-      _convertSatsToCurrencyAmountUsecase.execute(),
-      _getAvailableCurrenciesUsecase.execute(),
-    ).wait;
+    final fiatCurrencies = await _getAvailableCurrenciesUsecase.execute();
+    // The currencies are a static list; only the rate can fail, and a failed
+    // rate must not take the currency picker down with it.
+    final exchangeRate = await _loadExchangeRate() ?? state.exchangeRate;
 
     final bitcoinUnit = settings.bitcoinUnit;
     final fiatCurrency = settings.currencyCode;
@@ -881,23 +882,26 @@ class SendCubit extends Cubit<SendState>
     if (![BitcoinUnit.btc.code, BitcoinUnit.sats.code].contains(currencyCode)) {
       // If the currency is a fiat currency, retrieve the exchange rate and replace
       //  the current exchange rate and fiat currency code.
+      final rate = await _loadExchangeRate(currencyCode: currencyCode);
+      // No rate for the new currency: the input stays on the currency whose
+      // rate is on screen rather than pricing one currency with another's.
+      if (rate == null) return;
       fiatCurrencyCode = currencyCode;
-      exchangeRate = await _convertSatsToCurrencyAmountUsecase.execute(
-        currencyCode: currencyCode,
-      );
+      exchangeRate = rate;
     } else {
       // If the currency is a bitcoin unit, set the fiat currency and exchange
       //  rate back to the currency from the settings.
-      final currencyValues = await Future.wait([
+      final (settings, payjoinEnabled) = await (
         _getSettingsUsecase.execute(),
-        _convertSatsToCurrencyAmountUsecase.execute(),
         _getSendPayjoinEnabledUsecase.execute(),
-      ]);
-
-      final settings = currencyValues[0] as SettingsEntity;
-      fiatCurrencyCode = settings.currencyCode;
-      exchangeRate = currencyValues[1] as double;
-      payjoinGloballyEnabled = currencyValues[2] as bool;
+      ).wait;
+      payjoinGloballyEnabled = payjoinEnabled;
+      final rate = await _loadExchangeRate();
+      // Same rule: the fiat currency and its rate move together or not at all.
+      if (rate != null) {
+        fiatCurrencyCode = settings.currencyCode;
+        exchangeRate = rate;
+      }
     }
 
     emit(
@@ -2568,11 +2572,29 @@ class SendCubit extends Cubit<SendState>
   }
 
   Future<void> getExchangeRate({String? currencyCode}) async {
-    final exchangeRate = await _convertSatsToCurrencyAmountUsecase.execute(
+    final exchangeRate = await _loadExchangeRate(
       currencyCode: currencyCode ?? state.fiatCurrencyCode,
     );
+    if (exchangeRate == null) return;
 
     emit(state.copyWith(exchangeRate: exchangeRate));
+  }
+
+  /// The rate for [currencyCode], or null when the pricer gave none.
+  ///
+  /// On null the caller keeps the last valid rate on screen and the failure
+  /// explains it (#3011): a rate-limited or unreachable pricer used to come
+  /// back as a rate of 0, and any exception here escaped the cubit.
+  Future<double?> _loadExchangeRate({String? currencyCode}) async {
+    try {
+      return await _convertSatsToCurrencyAmountUsecase.execute(
+        currencyCode: currencyCode,
+      );
+    } on Exception catch (e, st) {
+      log.warning('Failed to load the exchange rate', error: e, trace: st);
+      emit(state.copyWith(failure: SendUnexpectedFailure(e.toString())));
+      return null;
+    }
   }
 
   void _watchOrderSwap(String localId) {

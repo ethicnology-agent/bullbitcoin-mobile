@@ -208,8 +208,22 @@ class CheckAllServiceStatusUsecase {
       currency: 'USD',
     );
 
+    // A pricer that answers but refuses (rate limited) or answers nonsense is
+    // as unusable as one that is down: the probe reports it offline, and the
+    // typed failure says why in the log.
+    final bool isOnline;
+    switch (price) {
+      case Ok(:final value):
+        isOnline = value > 0;
+      case Err(:final failure):
+        log.warning(
+          'Pricer probe failed: ${failure.runtimeType} ${failure.logMessage}',
+        );
+        isOnline = false;
+    }
+
     return ServiceStatusInfo(
-      status: price > 0 ? ServiceStatus.online : ServiceStatus.offline,
+      status: isOnline ? ServiceStatus.online : ServiceStatus.offline,
       name: 'Pricer',
       lastChecked: DateTime.now(),
     );
