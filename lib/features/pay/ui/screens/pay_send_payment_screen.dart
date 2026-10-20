@@ -1,3 +1,4 @@
+import 'package:bb_mobile/core/widgets/cards/payin_past_deadline_notice.dart';
 import 'package:bb_mobile/core/widgets/lists/payment_detail_row.dart';
 import 'package:bb_mobile/core/fees/domain/fees_entity.dart';
 import 'package:bb_mobile/core/themes/app_theme.dart';
@@ -92,8 +93,14 @@ class PaySendPaymentScreen extends StatelessWidget {
         _ => null,
       },
     );
+    final canLeave = context.select(
+      (PayBloc bloc) => switch (bloc.state) {
+        final PayPaymentState s => s.canLeavePaymentScreen,
+        _ => !isConfirmingPayment,
+      },
+    );
     return PopScope<Object?>(
-      canPop: !isConfirmingPayment && !isPayinBroadcast,
+      canPop: canLeave,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) {
           context.read<PayBloc>().add(
@@ -449,6 +456,16 @@ class _BottomButtons extends StatelessWidget {
     final isReady = context.select(
       (PayBloc bloc) => bloc.state is PayPaymentState,
     );
+    final pastDeadlineTxid = context.select(
+      (PayBloc bloc) => switch (bloc.state) {
+        PayPaymentState(
+          isPayinPastDeadline: true,
+          :final payinBroadcastTxid?,
+        ) =>
+          payinBroadcastTxid,
+        _ => null,
+      },
+    );
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -476,7 +493,12 @@ class _BottomButtons extends StatelessWidget {
           ),
           const Gap(16),
         ],
-        if (isConfirmingPayment || isPayinBroadcast)
+        if (pastDeadlineTxid != null)
+          PayinPastDeadlineNotice(
+            transactionId: pastDeadlineTxid,
+            onLeave: () => Navigator.of(context).maybePop(),
+          )
+        else if (isConfirmingPayment || isPayinBroadcast)
           BullAsyncStatus.progress(
             label: isPayinBroadcast
                 ? context.loc.exchangePaymentSentRefreshingOrder
