@@ -1,3 +1,4 @@
+import 'package:bb_mobile/core/widgets/cards/payin_past_deadline_notice.dart';
 import 'package:bb_mobile/core/widgets/lists/payment_detail_row.dart';
 import 'package:bb_mobile/core/exchange/domain/entity/order.dart';
 import 'package:bb_mobile/core/fees/domain/fees_entity.dart';
@@ -63,13 +64,14 @@ class SellSendPaymentScreen extends StatelessWidget {
         _ => null,
       },
     );
-    final isPayinBroadcast = context.select(
-      (SellBloc bloc) =>
-          bloc.state is SellPaymentState &&
-          (bloc.state as SellPaymentState).isPayinBroadcast,
+    final canLeave = context.select(
+      (SellBloc bloc) => switch (bloc.state) {
+        final SellPaymentState s => s.canLeavePaymentScreen,
+        _ => !isConfirmingPayment,
+      },
     );
     return PopScope<Object?>(
-      canPop: !isConfirmingPayment && !isPayinBroadcast,
+      canPop: canLeave,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) {
           context.read<SellBloc>().add(
@@ -369,6 +371,16 @@ class _BottomButtons extends StatelessWidget {
     final isReady = context.select(
       (SellBloc bloc) => bloc.state is SellPaymentState,
     );
+    final pastDeadlineTxid = context.select(
+      (SellBloc bloc) => switch (bloc.state) {
+        SellPaymentState(
+          isPayinPastDeadline: true,
+          :final payinBroadcastTxid?,
+        ) =>
+          payinBroadcastTxid,
+        _ => null,
+      },
+    );
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -398,7 +410,12 @@ class _BottomButtons extends StatelessWidget {
           ),
           const Gap(16),
         ],
-        if (isConfirmingPayment || isPayinBroadcast)
+        if (pastDeadlineTxid != null)
+          PayinPastDeadlineNotice(
+            transactionId: pastDeadlineTxid,
+            onLeave: () => Navigator.of(context).maybePop(),
+          )
+        else if (isConfirmingPayment || isPayinBroadcast)
           BullAsyncStatus.progress(
             label: isPayinBroadcast
                 ? context.loc.exchangePaymentSentRefreshingOrder
