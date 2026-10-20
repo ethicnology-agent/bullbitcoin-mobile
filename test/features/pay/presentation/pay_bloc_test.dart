@@ -83,12 +83,18 @@ class _MockWallet extends Mock implements Wallet {}
 class _MockLogger extends Mock implements Logger {}
 
 class _MockPayOrder extends Mock implements FiatPaymentOrder {
-  // Read only by the order-progress log line; no test drives them.
+  // Unstubbed, an order is in progress with no payjoin; tests can still stub
+  // either with `when`.
   @override
-  OrderStatus get orderStatus => OrderStatus.inProgress;
+  OrderStatus get orderStatus =>
+      super.noSuchMethod(Invocation.getter(#orderStatus)) as OrderStatus? ??
+      OrderStatus.inProgress;
 
   @override
-  OrderPayjoinOutcome get payjoinOutcome => OrderPayjoinOutcome.none;
+  OrderPayjoinOutcome get payjoinOutcome =>
+      super.noSuchMethod(Invocation.getter(#payjoinOutcome))
+          as OrderPayjoinOutcome? ??
+      OrderPayjoinOutcome.none;
 }
 
 /// The confirmation path only ever runs from a [PayPaymentState] that earlier
@@ -971,6 +977,171 @@ void main() {
         ),
       ).called(1);
     });
+  });
+
+  group('PayBloc — order deadline', () {
+    test('a quote past its deadline is never paid', () async {
+      when(
+        () => payOrder.confirmationDeadline,
+      ).thenReturn(DateTime.now().subtract(const Duration(seconds: 1)));
+      when(
+        () => refreshPayOrder.execute(
+          orderId: any(named: 'orderId'),
+          expectedDepositAddress: any(named: 'expectedDepositAddress'),
+        ),
+      ).thenAnswer((_) async => Ok<FiatPaymentOrder, PayFailure>(payOrder));
+      bloc.seed(paymentState().copyWith(isPayjoinEnabled: false));
+
+      bloc.add(const PayEvent.sendPaymentConfirmed());
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      // The exchange expires the order at its deadline and does not credit a
+      // payin sent after it.
+      verifyNever(
+        () => broadcastPayPayin.bitcoin(any(), isPsbt: any(named: 'isPsbt')),
+      );
+      // A fresh quote is asked for instead.
+      verify(
+        () => refreshPayOrder.execute(
+          orderId: any(named: 'orderId'),
+          expectedDepositAddress: any(named: 'expectedDepositAddress'),
+        ),
+      ).called(1);
+    });
+  });
+
+  group('PayBloc — payin past the order deadline', () {
+    _MockPayOrder polled({
+      required OrderStatus status,
+      required OrderPayinStatus payin,
+    }) {
+      final order = _MockPayOrder();
+      when(() => order.orderId).thenReturn('order-1');
+      when(() => order.orderStatus).thenReturn(status);
+      when(() => order.payinStatus).thenReturn(payin);
+      when(() => order.toAddress).thenReturn(payinAddress);
+      when(() => order.bitcoinAddress).thenReturn(payinAddress);
+      return order;
+    }
+
+    void seedBroadcast() => bloc.seed(
+      paymentState(
+        isConfirmingPayment: true,
+      ).copyWith(payinBroadcastTxid: expectedTxid),
+    );
+
+    test('an expired order after the payin lets the user leave without '
+        'paying again', () async {
+      seedBroadcast();
+      when(() => getOrder.execute(orderId: any(named: 'orderId'))).thenAnswer(
+        (_) async => Ok<FiatPaymentOrder, PayFailure>(
+          polled(
+            status: OrderStatus.expired,
+            payin: OrderPayinStatus.notStarted,
+          ),
+        ),
+      );
+
+      expect((bloc.state as PayPaymentState).canLeavePaymentScreen, isFalse);
+      bloc.add(const PayEvent.pollOrderStatus());
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      final waiting = bloc.state as PayPaymentState;
+      expect(waiting.isConfirmingPayment, isFalse);
+      expect(waiting.payinBroadcastTxid, expectedTxid);
+      expect(waiting.canLeavePaymentScreen, isTrue);
+
+      bloc.add(const PayEvent.sendPaymentConfirmed());
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      verifyNever(
+        () => broadcastPayPayin.bitcoin(any(), isPsbt: any(named: 'isPsbt')),
+      );
+    });
+
+    test(
+      'a completion read for a replaced order cannot settle the new one',
+      () async {
+        seedBroadcast();
+        final read = Completer<Result<FiatPaymentOrder, PayFailure>>();
+        when(
+          () => getOrder.execute(orderId: any(named: 'orderId')),
+        ).thenAnswer((_) => read.future);
+        final replacementOrder = _MockPayOrder();
+        when(() => replacementOrder.orderId).thenReturn('order-2');
+
+        bloc.add(const PayEvent.sendPaymentConfirmed());
+        await untilCalled(() => getOrder.execute(orderId: 'order-1'));
+        bloc.seed(
+          (bloc.state as PayPaymentState).copyWith(payOrder: replacementOrder),
+        );
+        read.complete(
+          Ok<FiatPaymentOrder, PayFailure>(
+            polled(
+              status: OrderStatus.inProgress,
+              payin: OrderPayinStatus.inProgress,
+            ),
+          ),
+        );
+        await pumpEventQueue();
+
+        expect(bloc.state, isA<PayPaymentState>());
+      },
+      timeout: const Timeout(Duration(seconds: 20)),
+    );
+
+    test(
+      'leaving a payin reported past its deadline stops watching it',
+      () async {
+        seedBroadcast();
+        when(() => getOrder.execute(orderId: any(named: 'orderId'))).thenAnswer(
+          (_) async => Ok<FiatPaymentOrder, PayFailure>(
+            polled(
+              status: OrderStatus.expired,
+              payin: OrderPayinStatus.notStarted,
+            ),
+          ),
+        );
+        bloc.add(const PayEvent.pollOrderStatus());
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+
+        // Leave pops the screen, which reports the preparation as abandoned.
+        bloc.add(const PayEvent.paymentPreparationAbandoned());
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+
+        final left = bloc.state as PayPaymentState;
+        // No screen is left to show a late credit, so nothing polls for one.
+        expect(left.isPolling, isFalse);
+        // Still paid as far as this device knows: never paid again.
+        expect(left.payinBroadcastTxid, expectedTxid);
+      },
+    );
+
+    test(
+      'a payin the exchange accepts late still completes the payment',
+      () async {
+        seedBroadcast();
+        final expired = polled(
+          status: OrderStatus.expired,
+          payin: OrderPayinStatus.notStarted,
+        );
+        final accepted = polled(
+          status: OrderStatus.inProgress,
+          payin: OrderPayinStatus.inProgress,
+        );
+        var reads = 0;
+        when(() => getOrder.execute(orderId: any(named: 'orderId'))).thenAnswer(
+          (_) async => Ok<FiatPaymentOrder, PayFailure>(
+            reads++ == 0 ? expired : accepted,
+          ),
+        );
+
+        bloc.add(const PayEvent.pollOrderStatus());
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        bloc.add(const PayEvent.pollOrderStatus());
+
+        await bloc.stream.firstWhere((state) => state is PaySuccessState);
+      },
+    );
   });
 
   group('PayBloc — fee selection (#2521)', () {
