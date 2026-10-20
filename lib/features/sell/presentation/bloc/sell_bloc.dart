@@ -197,6 +197,14 @@ class SellBloc extends Bloc<SellEvent, SellState>
     SellPaymentPreparationAbandoned event,
     Emitter<SellState> emit,
   ) {
+    // Leaving a payin the exchange reported late: the screen that would show a
+    // late credit is gone, so stop polling for one. The broadcast latch stays.
+    final current = _currentPaymentState;
+    if (current != null && current.isPayinPastDeadline) {
+      _stopPolling();
+      emit(current.copyWith(isPolling: false));
+      return;
+    }
     if (_hasPaymentInFlight) return;
     ++_paymentPreparationGeneration;
     _bitcoinPreviewEpoch++;

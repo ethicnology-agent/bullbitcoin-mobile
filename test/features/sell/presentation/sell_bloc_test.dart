@@ -1046,6 +1046,35 @@ void main() {
     });
 
     test(
+      'leaving a payin reported past its deadline stops watching it',
+      () async {
+        seedBroadcast();
+        when(
+          () => loadSellContext.order(orderId: any(named: 'orderId')),
+        ).thenAnswer(
+          (_) async => Ok<Order, SellFailure>(
+            polled(
+              status: OrderStatus.expired,
+              payin: OrderPayinStatus.notStarted,
+            ),
+          ),
+        );
+        bloc.add(const SellEvent.pollOrderStatus());
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+
+        // Leave pops the screen, which reports the preparation as abandoned.
+        bloc.add(const SellEvent.paymentPreparationAbandoned());
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+
+        final left = bloc.state as SellPaymentState;
+        // No screen is left to show a late credit, so nothing polls for one.
+        expect(left.isPolling, isFalse);
+        // Still paid as far as this device knows: never paid again.
+        expect(left.payinBroadcastTxid, expectedTxid);
+      },
+    );
+
+    test(
       'a payin the exchange accepts late still completes the sale',
       () async {
         seedBroadcast();
