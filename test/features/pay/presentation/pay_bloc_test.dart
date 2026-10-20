@@ -981,6 +981,37 @@ void main() {
     });
 
     test(
+      'a completion read for a replaced order cannot settle the new one',
+      () async {
+        seedBroadcast();
+        final read = Completer<Result<FiatPaymentOrder, PayFailure>>();
+        when(
+          () => getOrder.execute(orderId: any(named: 'orderId')),
+        ).thenAnswer((_) => read.future);
+        final replacementOrder = _MockPayOrder();
+        when(() => replacementOrder.orderId).thenReturn('order-2');
+
+        bloc.add(const PayEvent.sendPaymentConfirmed());
+        await untilCalled(() => getOrder.execute(orderId: 'order-1'));
+        bloc.seed(
+          (bloc.state as PayPaymentState).copyWith(payOrder: replacementOrder),
+        );
+        read.complete(
+          Ok<FiatPaymentOrder, PayFailure>(
+            polled(
+              status: OrderStatus.inProgress,
+              payin: OrderPayinStatus.inProgress,
+            ),
+          ),
+        );
+        await pumpEventQueue();
+
+        expect(bloc.state, isA<PayPaymentState>());
+      },
+      timeout: const Timeout(Duration(seconds: 20)),
+    );
+
+    test(
       'leaving a payin reported past its deadline stops watching it',
       () async {
         seedBroadcast();

@@ -1179,20 +1179,25 @@ class PayBloc extends Bloc<PayEvent, PayState>
     // the confirming state and let the poll take the order to success when
     // the payment shows up, rather than celebrating an order the exchange
     // has never seen paid.
+    // The read took seconds: settle only the order still on screen, from the
+    // state as it is now rather than as it was before the request.
+    final current = _currentPaymentState;
+    if (current == null ||
+        current.payOrder.orderId != paymentState.payOrder.orderId) {
+      return;
+    }
+
     final payinStatus = latestOrder.payinStatus;
     if (payinStatus != OrderPayinStatus.inProgress &&
         payinStatus != OrderPayinStatus.awaitingConfirmation &&
         payinStatus != OrderPayinStatus.completed) {
-      final current = _currentPaymentState;
-      if (current != null &&
-          current.isPayinBroadcast &&
-          _isPastDeadline(latestOrder)) {
+      if (current.isPayinBroadcast && _isPastDeadline(latestOrder)) {
         _reportPayinPastDeadline(emit, current, latestOrder);
       }
       return;
     }
 
-    emit(paymentState.toSuccessState(payOrder: latestOrder));
+    emit(current.toSuccessState(payOrder: latestOrder));
   }
 
   void _emitSendPaymentError(Emitter<PayState> emit, PayFailure error) {
