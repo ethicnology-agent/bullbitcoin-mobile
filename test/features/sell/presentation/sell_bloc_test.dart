@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:bb_mobile/core/exchange/domain/entity/order.dart';
 import 'package:bb_mobile/core/exchange/domain/entity/user_summary.dart';
@@ -1189,6 +1190,42 @@ void main() {
         expect(bloc.state, isA<SellPaymentState>());
       },
       timeout: const Timeout(Duration(seconds: 20)),
+    );
+
+    test(
+      'the past-deadline warning survives the exported log filter',
+      () async {
+        final previousLogger = log;
+        final directory = await Directory.systemTemp.createTemp('sell_logs');
+        addTearDown(() async {
+          log = previousLogger;
+          await directory.delete(recursive: true);
+        });
+        log = Logger.replace(directory: directory);
+        await log.ensureLogsExist(writeDiagnosticContext: false);
+        seedBroadcast();
+        when(
+          () => loadSellContext.order(orderId: any(named: 'orderId')),
+        ).thenAnswer(
+          (_) async => Ok<Order, SellFailure>(
+            polled(
+              status: OrderStatus.expired,
+              payin: OrderPayinStatus.notStarted,
+            ),
+          ),
+        );
+
+        bloc.add(const SellEvent.pollOrderStatus());
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+
+        // The logger redacts any long run of lowercase words as a possible
+        // mnemonic; on a phone this line came out as "[REDACTED]".
+        final lines = await log.readLogs();
+        expect(
+          lines.where((line) => line.contains('past deadline: status=expired')),
+          hasLength(1),
+        );
+      },
     );
 
     test(
