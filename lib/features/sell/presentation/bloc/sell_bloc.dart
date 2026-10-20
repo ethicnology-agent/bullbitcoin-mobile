@@ -1305,8 +1305,10 @@ class SellBloc extends Bloc<SellEvent, SellState>
   ) {
     if (!current.isPayinPastDeadline) {
       log.warning(
-        'Sell payin broadcast but the exchange reports the order past its '
-        'deadline: status=${latestOrder.orderStatus.name}, '
+        // Kept short and punctuated: a long run of lowercase words is
+        // redacted from exported logs as a possible mnemonic.
+        'Sell payin broadcast; exchange reports order past deadline: '
+        'status=${latestOrder.orderStatus.name}, '
         'payin=${latestOrder.payinStatus.name}',
       );
       // Still watched, in case the exchange credits it late, but no longer at
