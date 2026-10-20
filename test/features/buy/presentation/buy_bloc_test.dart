@@ -253,6 +253,10 @@ void main() {
 
   test('overlapping order refreshes send one request', () async {
     final refresh = _MockRefreshBuyOrderUsecase();
+    final cancel = _MockCancelAbandonedBuyPayjoinUsecase();
+    when(
+      () => cancel.execute(any()),
+    ).thenAnswer((_) async => const Ok<void, BuyFailure>(null));
     final order = _MockBuyOrder();
     when(() => order.orderId).thenReturn('order-1');
     final response = Completer<Result<BuyOrder, BuyFailure>>();
@@ -265,7 +269,7 @@ void main() {
       createBuyOrderUsecase: _MockCreateBuyOrderUsecase(),
       refreshBuyOrderUsecase: refresh,
       accelerateBuyOrderUsecase: _MockAccelerateBuyOrderUsecase(),
-      cancelAbandonedBuyPayjoinUsecase: _MockCancelAbandonedBuyPayjoinUsecase(),
+      cancelAbandonedBuyPayjoinUsecase: cancel,
       getBuyPayjoinEnabledUsecase: _MockGetBuyPayjoinEnabledUsecase(),
       labelCompletedBuyOrderUsecase: _MockLabelCompletedBuyOrderUsecase(),
     );
