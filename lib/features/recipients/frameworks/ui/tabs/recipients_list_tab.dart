@@ -157,20 +157,33 @@ class RecipientsListTabState extends State<RecipientsListTab> {
             if (!state.canChooseSepaType) return const SizedBox.shrink();
             return Padding(
               padding: const EdgeInsets.only(top: 16.0),
-              child: BBSegmentedButton(
-                key: _sepaTypeSelectorKey,
-                items: {
-                  RecipientType.sepaEur.name,
-                  RecipientType.confidentialSepaEur.name,
-                },
-                labels: {
-                  RecipientType.sepaEur.name: context.loc.recipientsTypeSepa,
-                  RecipientType.confidentialSepaEur.name:
-                      context.loc.recipientsTypeConfidentialSepa,
-                },
-                selected: state.sepaType.name,
-                onChanged: (value) =>
-                    _onSepaTypeChanged(RecipientType.values.byName(value)),
+              child: Column(
+                crossAxisAlignment: .start,
+                children: [
+                  BBSegmentedButton(
+                    key: _sepaTypeSelectorKey,
+                    items: {
+                      RecipientType.sepaEur.name,
+                      RecipientType.confidentialSepaEur.name,
+                    },
+                    labels: {
+                      RecipientType.sepaEur.name:
+                          context.loc.recipientsTypeSepa,
+                      RecipientType.confidentialSepaEur.name:
+                          context.loc.recipientsTypeConfidentialSepa,
+                    },
+                    selected: state.sepaType.name,
+                    onChanged: (value) =>
+                        _onSepaTypeChanged(RecipientType.values.byName(value)),
+                  ),
+                  if (state.sepaType == RecipientType.confidentialSepaEur) ...[
+                    const Gap(8),
+                    Text(
+                      context.loc.recipientsTypeConfidentialSepaDescription,
+                      style: context.font.bodyMedium,
+                    ),
+                  ],
+                ],
               ),
             );
           },
