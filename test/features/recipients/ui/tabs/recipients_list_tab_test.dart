@@ -19,6 +19,7 @@ import 'package:bb_mobile/features/recipients/ui/screens/virtual_iban_onboarding
 import 'package:bb_mobile/generated/l10n/localization.dart';
 import 'package:bb_mobile/locator.dart';
 import 'package:bloc_test/bloc_test.dart';
+import 'package:bull_ui/bull_ui.dart' show BullButton;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -109,7 +110,14 @@ void main() {
     WidgetTester tester,
     AppLocalizations loc,
   ) async {
-    await tester.tap(find.text(loc.recipientsTypeConfidentialSepa));
+    await tester.tap(
+      find
+          .descendant(
+            of: find.byType(BBSegmentedButton),
+            matching: find.text(loc.recipientsTypeConfidentialSepa),
+          )
+          .hitTestable(),
+    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
   }
@@ -146,9 +154,10 @@ void main() {
       ),
     );
     await tester.pump();
-    await tester.tap(find.text(loc.recipientsContinue));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(
+      find.widgetWithText(BullButton, loc.recipientsContinue).hitTestable(),
+    );
+    await tester.pumpAndSettle();
 
     verify(
       () => bloc.add(const RecipientsEvent.virtualIbanActivated()),
@@ -171,8 +180,7 @@ void main() {
     await tester.pump();
 
     await tester.tap(find.text(loc.recipientsConfidentialSepaUseRegularSepa));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
 
     verify(
       () => bloc.add(
@@ -202,8 +210,7 @@ void main() {
     Navigator.of(
       tester.element(find.byType(VirtualIbanOnboardingScreen)),
     ).pop();
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
 
     expect(
       tester.widget<BBSegmentedButton>(find.byType(BBSegmentedButton)).selected,
