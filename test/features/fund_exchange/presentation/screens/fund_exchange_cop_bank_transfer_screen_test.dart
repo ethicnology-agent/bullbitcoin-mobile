@@ -26,6 +26,8 @@ import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:primitives/primitives.dart';
 
+import '../widget_test_helpers.dart';
+
 const _link = 'https://pay.example.com/abc';
 const _copMethod = CopBankTransfer(bankCode: 'BC01', amountCop: 50000);
 
@@ -106,7 +108,7 @@ Future<void> _pumpLoaded(WidgetTester tester, ExternalLinkPort link) async {
   // Completer must therefore be released *inside* the test body — tear-downs
   // run outside the FakeAsync zone, so completing one there never advances the
   // microtask that would finish the handler, and the test hangs.
-  addTearDown(bloc.close);
+  addTearDown(() => closeFundExchangeBloc(tester, bloc));
   bloc.add(
     const FundExchangeEvent.fundingDetailsRequested(fundingMethod: _copMethod),
   );

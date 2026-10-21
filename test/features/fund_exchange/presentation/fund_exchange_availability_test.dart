@@ -19,6 +19,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:primitives/primitives.dart';
 
+import 'widget_test_helpers.dart';
+
 class _MockGetUserSummary extends Mock
     implements GetFundExchangeUserSummaryUsecase {}
 
@@ -151,9 +153,9 @@ void main() {
       bloc.add(const FundExchangeEvent.started());
       await pumpEventQueue();
 
-      final closing = bloc.close();
+      await bloc.close();
       check.complete(const Ok(true));
-      await closing;
+      await pumpEventQueue();
 
       expect(bloc.state.isConfidentialSepaAvailable, isFalse);
     },
@@ -162,6 +164,7 @@ void main() {
   testWidgets('shows a generic error and retry restores the funding option', (
     tester,
   ) async {
+    addTearDown(() => closeFundExchangeBloc(tester, bloc));
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.themeData(AppThemeType.light),
@@ -176,9 +179,12 @@ void main() {
     final loc = AppLocalizations.of(
       tester.element(find.byType(FundExchangeMethodSelectionScreen)),
     );
-    bloc.add(const FundExchangeEvent.started());
-    await tester.pump();
-    await tester.pump();
+    await tester.runAsync(() async {
+      final started = bloc.stream.firstWhere((state) => state.isStarted);
+      bloc.add(const FundExchangeEvent.started());
+      await started;
+    });
+    await tester.pumpAndSettle();
 
     expect(
       find.text(
@@ -193,6 +199,7 @@ void main() {
     when(() => getAvailability.execute()).thenAnswer((_) => retry.future);
     await tester.ensureVisible(find.text(loc.retry));
     await tester.tap(find.text(loc.retry));
+    await tester.runAsync(pumpEventQueue);
     await tester.pump();
 
     expect(bloc.state.isLoadingConfidentialSepaAvailability, isTrue);
@@ -207,9 +214,14 @@ void main() {
       isTrue,
     );
 
-    retry.complete(const Ok(true));
-    await tester.pump();
-    await tester.pump();
+    await tester.runAsync(() async {
+      final available = bloc.stream.firstWhere(
+        (state) => state.isConfidentialSepaAvailable,
+      );
+      retry.complete(const Ok(true));
+      await available;
+    });
+    await tester.pumpAndSettle();
 
     expect(find.text(loc.fundExchangeMethodConfidentialSepa), findsOneWidget);
     expect(find.text(loc.retry), findsNothing);

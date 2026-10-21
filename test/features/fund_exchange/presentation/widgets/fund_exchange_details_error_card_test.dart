@@ -22,6 +22,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:primitives/primitives.dart';
 
+import '../widget_test_helpers.dart';
+
 const _rawReason =
     'getUserPaymentProcessorCode API error [ERR_ORD_KYC400]: '
     'Missing fields for DE89370400440532013000';
@@ -84,7 +86,7 @@ Future<InfoCard> _pumpCard(
   FundExchangeBloc bloc, {
   bool triggerFailure = true,
 }) async {
-  addTearDown(bloc.close);
+  addTearDown(() => closeFundExchangeBloc(tester, bloc));
   if (triggerFailure) {
     bloc.add(
       FundExchangeEvent.fundingDetailsRequested(fundingMethod: RegularSepa()),
