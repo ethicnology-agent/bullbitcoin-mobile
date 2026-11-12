@@ -117,9 +117,9 @@ packages:
     dependency: transitive
     description:
       path: "."
-      ref: "757d4e81a55d920fdf5c9d48d65723aa8790e6bd"
-      resolved-ref: "757d4e81a55d920fdf5c9d48d65723aa8790e6bd"
-      url: "https://github.com/ethicnology/bdk-dart"
+      ref: "227c9dcb967e23e8aea190611dd9b2489ee14938"
+      resolved-ref: "227c9dcb967e23e8aea190611dd9b2489ee14938"
+      url: "https://github.com/ethicnology-agent/bdk-dart"
     source: git
     version: "1.0.1"
   bech32:
@@ -174,9 +174,9 @@ packages:
     dependency: "direct main"
     description:
       path: "packages/bitbox-transport"
-      ref: e538cbc6fe51a9a6ce425d2513e0c1422ca89132
-      resolved-ref: e538cbc6fe51a9a6ce425d2513e0c1422ca89132
-      url: "https://github.com/SatoshiPortal/bull_sdk"
+      ref: a661a1a67d6ab5488310f7f4154a2f055c70b57a
+      resolved-ref: a661a1a67d6ab5488310f7f4154a2f055c70b57a
+      url: "https://github.com/ethicnology-agent/bull_sdk"
     source: git
     version: "0.1.0"
   bitcoin_base:
@@ -240,9 +240,9 @@ packages:
     dependency: "direct main"
     description:
       path: "packages/boltz-stream"
-      ref: e538cbc6fe51a9a6ce425d2513e0c1422ca89132
-      resolved-ref: e538cbc6fe51a9a6ce425d2513e0c1422ca89132
-      url: "https://github.com/SatoshiPortal/bull_sdk"
+      ref: a661a1a67d6ab5488310f7f4154a2f055c70b57a
+      resolved-ref: a661a1a67d6ab5488310f7f4154a2f055c70b57a
+      url: "https://github.com/ethicnology-agent/bull_sdk"
     source: git
     version: "0.1.0"
   boolean_selector:
@@ -329,9 +329,9 @@ packages:
     dependency: "direct main"
     description:
       path: "packages/bull_sdk"
-      ref: e538cbc6fe51a9a6ce425d2513e0c1422ca89132
-      resolved-ref: e538cbc6fe51a9a6ce425d2513e0c1422ca89132
-      url: "https://github.com/SatoshiPortal/bull_sdk"
+      ref: a661a1a67d6ab5488310f7f4154a2f055c70b57a
+      resolved-ref: a661a1a67d6ab5488310f7f4154a2f055c70b57a
+      url: "https://github.com/ethicnology-agent/bull_sdk"
     source: git
     version: "1.0.0+1"
   camera:
@@ -442,10 +442,10 @@ packages:
     dependency: transitive
     description:
       name: code_assets
-      sha256: "83ccdaa064c980b5596c35dd64a8d3ecc68620174ab9b90b6343b753aa721687"
+      sha256: bf394f466ba9205f1812a0433b392d6af280f155f56651eda7c18cc32ed493b8
       url: "https://pub.dev"
     source: hosted
-    version: "1.0.0"
+    version: "1.2.1"
   code_builder:
     dependency: transitive
     description:
@@ -873,10 +873,18 @@ packages:
     dependency: transitive
     description:
       name: flutter_rust_bridge
-      sha256: e87d6b9ee934dcd24a128ccb2bd91905d2d5fe5c06245d6a8f5477d4907a437a
+      sha256: ec69331e2335ab4d456c0a9fc700892c2c85b72b9c0cb39df3ecfe8833d5d5c8
       url: "https://pub.dev"
     source: hosted
-    version: "2.12.0"
+    version: "2.13.0"
+  flutter_rust_bridge_hooks:
+    dependency: transitive
+    description:
+      name: flutter_rust_bridge_hooks
+      sha256: "19900fbcaa8ddc2a4f1b13994ef34393eda129ebccc59ceb887a8fd2cf5def3e"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.13.0"
   flutter_secure_storage:
     dependency: "direct main"
     description:
@@ -1120,10 +1128,10 @@ packages:
     dependency: transitive
     description:
       name: hooks
-      sha256: "025f060e86d2d4c3c47b56e33caf7f93bf9283340f26d23424ebcfccf34f621e"
+      sha256: "9a62a50b50b769a737bc0a8ff381f333529df3ab746b2f6b02e83760231455ba"
       url: "https://pub.dev"
     source: hosted
-    version: "1.0.3"
+    version: "2.0.2"
   html:
     dependency: transitive
     description:
@@ -1434,22 +1442,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.5"
-  native_toolchain_c:
-    dependency: transitive
-    description:
-      name: native_toolchain_c
-      sha256: "6ba77bb18063eebe9de401f5e6437e95e1438af0a87a3a39084fbd37c90df572"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.17.6"
   native_toolchain_rust:
     dependency: transitive
     description:
       name: native_toolchain_rust
-      sha256: "26d4dcae954328af4ebfa8fc56cca0bf74b9ae8b4a6132de5da2071ac3d237b3"
+      sha256: faa57d2258a3b0fd2a634054f54e4496c9fcbd971977e7d2b7e6916d56892857
       url: "https://pub.dev"
     source: hosted
-    version: "1.0.4"
+    version: "1.0.4+0"
   ndef:
     dependency: "direct main"
     description:
@@ -1494,17 +1494,17 @@ packages:
     dependency: transitive
     description:
       name: objective_c
-      sha256: "100a1c87616ab6ed41ec263b083c0ef3261ee6cd1dc3b0f35f8ddfa4f996fe52"
+      sha256: b7fb95a6d9a4f009edd63dc5ac69f07420b23a16161c6dd8660290b59c602e8e
       url: "https://pub.dev"
     source: hosted
-    version: "9.3.0"
+    version: "9.5.0"
   onion:
     dependency: transitive
     description:
       path: "packages/onion"
-      ref: e538cbc6fe51a9a6ce425d2513e0c1422ca89132
-      resolved-ref: e538cbc6fe51a9a6ce425d2513e0c1422ca89132
-      url: "https://github.com/SatoshiPortal/bull_sdk"
+      ref: a661a1a67d6ab5488310f7f4154a2f055c70b57a
+      resolved-ref: a661a1a67d6ab5488310f7f4154a2f055c70b57a
+      url: "https://github.com/ethicnology-agent/bull_sdk"
     source: git
     version: "0.1.0"
   package_config:
@@ -1598,11 +1598,12 @@ packages:
   payjoin:
     dependency: transitive
     description:
-      name: payjoin
-      sha256: "2ed55d9abf8c5be8a0604a94a75eacd54ad8245613ee319456012bfbdc361f3e"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.25.1"
+      path: "payjoin-ffi/dart"
+      ref: "06417f23bb623408d45805adcf2c8207f672be58"
+      resolved-ref: "06417f23bb623408d45805adcf2c8207f672be58"
+      url: "https://github.com/ethicnology-agent/rust-payjoin"
+    source: git
+    version: "0.26.0"
   permission_handler:
     dependency: "direct main"
     description:
@@ -1804,15 +1805,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.5"
-  rust_lib_bull_sdk:
-    dependency: transitive
-    description:
-      path: "packages/bull_sdk/rust_builder"
-      ref: e538cbc6fe51a9a6ce425d2513e0c1422ca89132
-      resolved-ref: e538cbc6fe51a9a6ce425d2513e0c1422ca89132
-      url: "https://github.com/SatoshiPortal/bull_sdk"
-    source: git
-    version: "0.0.1"
   rxdart:
     dependency: transitive
     description:
@@ -1825,9 +1817,9 @@ packages:
     dependency: "direct main"
     description:
       path: "packages/satoshifier"
-      ref: e538cbc6fe51a9a6ce425d2513e0c1422ca89132
-      resolved-ref: e538cbc6fe51a9a6ce425d2513e0c1422ca89132
-      url: "https://github.com/SatoshiPortal/bull_sdk"
+      ref: a661a1a67d6ab5488310f7f4154a2f055c70b57a
+      resolved-ref: a661a1a67d6ab5488310f7f4154a2f055c70b57a
+      url: "https://github.com/ethicnology-agent/bull_sdk"
     source: git
     version: "0.0.1"
   sentry:

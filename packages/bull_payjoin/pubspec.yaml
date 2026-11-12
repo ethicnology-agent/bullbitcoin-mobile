@@ -11,16 +11,20 @@ resolution: workspace
 dependencies:
   bull_sdk:
     git:
-      url: https://github.com/SatoshiPortal/bull_sdk
-      ref: e538cbc6fe51a9a6ce425d2513e0c1422ca89132
+      url: https://github.com/ethicnology-agent/bull_sdk
+      ref: a661a1a67d6ab5488310f7f4154a2f055c70b57a
       path: packages/bull_sdk
   crypto: ^3.0.7
   dio: ^5.9.0
   drift: ^2.29.0
   freezed_annotation: ^3.1.0
   meta: ^1.17.0
-  # Use the published archive for its release-locked native Cargo dependencies.
-  payjoin: 0.25.1
+  # Temporary source-build fork until hooks 2 is published on pub.dev.
+  payjoin:
+    git:
+      url: https://github.com/ethicnology-agent/rust-payjoin
+      ref: 06417f23bb623408d45805adcf2c8207f672be58
+      path: payjoin-ffi/dart
   primitives:
   sqlite3: ^2.9.4
   synchronized: ^3.4.0

@@ -7,6 +7,10 @@ version: 6.15.0+228
 environment:
   sdk: "3.12.2"
   flutter: "3.44.9"
+hooks:
+  user_defines:
+    payjoin:
+      build: source
 workspace:
   - packages/secrets
   - packages/bull_payjoin
@@ -63,18 +67,18 @@ dependencies:
   file_picker: 10.3.6
   bull_sdk:
     git:
-      url: https://github.com/SatoshiPortal/bull_sdk
-      ref: e538cbc6fe51a9a6ce425d2513e0c1422ca89132
+      url: https://github.com/ethicnology-agent/bull_sdk
+      ref: a661a1a67d6ab5488310f7f4154a2f055c70b57a
       path: packages/bull_sdk
   boltz_stream:
     git:
-      url: https://github.com/SatoshiPortal/bull_sdk
-      ref: e538cbc6fe51a9a6ce425d2513e0c1422ca89132
+      url: https://github.com/ethicnology-agent/bull_sdk
+      ref: a661a1a67d6ab5488310f7f4154a2f055c70b57a
       path: packages/boltz-stream
   bitbox_transport:
     git:
-      url: https://github.com/SatoshiPortal/bull_sdk
-      ref: e538cbc6fe51a9a6ce425d2513e0c1422ca89132
+      url: https://github.com/ethicnology-agent/bull_sdk
+      ref: a661a1a67d6ab5488310f7f4154a2f055c70b57a
       path: packages/bitbox-transport
   universal_ble: ^1.2.0
   auto_size_text: ^3.0.0
@@ -130,8 +134,8 @@ dependencies:
       ref: f5deec21fb0ac2ee507de1f683344b03f8cc92a3
   satoshifier:
     git:
-      url: https://github.com/SatoshiPortal/bull_sdk
-      ref: e538cbc6fe51a9a6ce425d2513e0c1422ca89132
+      url: https://github.com/ethicnology-agent/bull_sdk
+      ref: a661a1a67d6ab5488310f7f4154a2f055c70b57a
       path: packages/satoshifier
   flutter_nfc_kit: ^3.6.1
   ndef: ^0.4.0

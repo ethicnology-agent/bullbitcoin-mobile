@@ -13,8 +13,8 @@ dependencies:
     sdk: flutter
   bull_sdk:
     git:
-      url: https://github.com/SatoshiPortal/bull_sdk
-      ref: e538cbc6fe51a9a6ce425d2513e0c1422ca89132
+      url: https://github.com/ethicnology-agent/bull_sdk
+      ref: a661a1a67d6ab5488310f7f4154a2f055c70b57a
       path: packages/bull_sdk
   sqlite3: 2.9.4
   bull_logger:
