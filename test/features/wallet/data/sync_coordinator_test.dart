@@ -98,7 +98,7 @@ void main() {
   tearDown(() => coordinator.dispose());
 
   test(
-    'regtest syncs Liquid, skips SP and swaps, and logs their configuration once',
+    'regtest syncs Liquid, skips SP and exchange swaps, and logs configuration once',
     () async {
       final directory = await Directory.systemTemp.createTemp(
         'network-sync-logs-',
@@ -125,7 +125,7 @@ void main() {
       await coordinator.sync(
         only: {SyncKind.liquid, SyncKind.sp, SyncKind.swaps},
       );
-      // Liquid regtest is supported since lwk-dart#99; SP and swaps are not.
+      // Liquid and native swaps support regtest; legacy exchange sync and SP do not.
       verify(() => getWallets.execute(onlyLiquid: true)).called(greaterThan(0));
       verifyNever(syncSwaps.call);
       expect(spRuns, 0);

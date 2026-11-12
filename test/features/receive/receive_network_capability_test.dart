@@ -121,7 +121,7 @@ void main() {
         );
         expect(
           selection.items,
-          // Regtest has no swaps, so no Lightning; Home still offers Liquid.
+          // The exchange receive provider is unavailable on regtest.
           network == Network.bitcoinRegtest
               ? {loc.receiveBitcoin, if (fromHome) loc.receiveLiquid}
               : {

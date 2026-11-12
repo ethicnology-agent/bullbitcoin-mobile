@@ -175,6 +175,29 @@ void main() {
     });
   });
 
+  test(
+    'regtest refuses direct exchange execution before wallet or provider IO',
+    () async {
+      when(() => settingsRepository.fetch()).thenAnswer(
+        (_) async => const SettingsEntity(
+          environment: Environment.regtest,
+          bitcoinUnit: BitcoinUnit.sats,
+          currencyCode: 'USD',
+        ),
+      );
+
+      final result = await provider.execute(settings);
+
+      expect(result, isA<Err<String, AutoswapFailure>>());
+      verifyZeroInteractions(walletRepository);
+      verifyZeroInteractions(liquidWalletRepository);
+      verifyZeroInteractions(getReceiveAddress);
+      verifyZeroInteractions(broadcastLiquid);
+      verifyZeroInteractions(swapFacade);
+      verifyZeroInteractions(labelsFacade);
+    },
+  );
+
   test('stops before signing when Liquid build 1 returns Err', () async {
     var builds = 0;
     when(

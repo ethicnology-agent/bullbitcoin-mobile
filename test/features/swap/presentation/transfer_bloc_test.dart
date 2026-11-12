@@ -1348,6 +1348,43 @@ void main() {
     syncCompleter.complete(_wallet());
   });
 
+  test('regtest startup never reads legacy exchange orders', () async {
+    when(() => getSettings.execute()).thenAnswer(
+      (_) async => const SettingsEntity(
+        environment: Environment.regtest,
+        bitcoinUnit: BitcoinUnit.sats,
+        currencyCode: 'USD',
+      ),
+    );
+    when(
+      () => getPendingOrders.execute(),
+    ).thenAnswer((_) async => const Ok([]));
+    when(() => getWallets.execute()).thenAnswer(
+      (_) async => Ok([
+        _liquidWallet().copyWith(network: Network.liquidRegtest),
+        _destinationWallet().copyWith(network: Network.bitcoinRegtest),
+      ]),
+    );
+    when(
+      () => getNetworkFees.execute(isLiquid: any(named: 'isLiquid')),
+    ).thenAnswer((_) async => _feeOptions());
+    when(
+      () => getExchangeRate.execute(currencyCode: 'USD'),
+    ).thenAnswer((_) async => const Ok(1.0));
+
+    bloc.add(const TransferEvent.started());
+    await bloc.stream.firstWhere((state) => !state.isStarting);
+
+    verifyZeroInteractions(getPendingOrders);
+    expect(bloc.state.startError, isNull);
+    expect(bloc.state.fromWallet?.network, Network.liquidRegtest);
+    expect(bloc.state.toWallet?.network, Network.bitcoinRegtest);
+    expect(bloc.state.orderSwap, isNull);
+    verifyZeroInteractions(watchOrder);
+    verifyZeroInteractions(getQuote);
+    verifyZeroInteractions(createOrder);
+  });
+
   test('resumes a stored prepared transfer on start', () async {
     final settings = SettingsEntity(
       environment: Environment.testnet,
