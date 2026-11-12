@@ -1,4 +1,7 @@
 import 'package:bb_mobile/core/storage/sqlite_database.dart';
+import 'package:bb_mobile/core/storage/database_seeds.dart';
+import 'package:bb_mobile/core/storage/migrations/schema_15_to_16.dart';
+import 'package:bb_mobile/core/storage/sqlite_database.steps.dart';
 import 'package:drift_dev/api/migrations_native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -8,6 +11,90 @@ import 'generated/schema_v16.dart' as v16;
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 
 void main() {
+  test('Blockstream upgrade and reruns preserve Liquid regtest seeds', () async {
+    final verifier = SchemaVerifier(GeneratedHelper());
+    final schema = await verifier.schemaAt(15);
+    final old = v15.DatabaseAtV15(schema.newConnection());
+    for (final (url, testnet, liquid, priority, custom) in [
+      ('ssl://blockstream.info:993', 1, 0, 7, 0),
+      ('blockstream.info:465', 1, 1, 9, 1),
+      ('ssl://blockstream.info:700', 0, 0, 4, 0),
+      ('ssl://bitcoin-mainnet.blockstream.info:50002', 0, 0, 6, 0),
+    ]) {
+      await old.customStatement(
+        'INSERT INTO electrum_servers '
+        '(url, is_testnet, is_liquid, priority, is_custom) VALUES (?, ?, ?, ?, ?)',
+        [url, testnet, liquid, priority, custom],
+      );
+    }
+    await old.close();
+    final db = SqliteDatabase(schema.newConnection());
+    addTearDown(db.close);
+    await verifier.migrateAndValidate(db, 16);
+    await DatabaseSeeds.ensureRegtestDefaults(db);
+    await db.customStatement(
+      "UPDATE electrum_servers SET priority = 11 WHERE network = 'liquidRegtest'",
+    );
+    await db.customStatement(
+      "UPDATE electrum_settings SET stop_gap = 37, timeout = 11, retry = 2 "
+      "WHERE network = 'liquidRegtest'",
+    );
+    final servers = await db.select(db.electrumServers).get();
+    final settings = await db.select(db.electrumSettings).get();
+    for (var pass = 0; pass < 2; pass++) {
+      await Schema15To16.migrate(db.createMigrator(), Schema16(database: db));
+      await DatabaseSeeds.ensureRegtestDefaults(db);
+    }
+    expect(await db.select(db.electrumServers).get(), unorderedEquals(servers));
+    expect(
+      await db.select(db.electrumSettings).get(),
+      unorderedEquals(settings),
+    );
+    expect(
+      servers.where((row) => row.url == 'ssl://blockstream.info:993'),
+      isEmpty,
+    );
+    final migrated = servers.singleWhere(
+      (row) => row.url == 'ssl://bitcoin-testnet.blockstream.info:50002',
+    );
+    expect(migrated.network, 'bitcoinTestnet');
+    expect(migrated.priority, 7);
+    expect(migrated.isCustom, isFalse);
+    final custom = servers.singleWhere(
+      (row) => row.url == 'blockstream.info:465',
+    );
+    expect(custom.network, 'liquidTestnet');
+    expect(custom.priority, 9);
+    expect(custom.isCustom, isTrue);
+    // UPDATE OR IGNORE preserves both rows when the destination already exists.
+    expect(
+      servers
+          .singleWhere((row) => row.url == 'ssl://blockstream.info:700')
+          .priority,
+      4,
+    );
+    expect(
+      servers
+          .singleWhere(
+            (row) => row.url == 'ssl://bitcoin-mainnet.blockstream.info:50002',
+          )
+          .priority,
+      6,
+    );
+    final loopback = servers.singleWhere(
+      (row) => row.network == 'liquidRegtest',
+    );
+    expect(loopback.url, 'tcp://127.0.0.1:50001');
+    expect(loopback.priority, 11);
+    final liquidSettings = settings.singleWhere(
+      (row) => row.network.name == 'liquidRegtest',
+    );
+    expect(liquidSettings.stopGap, 37);
+    expect(liquidSettings.timeout, 11);
+    expect(liquidSettings.retry, 2);
+    final version = await db.customSelect('PRAGMA user_version').getSingle();
+    expect(version.read<int>('user_version'), 16);
+  });
   test('network backfill preserves identities and Electrum configuration', () async {
     final schema = await SchemaVerifier(GeneratedHelper()).schemaAt(15);
     final old = v15.DatabaseAtV15(schema.newConnection());
