@@ -322,7 +322,12 @@ class SyncCoordinator {
     };
     final supported =
         chain != null &&
-        network.NetworkCapabilities.supports(chain, capability);
+        network.NetworkCapabilities.supports(chain, capability) &&
+        (kind != SyncKind.swaps ||
+            network.NetworkCapabilities.supports(
+              chain,
+              network.NetworkCapability.exchange,
+            ));
     if (!supported && _unsupportedLogged.add((environment, kind))) {
       log.config(
         'Wallet sync disabled network=${environment.name} kind=${kind.name}',

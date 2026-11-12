@@ -28,6 +28,7 @@ enum ReceiveNetworkType {
             ),
       lightning =>
         NetworkCapabilities.supports(network, NetworkCapability.swaps) &&
+            NetworkCapabilities.supports(network, NetworkCapability.exchange) &&
             liquidNetwork != null &&
             NetworkCapabilities.supports(
               liquidNetwork,

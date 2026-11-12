@@ -1,4 +1,5 @@
 import 'package:bb_mobile/core/fees/domain/fees_entity.dart';
+import 'package:primitives/primitives.dart' show NetworkEnv;
 import 'package:bb_mobile/core/settings/domain/repositories/settings_repository.dart';
 import 'package:bb_mobile/core/swaps/domain/entity/auto_swap.dart';
 import 'package:bb_mobile/core/utils/result.dart';
@@ -47,6 +48,10 @@ class ExchangeAutoswapProvider implements AutoswapProviderPort {
   Future<Result<String, AutoswapFailure>> execute(AutoSwap settings) async {
     try {
       final environment = (await _settingsRepository.fetch()).environment;
+      if (environment.networkEnv != NetworkEnv.mainnet &&
+          environment.networkEnv != NetworkEnv.testnet) {
+        return const Err(AutoswapProviderFailure('unsupported_network'));
+      }
       final List<Wallet> wallets;
       switch (await _walletRepository.getWallets(environment: environment)) {
         case Ok(:final value):

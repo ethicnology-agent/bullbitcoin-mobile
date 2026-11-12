@@ -6,6 +6,7 @@ import 'package:bb_mobile/features/send/public/send_facade.dart'
 import 'package:primitives/primitives.dart'
     show Sats, BitcoinTransactionRecipient;
 import 'dart:async';
+import 'package:bb_mobile/features/swap/domain/swap_network_policy.dart';
 
 import 'package:bb_mobile/features/send/domain/usecases/broadcast_bitcoin_transaction_usecase.dart';
 import 'package:bb_mobile/features/send/domain/usecases/broadcast_liquid_transaction_usecase.dart';
@@ -241,7 +242,10 @@ class TransferBloc extends Bloc<TransferEvent, TransferState>
           ? (bitcoinWallets.where((wallet) => wallet.isDefault).firstOrNull ??
                 bitcoinWallets.first)
           : null;
-      final pendingResult = await _getPendingOrderSwapsUsecase.execute();
+      final pendingResult =
+          swapEnvironmentAvailable(settings.environment.networkEnv)
+          ? await _getPendingOrderSwapsUsecase.execute()
+          : const Ok<List<OrderSwapRecord>, SwapFailure>([]);
       if (pendingResult case Ok(:final value)) {
         final pendingTransfer = value
             .where((order) => order.purpose == OrderSwapPurpose.transfer)
@@ -289,6 +293,7 @@ class TransferBloc extends Bloc<TransferEvent, TransferState>
   Future<void> _resumePendingTransfer(Emitter<TransferState> emit) async {
     final fromWallet = state.fromWallet;
     if (fromWallet == null) return;
+    if (!swapEnvironmentAvailable(fromWallet.network.environment)) return;
     final pendingResult = await _getPendingOrderSwapsUsecase.execute();
     if (pendingResult case Err()) return;
     final pending =
@@ -674,6 +679,9 @@ class TransferBloc extends Bloc<TransferEvent, TransferState>
     final fromWallet = state.fromWallet;
     if (fromWallet == null) {
       throw SwapCreationException('source_wallet_required');
+    }
+    if (!swapEnvironmentAvailable(fromWallet.network.environment)) {
+      throw SwapCreationException('exchange_swap_network_unavailable');
     }
     if (fromWallet.isHardwareWallet) {
       throw SwapCreationException('hardware_wallet_swap_unavailable');

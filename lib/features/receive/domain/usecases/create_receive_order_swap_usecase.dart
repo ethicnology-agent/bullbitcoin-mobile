@@ -31,9 +31,13 @@ class CreateReceiveOrderSwapUsecase {
     String? note,
   }) async {
     if (!NetworkCapabilities.supports(
-      wallet.network.shared,
-      NetworkCapability.swaps,
-    )) {
+          wallet.network.shared,
+          NetworkCapability.swaps,
+        ) ||
+        !NetworkCapabilities.supports(
+          wallet.network.shared,
+          NetworkCapability.exchange,
+        )) {
       log.warning('Capability refused feature=receive_swap reason=unsupported');
       return const Err(ReceiveSwapUnavailableFailure());
     }

@@ -693,7 +693,7 @@ List<SettingsItem> buildSettingsItems({
     final capability = switch (item.id) {
       SettingsItemId.exchange ||
       SettingsItemId.testnetCredentials => NetworkCapability.exchange,
-      SettingsItemId.autoswap => NetworkCapability.swaps,
+      SettingsItemId.autoswap => NetworkCapability.exchange,
       SettingsItemId.payjoin => NetworkCapability.payjoin,
       SettingsItemId.sp => NetworkCapability.silentPayments,
       SettingsItemId.mempool ||
