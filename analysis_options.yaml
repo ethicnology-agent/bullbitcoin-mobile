@@ -27,4 +27,8 @@ analyzer:
     - lib/**/*.g.dart
     - lib/**/*.freezed.dart
     - pubspec.yaml
+    - build/**
+    - android/**
+    - ios/**
+    - linux/**
   
