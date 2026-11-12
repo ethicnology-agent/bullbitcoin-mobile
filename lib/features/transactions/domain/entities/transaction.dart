@@ -29,12 +29,9 @@ sealed class Transaction with _$Transaction {
       payjoin?.txId ??
       order?.transactionId;
   bool get supportsPublicExplorer {
-    final network = walletTransaction?.network;
+    final network = walletTransaction?.network.shared ?? payjoin?.network;
     return network == null ||
-        NetworkCapabilities.supports(
-          network.shared,
-          NetworkCapability.publicExplorer,
-        );
+        NetworkCapabilities.supports(network, NetworkCapability.publicExplorer);
   }
 
   bool get isTestnet =>
