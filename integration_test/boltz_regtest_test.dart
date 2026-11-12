@@ -141,7 +141,7 @@ Future<void> main({bool isInitialized = false}) async {
           if (coins.any(
             (coin) =>
                 coin.txId == txid &&
-                coin.confirmations > 0 &&
+                coin.isConfirmed &&
                 coin.amountSat >= BigInt.from(minimum),
           )) {
             return;

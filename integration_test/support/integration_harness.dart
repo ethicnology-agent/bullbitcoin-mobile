@@ -124,8 +124,7 @@ abstract final class IntegrationHarness {
         final coins = await locator<WalletUtxoRepository>().getWalletUtxos(
           walletId: wallet.id,
         );
-        if (coins.length >= 2 &&
-            coins.every((coin) => coin.confirmations > 0)) {
+        if (coins.length >= 2 && coins.every((coin) => coin.isConfirmed)) {
           return value;
         }
       }

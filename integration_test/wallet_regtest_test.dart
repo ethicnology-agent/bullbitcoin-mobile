@@ -63,7 +63,7 @@ Future<void> main({bool isInitialized = false}) async {
             final payment = coins.where((coin) => coin.txId == txid).toList();
             expect(payment, hasLength(1));
             expect(payment.single.amountSat, BigInt.from(10000));
-            expect(payment.single.confirmations, greaterThan(0));
+            expect(payment.single.isConfirmed, isTrue);
           },
           timeout: const Timeout(Duration(minutes: 4)),
         );
