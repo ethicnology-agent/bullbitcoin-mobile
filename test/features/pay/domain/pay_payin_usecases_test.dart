@@ -1,3 +1,6 @@
+import 'package:bb_mobile/features/send/public/send_facade.dart';
+import 'package:bb_mobile/features/wallet/public/wallet_facade.dart'
+    show WalletFacade;
 import 'package:bb_mobile/features/wallet/domain/wallet.dart' as app;
 import 'package:bb_mobile/features/send/domain/usecases/broadcast_bitcoin_transaction_usecase.dart';
 import 'package:bb_mobile/core/fees/domain/fees_entity.dart';
@@ -243,18 +246,28 @@ void main() {
         () => broadcast.execute(
           any(),
           isPsbt: any(named: 'isPsbt'),
+          walletId: any(named: 'walletId'),
           network: app.Network.bitcoinMainnet,
         ),
       ).thenThrow(Exception(_rawReason));
 
-      final result = await BroadcastPayPayinUsecase(
-        broadcastBitcoinTransactionUsecase: broadcast,
-        broadcastLiquidTransactionUsecase: _MockBroadcastLiquid(),
-      ).bitcoin('rawtx', isPsbt: true, network: app.Network.bitcoinMainnet);
+      final result =
+          await BroadcastPayPayinUsecase(
+            wallet: const WalletFacade(Stream.empty()),
+            send: SendFacade(
+              bitcoin: broadcast.execute,
+              liquid: _MockBroadcastLiquid().execute,
+            ),
+          ).bitcoin(
+            'rawtx',
+            walletId: 'source',
+            isPsbt: true,
+            network: app.Network.bitcoinMainnet,
+          );
 
       final failure = (result as Err<String, PayFailure>).failure;
       expect(failure, isA<PayUnexpectedFailure>());
-      expect(failure.logMessage, contains(_rawReason));
+      expect(failure.logMessage, 'pay_payin_broadcast_failed');
     });
   });
 

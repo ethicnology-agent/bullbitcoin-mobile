@@ -5,6 +5,7 @@ import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
+import 'package:bull_sdk/bdk.dart' as bdk;
 
 /// Wallet transaction scenarios served by [ElectrumFixture]. Each has a first
 /// chain state, synced as a new wallet would, and a second one to sync next.
@@ -70,6 +71,41 @@ final class ElectrumFixture {
     );
   }
 
+  /// Broadcast acceptance and script-history visibility are independent.
+  Future<void> exposeBroadcasts(bool visible) async {
+    await _call(['broadcastVisibility', visible]);
+  }
+
+  Future<void> advanceTip() async {
+    await _call(['advanceTip']);
+  }
+
+  /// Sets broadcast visibility to [visible] once [histories] further
+  /// script-history requests were answered, so one sync pass can see the
+  /// broadcasts in its first requests only, or in its last ones only.
+  Future<void> exposeBroadcastsAfterHistories(int histories, bool visible) =>
+      _call(['exposeAfterHistories', histories, visible]);
+
+  /// Fails every script-history request after [histories] further ones;
+  /// null stops failing.
+  Future<void> failHistoriesAfter(int? histories) =>
+      _call(['failHistoriesAfter', histories]);
+
+  /// Forgets every broadcast, as a server that never relayed them would.
+  Future<void> dropBroadcasts() async {
+    await _call(['dropBroadcasts']);
+  }
+
+  /// Replaces the tip block with two empty ones: its transactions unconfirm.
+  Future<void> reorgTip() async {
+    await _call(['reorgTip']);
+  }
+
+  /// Mines one broadcast; the others leave the mempool as its conflicts would.
+  Future<void> confirmBroadcast(String txid) async {
+    await _call(['confirmBroadcast', txid]);
+  }
+
   void close() => _isolate.kill(priority: Isolate.immediate);
 
   Future<Object?> _call(List<Object?> command) async {
@@ -85,6 +121,9 @@ final class ElectrumFixture {
     final chain = _Chain((args[1] as Map).cast<String, String>());
     final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
     server.listen((socket) {
+      // A client may drop the connection after an error reply; that must not
+      // kill the fixture isolate.
+      socket.done.catchError((_) {});
       utf8.decoder.bind(socket).transform(const LineSplitter()).listen((line) {
         final request = jsonDecode(line);
         final response = request is List
@@ -101,6 +140,16 @@ final class ElectrumFixture {
         reply.send(switch (command[0]) {
           'load' => chain.load(command[1] as String, command[2] as int),
           'requests' => chain.takeRequests(),
+          'broadcastVisibility' => chain.exposeBroadcasts(command[1] as bool),
+          'advanceTip' => chain.advanceTip(),
+          'exposeAfterHistories' => chain.exposeAfterHistories(
+            command[1] as int,
+            command[2] as bool,
+          ),
+          'failHistoriesAfter' => chain.failHistoriesAfter(command[1] as int?),
+          'dropBroadcasts' => chain.dropBroadcasts(),
+          'reorgTip' => chain.reorgTip(),
+          'confirmBroadcast' => chain.confirmBroadcast(command[1] as String),
           _ => StateError('unknown command ${command[0]}'),
         });
       } catch (error) {
@@ -118,6 +167,8 @@ final class _Chain {
   List<Uint8List> headers = [_genesis];
   List<String> mempool = [];
   int? snapshot;
+  bool broadcastsVisible = false;
+  final Set<String> broadcasts = {};
   Map<String, int> counts = {};
   Set<String> scriptHashes = {};
   Set<String> fetchedTxids = {};
@@ -131,6 +182,74 @@ final class _Chain {
     scriptHashes = {};
     fetchedTxids = {};
     return taken;
+  }
+
+  int _histories = 0;
+  int? _exposeAfter;
+  bool _exposeTo = false;
+  int? _failAfter;
+
+  bool exposeAfterHistories(int histories, bool visible) {
+    _histories = 0;
+    _exposeAfter = histories;
+    _exposeTo = visible;
+    return true;
+  }
+
+  bool failHistoriesAfter(int? histories) {
+    _histories = 0;
+    _failAfter = histories;
+    return true;
+  }
+
+  bool exposeBroadcasts(bool visible) {
+    broadcastsVisible = visible;
+    mempool.removeWhere(broadcasts.contains);
+    if (visible) mempool.addAll(broadcasts);
+    return true;
+  }
+
+  bool advanceTip() {
+    final height = headers.length;
+    blocks.add([]);
+    headers.add(
+      _header(
+        _sha256d(headers.last),
+        _sha256(utf8.encode('broadcast-tip-$height')),
+        1296688602 + height * 600,
+        height * 100,
+      ),
+    );
+    return true;
+  }
+
+  bool dropBroadcasts() {
+    mempool.removeWhere(broadcasts.contains);
+    broadcasts.clear();
+    return true;
+  }
+
+  bool reorgTip() {
+    blocks.removeLast();
+    headers.removeLast();
+    advanceTip();
+    return advanceTip();
+  }
+
+  bool confirmBroadcast(String txid) {
+    broadcastsVisible = false;
+    mempool.removeWhere(broadcasts.contains);
+    final height = headers.length;
+    blocks.add([txid]);
+    headers.add(
+      _header(
+        _sha256d(headers.last),
+        _merkle([txid], 0).root,
+        1296688602 + height * 600,
+        height * 100,
+      ),
+    );
+    return true;
   }
 
   Map<String, Object?> answer(Map request) {
@@ -167,10 +286,32 @@ final class _Chain {
       case 'blockchain.scripthash.get_history':
         final hash = params[0] as String;
         scriptHashes.add(hash);
+        _histories++;
+        final failAfter = _failAfter;
+        if (failAfter != null && _histories > failAfter) {
+          return error(-32603, 'history unavailable');
+        }
+        final exposeAfter = _exposeAfter;
+        if (exposeAfter != null && _histories > exposeAfter) {
+          _exposeAfter = null;
+          exposeBroadcasts(_exposeTo);
+        }
         final script = scripts.values
             .where((s) => _rhex(_sha256(_bytes(s))) == hash)
             .firstOrNull;
         result = script == null ? [] : _history(script);
+      case 'blockchain.transaction.broadcast':
+        final raw = _bytes(params[0] as String);
+        final tx = bdk.Transaction(transactionBytes: raw);
+        try {
+          final txid = tx.computeTxid().toString();
+          txs[txid] = raw;
+          broadcasts.add(txid);
+          if (broadcastsVisible) mempool.add(txid);
+          result = txid;
+        } finally {
+          tx.dispose();
+        }
       case 'blockchain.transaction.get':
         final txid = params[0] as String;
         fetchedTxids.add(txid);
@@ -195,6 +336,8 @@ final class _Chain {
   }
 
   List<Object> load(String scenario, int phase) {
+    broadcasts.clear();
+    broadcastsVisible = false;
     final s = scripts;
     final foreign = s['foreign'] as String;
     String spk(String name) => s[name] ?? (throw StateError('no $name'));
@@ -423,6 +566,23 @@ Uint8List _tx(
 }
 
 (List<(String, int)>, List<(int, String)>) _parse(Uint8List raw) {
+  if (raw[4] == 0 && raw[5] == 1) {
+    final tx = bdk.Transaction(transactionBytes: raw);
+    try {
+      return (
+        [
+          for (final i in tx.input())
+            (i.previousOutput.txid.toString(), i.previousOutput.vout),
+        ],
+        [
+          for (final o in tx.output())
+            (o.value.toSat(), _hex(o.scriptPubkey.toBytes())),
+        ],
+      );
+    } finally {
+      tx.dispose();
+    }
+  }
   final data = ByteData.sublistView(raw);
   var i = 4;
   final inputs = <(String, int)>[];

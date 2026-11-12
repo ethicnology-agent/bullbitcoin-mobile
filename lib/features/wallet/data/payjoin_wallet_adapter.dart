@@ -1,3 +1,4 @@
+import '../public/wallet_facade.dart';
 import 'dart:typed_data';
 
 import 'package:secrets/secrets.dart';
@@ -14,8 +15,28 @@ final class PayjoinWalletAdapter implements PayjoinWalletPort {
   final Secrets _secrets;
   final BdkWalletDatasource _wallet;
   final WalletMetadataDatasource _metadata;
+  final WalletFacade _gate;
 
-  const PayjoinWalletAdapter(this._secrets, this._wallet, this._metadata);
+  const PayjoinWalletAdapter(
+    this._secrets,
+    this._wallet,
+    this._metadata,
+    this._gate,
+  );
+
+  /// Contention is transient and each check already waits for the wallet:
+  /// a few attempts outlast a routine sync instead of pausing the proposal.
+  Future<void> _requireSpend(String walletId) async {
+    for (var attempt = 1; ; attempt++) {
+      final status = await _gate.spendStatus(walletId);
+      if (status == BitcoinSpendStatus.ready) return;
+      if (status != BitcoinSpendStatus.busy || attempt == 5) {
+        throw PayjoinSpendBlockedException(
+          busy: status == BitcoinSpendStatus.busy,
+        );
+      }
+    }
+  }
 
   @override
   Future<String> signPsbt({
@@ -23,6 +44,7 @@ final class PayjoinWalletAdapter implements PayjoinWalletPort {
     required BitcoinNetwork network,
     required String psbt,
   }) async {
+    await _requireSpend(walletId);
     final (secret, metadata) = await _loadSecret(walletId, network);
     // The receiver's own input in a payjoin proposal carries no derivation
     // path, and the package signs only what it can derive: the watch-only
@@ -68,6 +90,7 @@ final class PayjoinWalletAdapter implements PayjoinWalletPort {
     required String walletId,
     required BitcoinNetwork network,
   }) async {
+    await _requireSpend(walletId);
     final metadata = await _loadMetadata(walletId, network);
     final wallet = WalletModel.fromMetadata(metadata);
     final utxos = await _wallet.getUtxos(wallet: wallet);

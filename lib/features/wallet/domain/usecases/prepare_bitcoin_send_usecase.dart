@@ -1,3 +1,4 @@
+import '../wallet_spend_failure.dart';
 import 'package:bb_mobile/core/wallet/domain/wallet_failure.dart';
 import 'package:meta/meta.dart';
 import 'package:primitives/primitives.dart';
@@ -110,6 +111,9 @@ class PrepareBitcoinSendUsecase {
         isToSelf: isToSelf,
         recipientAmountsSat: recipientAmountsSat,
       ));
+    } on WalletSpendBlockedException {
+      // The spend gate is not a build failure: the caller names it.
+      rethrow;
     } on NoSpendableUtxoException {
       return Err(
         selectedOnly || (selectedInputs?.isNotEmpty ?? false)

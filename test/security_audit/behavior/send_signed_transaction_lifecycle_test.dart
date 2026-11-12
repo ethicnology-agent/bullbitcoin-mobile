@@ -1,3 +1,4 @@
+import 'package:bb_mobile/features/send/domain/usecases/retry_payjoin_proposal_usecase.dart';
 import 'package:bb_mobile/features/wallet/domain/wallet.dart' as app;
 import 'package:primitives/primitives.dart' show Ok;
 import 'package:bb_mobile/features/send/domain/usecases/prepare_send_bitcoin_transaction_usecase.dart';
@@ -224,6 +225,7 @@ class _TestSendCubit extends SendCubit {
     required super.updatePaidSendSwapUsecase,
     required super.sendWithPayjoinUsecase,
     required super.watchPayjoinUsecase,
+    required super.retryPayjoinProposalUsecase,
     required super.watchFinishedWalletSyncsUsecase,
     required super.calculateLiquidAbsoluteFeesUsecase,
     required super.calculateLiquidPsetSizeUsecase,
@@ -328,6 +330,7 @@ void main() {
       updatePaidSendSwapUsecase: _MockUpdatePaidSendSwapUsecase(),
       sendWithPayjoinUsecase: _MockSendWithPayjoinUsecase(),
       watchPayjoinUsecase: _MockWatchPayjoinUsecase(),
+      retryPayjoinProposalUsecase: _MockRetryPayjoinProposalUsecase(),
       watchFinishedWalletSyncsUsecase: _MockWatchFinishedWalletSyncsUsecase(),
       calculateLiquidAbsoluteFeesUsecase: calculateLiquidAbsoluteFeesUsecase,
       calculateLiquidPsetSizeUsecase: _MockCalculateLiquidPsetSizeUsecase(),
@@ -492,6 +495,7 @@ void main() {
       final broadcast = Completer<String>();
       when(
         () => broadcastBitcoinTx.execute(
+          walletId: _wallet.id,
           any(),
           isPsbt: any(named: 'isPsbt'),
           network: app.Network.bitcoinMainnet,
@@ -527,3 +531,6 @@ void main() {
     });
   });
 }
+
+class _MockRetryPayjoinProposalUsecase extends Mock
+    implements RetryPayjoinProposalUsecase {}

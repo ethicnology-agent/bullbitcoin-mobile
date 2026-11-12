@@ -1,5 +1,6 @@
-import 'package:bb_mobile/features/send/domain/usecases/broadcast_bitcoin_transaction_usecase.dart';
-import 'package:bb_mobile/features/send/domain/usecases/broadcast_liquid_transaction_usecase.dart';
+import 'package:bb_mobile/features/sell/domain/retry_payjoin_proposal_usecase.dart';
+import 'package:bb_mobile/features/wallet/public/wallet_facade.dart';
+import 'package:bb_mobile/features/send/public/send_facade.dart';
 import 'package:bb_mobile/core/exchange/domain/repositories/exchange_order_repository.dart';
 import 'package:bb_mobile/features/exchange/domain/usecases/get_exchange_user_summary_usecase.dart';
 import 'package:bb_mobile/features/exchange/domain/usecases/get_order_usercase.dart';
@@ -47,6 +48,9 @@ class SellLocator {
     locator.registerFactory<WatchPayjoinUsecase>(
       () => WatchPayjoinUsecase(locator<PayjoinSessions>()),
     );
+    locator.registerFactory<RetryPayjoinProposalUsecase>(
+      () => RetryPayjoinProposalUsecase(locator<PayjoinSender>()),
+    );
     locator.registerFactory<GetPayjoinUsecase>(
       () => GetPayjoinUsecase(locator<PayjoinSessions>()),
     );
@@ -78,10 +82,8 @@ class SellLocator {
     );
     locator.registerFactory<BroadcastSellPayinUsecase>(
       () => BroadcastSellPayinUsecase(
-        broadcastBitcoinTransactionUsecase:
-            locator<BroadcastBitcoinTransactionUsecase>(),
-        broadcastLiquidTransactionUsecase:
-            locator<BroadcastLiquidTransactionUsecase>(),
+        wallet: locator<WalletFacade>(),
+        send: locator<SendFacade>(),
       ),
     );
     locator.registerFactory<LoadSellContextUsecase>(
@@ -104,6 +106,7 @@ class SellLocator {
     );
     locator.registerFactory<CreateSellOrderUsecase>(
       () => CreateSellOrderUsecase(
+        wallet: locator<WalletFacade>(),
         mainnetExchangeOrderRepository: locator<ExchangeOrderRepository>(
           instanceName: 'mainnetExchangeOrderRepository',
         ),
@@ -158,6 +161,7 @@ class SellLocator {
         sendWithPayjoinUsecase: locator<SendWithPayjoinUsecase>(),
         watchPayjoinUsecase: locator<WatchPayjoinUsecase>(),
         getPayjoinUsecase: locator<GetPayjoinUsecase>(),
+        retryPayjoinProposalUsecase: locator<RetryPayjoinProposalUsecase>(),
         calculateSellLiquidFeesUsecase:
             locator<CalculateSellLiquidFeesUsecase>(),
         loadSellWalletUtxosUsecase: locator<LoadSellWalletUtxosUsecase>(),

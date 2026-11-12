@@ -1,3 +1,4 @@
+import 'data/broadcast_observation_follow_up.dart';
 import 'data/catalog_wallet_secret_references_repository.dart';
 import 'domain/repositories/wallet_secret_references_repository.dart';
 import 'domain/usecases/load_network_wallet_setup_usecase.dart';
@@ -97,9 +98,23 @@ class WalletLocator {
         walletFacade: locator<WalletFacade>(),
       ),
     );
+    locator.registerLazySingleton<BroadcastObservationFollowUp>(
+      () => BroadcastObservationFollowUp(
+        spendStatus: locator<WalletNativeRuntime>().spendStatus,
+        pollWallet: (id, {required isActive}) =>
+            locator<SyncCoordinator>().pollWallet(id, isActive: isActive),
+      ),
+      dispose: (followUp) => followUp.dispose(),
+    );
     locator.registerLazySingleton<WalletFacade>(
       () => WalletFacade(
         locator<WalletNativeRuntime>().changes,
+        spendStatus: locator<WalletNativeRuntime>().spendStatus,
+        broadcastBitcoin: locator<BroadcastObservationFollowUp>().wrap(
+          locator<WalletNativeRuntime>().broadcastBitcoin,
+        ),
+        protectObservedSpend:
+            locator<WalletNativeRuntime>().protectObservedSpend,
         pollWallet: (id, {required isActive}) =>
             locator<SyncCoordinator>().pollWallet(id, isActive: isActive),
         discoverWallet: (id) => locator<SyncCoordinator>().discoverWallet(id),

@@ -1,3 +1,8 @@
+import 'package:bb_mobile/features/send/domain/usecases/retry_payjoin_proposal_usecase.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
+import 'dart:io';
+import 'package:bb_mobile/core/errors/send_errors.dart';
+import 'package:bull_logger/bull_logger.dart';
 import 'package:bb_mobile/features/send/domain/usecases/watch_wallet_revisions_usecase.dart';
 import 'package:bb_mobile/features/wallet/public/wallet_facade.dart';
 import 'package:bb_mobile/features/wallet/domain/wallet.dart' as app;
@@ -5,7 +10,6 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:bb_mobile/features/send/domain/usecases/broadcast_bitcoin_transaction_usecase.dart';
 import 'package:bb_mobile/features/send/domain/usecases/broadcast_liquid_transaction_usecase.dart';
-import 'package:bb_mobile/core/errors/send_errors.dart';
 import 'package:bb_mobile/core/entities/signer_entity.dart';
 import 'package:bb_mobile/core/entities/signer_device_entity.dart';
 import 'package:bb_mobile/features/send/domain/usecases/prepare_send_bitcoin_transaction_usecase.dart';
@@ -76,6 +80,8 @@ import 'package:bb_mobile/features/send/presentation/send_wallet_view.dart';
 import 'package:bb_mobile/features/send/presentation/send_mode.dart';
 
 import '../../../coins/wallet_utxo_fixture.dart';
+
+class _BroadcastReporter extends Mock implements LoggerReporter {}
 
 class _MockLabelsFacade extends Mock implements LabelsFacade {}
 
@@ -246,6 +252,7 @@ class _TestableSendCubit extends SendCubit {
     required super.prepareLiquidSendUsecase,
     required super.sendWithPayjoinUsecase,
     required super.watchPayjoinUsecase,
+    required super.retryPayjoinProposalUsecase,
     required super.getWalletsUsecase,
     required super.getWalletUsecase,
     required super.createSendSwapUsecase,
@@ -393,7 +400,9 @@ PayjoinSenderSession _sender({
   required PayjoinStatus status,
   String? txId,
   String originalTxId = 'sender-orig-txid',
+  PayjoinSpendBlockedFailure? spendFailure,
 }) => PayjoinSenderSession(
+  spendFailure: spendFailure,
   status: status,
   uri: 'bitcoin:bc1qaddr?amount=0.0005&pj=https://payjo.in',
   network: BitcoinNetwork.mainnet,
@@ -401,11 +410,12 @@ PayjoinSenderSession _sender({
   originalTransactionId: originalTxId,
   amount: Sats.fromInt(50000),
   createdAt: DateTime(2026),
-  expiresAt: DateTime(2026).add(const Duration(minutes: 1)),
+  expiresAt: DateTime.now().add(const Duration(minutes: 1)),
   transactionId: txId,
 );
 
 void main() {
+  late _MockRetryPayjoinProposalUsecase retryPayjoinProposalUsecase;
   late _MockLabelsFacade labelsFacade;
   late _MockSelectBestWalletUsecase bestWalletUsecase;
   late _MockDetectBitcoinStringUsecase detectBitcoinStringUsecase;
@@ -485,6 +495,7 @@ void main() {
     prepareLiquidSendUsecase: prepareLiquidSendUsecase,
     sendWithPayjoinUsecase: sendWithPayjoinUsecase,
     watchPayjoinUsecase: watchPayjoinUsecase,
+    retryPayjoinProposalUsecase: retryPayjoinProposalUsecase,
     getWalletsUsecase: getWalletsUsecase,
     getWalletUsecase: getWalletUsecase,
     createSendSwapUsecase: createSendSwapUsecase,
@@ -574,6 +585,7 @@ void main() {
   });
 
   setUp(() {
+    retryPayjoinProposalUsecase = _MockRetryPayjoinProposalUsecase();
     labelsFacade = _MockLabelsFacade();
     bestWalletUsecase = _MockSelectBestWalletUsecase();
     detectBitcoinStringUsecase = _MockDetectBitcoinStringUsecase();
@@ -4516,6 +4528,126 @@ void main() {
 
   group('SendCubit._watchPayjoin', () {
     test(
+      'drops a second proposal retry while the first is in flight',
+      () async {
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+        final paused = _sender(
+          status: PayjoinStatus.proposed,
+          spendFailure: const PayjoinSpendBlockedFailure(),
+        );
+        cubit.setStateForTest(cubit.state.copyWith(payjoinSender: paused));
+        final pending = Completer<Result<PayjoinSession, SendFailure>>();
+        when(
+          () => retryPayjoinProposalUsecase.execute(paused.id),
+        ).thenAnswer((_) => pending.future);
+        final first = cubit.retryPayjoinProposal();
+        final second = cubit.retryPayjoinProposal();
+        verify(() => retryPayjoinProposalUsecase.execute(paused.id)).called(1);
+        pending.complete(const Err(SendSpendBlockedFailure()));
+        await Future.wait([first, second]);
+        expect(cubit.state.failure, isA<SendSpendBlockedFailure>());
+        await cubit.retryPayjoinProposal();
+        verify(() => retryPayjoinProposalUsecase.execute(paused.id)).called(1);
+      },
+    );
+
+    test('proposal retry discards a result for a replaced session', () async {
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      final paused = _sender(
+        status: PayjoinStatus.proposed,
+        spendFailure: const PayjoinSpendBlockedFailure(),
+      );
+      cubit.setStateForTest(cubit.state.copyWith(payjoinSender: paused));
+      final pending = Completer<Result<PayjoinSession, SendFailure>>();
+      when(
+        () => retryPayjoinProposalUsecase.execute(paused.id),
+      ).thenAnswer((_) => pending.future);
+      final retry = cubit.retryPayjoinProposal();
+      cubit.setStateForTest(cubit.state.copyWith(payjoinSender: null));
+      pending.complete(const Err(SendSpendBlockedFailure()));
+      await retry;
+      expect(cubit.state.failure, isNull);
+      expect(cubit.state.payjoinSender, isNull);
+    });
+
+    test('proposal retry releases its guard after an exception', () async {
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      final paused = _sender(
+        status: PayjoinStatus.proposed,
+        spendFailure: const PayjoinSpendBlockedFailure(),
+      );
+      cubit.setStateForTest(cubit.state.copyWith(payjoinSender: paused));
+      when(
+        () => retryPayjoinProposalUsecase.execute(paused.id),
+      ).thenThrow(Exception('retry failed'));
+      await expectLater(cubit.retryPayjoinProposal(), throwsException);
+      when(
+        () => retryPayjoinProposalUsecase.execute(paused.id),
+      ).thenAnswer((_) async => Ok(paused));
+      await cubit.retryPayjoinProposal();
+      verify(() => retryPayjoinProposalUsecase.execute(paused.id)).called(2);
+    });
+
+    for (final terminal in [
+      PayjoinStatus.completed,
+      PayjoinStatus.aborted,
+      PayjoinStatus.expired,
+    ]) {
+      test('late proposal retry does not overwrite $terminal', () async {
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+        final paused = _sender(
+          status: PayjoinStatus.proposed,
+          spendFailure: const PayjoinSpendBlockedFailure(),
+        );
+        cubit.setStateForTest(cubit.state.copyWith(payjoinSender: paused));
+        final pending = Completer<Result<PayjoinSession, SendFailure>>();
+        when(
+          () => retryPayjoinProposalUsecase.execute(paused.id),
+        ).thenAnswer((_) => pending.future);
+        final retry = cubit.retryPayjoinProposal();
+        cubit.setStateForTest(
+          cubit.state.copyWith(payjoinSender: _sender(status: terminal)),
+        );
+        pending.complete(const Err(SendSpendBlockedFailure()));
+        await retry;
+        expect(cubit.state.failure, isNull);
+        expect(cubit.state.payjoinSender?.status, terminal);
+      });
+    }
+
+    test(
+      'paused proposal keeps payment context and surfaces typed refusal until completion',
+      () async {
+        final cubit = await armWatcher(buildCubit());
+        addTearDown(cubit.close);
+        final previousStep = cubit.state.step;
+        final previousTxId = cubit.state.txId;
+        payjoinEvents.add(
+          _sender(
+            status: PayjoinStatus.proposed,
+            spendFailure: const PayjoinSpendBlockedFailure(),
+          ),
+        );
+        await pumpEventQueue();
+        expect(cubit.state.step, previousStep);
+        expect(cubit.state.txId, previousTxId);
+        expect(cubit.state.failure, isA<SendPayjoinPausedFailure>());
+        expect(cubit.state.payjoinSender?.canRetryProposal, isTrue);
+        payjoinEvents.add(
+          _sender(status: PayjoinStatus.completed, txId: 'accepted-proposal'),
+        );
+        await pumpEventQueue();
+        expect(cubit.state.step, SendStep.success);
+        expect(cubit.state.failure, isNull);
+        expect(cubit.state.txId, 'accepted-proposal');
+      },
+    );
+
+    test(
       'confirm starts payjoin even when the regular PSBT was pre-signed',
       () async {
         final cubit = buildCubit();
@@ -4556,6 +4688,7 @@ void main() {
         ).called(1);
         verifyNever(
           () => broadcastBitcoinTxUsecase.execute(
+            walletId: any(named: 'walletId'),
             any(),
             isPsbt: any(named: 'isPsbt'),
             network: app.Network.bitcoinMainnet,
@@ -4896,9 +5029,117 @@ void main() {
       label: label,
     );
 
+    for (final wrapped in [true, false]) {
+      test(
+        'broadcast failure persists no foreign text wrapped=$wrapped',
+        () async {
+          const foreign =
+              'tcp://private-electrum.invalid:50001 foreign-rejection';
+          final directory = await Directory.systemTemp.createTemp('send-log-');
+          final reporter = _BroadcastReporter();
+          final console = <String>[];
+          final previousPrint = debugPrint;
+          debugPrint = (message, {wrapWidth}) {
+            if (message != null) console.add(message);
+          };
+          log = Logger.replace(directory: directory, reporter: reporter);
+          addTearDown(() async {
+            debugPrint = previousPrint;
+            await log.flush();
+            log = Logger.replace(directory: Directory.current);
+            await directory.delete(recursive: true);
+          });
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+          final error = wrapped
+              ? BroadcastTransactionException(foreign)
+              : Exception(foreign);
+          when(
+            () => broadcastBitcoinTxUsecase.execute(
+              walletId: 'w1',
+              any(),
+              isPsbt: any(named: 'isPsbt'),
+              network: app.Network.bitcoinMainnet,
+            ),
+          ).thenAnswer(
+            (_) => Future.error(error, StackTrace.fromString(foreign)),
+          );
+          cubit.setStateForTest(plainSignedState());
+          await cubit.broadcastTransaction();
+          await log.flush();
+          final disk = await log.logsFile.readAsString();
+          expect(disk, isNot(contains('private-electrum.invalid')));
+          expect(
+            console.join('\n'),
+            isNot(contains('private-electrum.invalid')),
+          );
+          verifyZeroInteractions(reporter);
+          expect(disk, contains('send_broadcast_failed category=unexpected'));
+          expect(cubit.state.txId, isNull);
+          expect(cubit.state.broadcastingTransaction, isFalse);
+          final failure =
+              cubit.state.failure as SendTransactionConfirmationFailure;
+          expect(failure.isBroadcastFailure, wrapped);
+          expect(failure.logMessage, isNot(contains(foreign)));
+        },
+      );
+    }
+
+    test('spend refusal exposes the localized failure without retry', () async {
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      when(
+        () => broadcastBitcoinTxUsecase.execute(
+          'signed-psbt',
+          walletId: 'w1',
+          isPsbt: true,
+          network: app.Network.bitcoinMainnet,
+        ),
+      ).thenThrow(
+        const WalletSpendBlockedException(BitcoinSpendStatus.pending),
+      );
+      cubit.setStateForTest(plainSignedState());
+
+      await cubit.broadcastTransaction();
+
+      expect(cubit.state.failure, isA<SendSpendBlockedFailure>());
+      expect(cubit.state.broadcastingTransaction, isFalse);
+      expect(cubit.state.txId, isNull);
+      verify(
+        () => broadcastBitcoinTxUsecase.execute(
+          'signed-psbt',
+          walletId: 'w1',
+          isPsbt: true,
+          network: app.Network.bitcoinMainnet,
+        ),
+      ).called(1);
+    });
+
+    test('a busy wallet is not reported as awaiting a payment', () async {
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      when(
+        () => broadcastBitcoinTxUsecase.execute(
+          'signed-psbt',
+          walletId: 'w1',
+          isPsbt: true,
+          network: app.Network.bitcoinMainnet,
+        ),
+      ).thenThrow(const WalletSpendBlockedException(BitcoinSpendStatus.busy));
+      cubit.setStateForTest(plainSignedState());
+
+      await cubit.broadcastTransaction();
+
+      expect(
+        cubit.state.failure,
+        isA<SendSpendBlockedFailure>().having((f) => f.busy, 'busy', isTrue),
+      );
+    });
+
     void stubBroadcast() {
       when(
         () => broadcastBitcoinTxUsecase.execute(
+          walletId: 'w1',
           any(),
           isPsbt: any(named: 'isPsbt'),
           network: app.Network.bitcoinMainnet,
@@ -4918,6 +5159,7 @@ void main() {
 
         verify(
           () => broadcastBitcoinTxUsecase.execute(
+            walletId: 'w1',
             'signed-psbt',
             isPsbt: true,
             network: app.Network.bitcoinMainnet,
@@ -4925,6 +5167,42 @@ void main() {
         ).called(1);
         expect(cubit.state.txId, 'broadcast-txid');
         expect(cubit.state.step, SendStep.success);
+        expect(cubit.state.failure, isNull);
+      },
+    );
+
+    test(
+      'post-broadcast refresh failure keeps success and logs no foreign text',
+      () async {
+        const foreign =
+            'tcp://private-electrum.invalid:50001 foreign-rejection';
+        final directory = await Directory.systemTemp.createTemp(
+          'send-refresh-log-',
+        );
+        log = Logger.replace(directory: directory);
+        addTearDown(() async {
+          await log.flush();
+          log = Logger.replace(directory: Directory.current);
+          await directory.delete(recursive: true);
+        });
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+        stubBroadcast();
+        when(
+          () => getWalletUsecase.execute(any(), sync: true),
+        ).thenAnswer((_) async => throw Exception(foreign));
+        cubit.setStateForTest(plainSignedState());
+        await cubit.broadcastTransaction();
+        await pumpEventQueue();
+        await log.flush();
+        final disk = await log.logsFile.readAsString();
+        expect(disk, isNot(contains('private-electrum.invalid')));
+        expect(
+          disk,
+          contains('send_post_broadcast_refresh_failed category=unexpected'),
+        );
+        expect(cubit.state.step, SendStep.success);
+        expect(cubit.state.txId, 'broadcast-txid');
         expect(cubit.state.failure, isNull);
       },
     );
@@ -4942,6 +5220,7 @@ void main() {
             'signed-psbt',
             isPsbt: true,
             network: app.Network.bitcoinMainnet,
+            walletId: 'w1',
           ),
         ).thenThrow(BroadcastTransactionException('connection closed'));
 
@@ -4977,6 +5256,7 @@ void main() {
             'signed-psbt',
             isPsbt: true,
             network: app.Network.bitcoinMainnet,
+            walletId: 'w1',
           ),
         ).called(2);
       },
@@ -4992,6 +5272,7 @@ void main() {
 
       verify(
         () => broadcastBitcoinTxUsecase.execute(
+          walletId: 'w1',
           'signed-psbt',
           isPsbt: true,
           network: app.Network.bitcoinMainnet,
@@ -5055,6 +5336,7 @@ void main() {
       expect(cubit.state.signedBitcoinPsbt, isNull);
       verifyNever(
         () => broadcastBitcoinTxUsecase.execute(
+          walletId: any(named: 'walletId'),
           any(),
           isPsbt: any(named: 'isPsbt'),
           network: app.Network.bitcoinMainnet,
@@ -6511,3 +6793,6 @@ void main() {
     });
   });
 }
+
+class _MockRetryPayjoinProposalUsecase extends Mock
+    implements RetryPayjoinProposalUsecase {}

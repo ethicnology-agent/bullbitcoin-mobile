@@ -1,3 +1,4 @@
+import 'package:bb_mobile/features/send/domain/usecases/retry_payjoin_proposal_usecase.dart';
 import 'package:bb_mobile/features/send/domain/usecases/watch_wallet_revisions_usecase.dart';
 import 'package:bb_mobile/features/wallet/public/wallet_facade.dart';
 import 'package:bb_mobile/features/send/domain/usecases/prepare_send_bitcoin_transaction_usecase.dart';
@@ -78,11 +79,11 @@ class SendLocator {
       ),
     );
     locator.registerFactory<VerifySignedTxUsecase>(VerifySignedTxUsecase.new);
-    locator.registerLazySingleton<SendFacade>(
-      () => SendFacade(locator<VerifySignedTxUsecase>()),
-    );
     locator.registerFactory<SendWithPayjoinUsecase>(
       () => SendWithPayjoinUsecase(locator<PayjoinSender>()),
+    );
+    locator.registerFactory<RetryPayjoinProposalUsecase>(
+      () => RetryPayjoinProposalUsecase(locator<PayjoinSender>()),
     );
     locator.registerFactory<WatchPayjoinUsecase>(
       () => WatchPayjoinUsecase(locator<PayjoinSessions>()),
@@ -288,6 +289,7 @@ class SendLocator {
         updatePaidSendSwapUsecase: locator<UpdatePaidSendSwapUsecase>(),
         sendWithPayjoinUsecase: locator<SendWithPayjoinUsecase>(),
         watchPayjoinUsecase: locator<WatchPayjoinUsecase>(),
+        retryPayjoinProposalUsecase: locator<RetryPayjoinProposalUsecase>(),
         watchFinishedWalletSyncsUsecase:
             locator<WatchFinishedWalletSyncsUsecase>(),
         calculateLiquidAbsoluteFeesUsecase:

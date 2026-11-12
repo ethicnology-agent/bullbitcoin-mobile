@@ -365,7 +365,10 @@ Future<_Attempt> _performSync(_SyncParams params) async {
     probe?.dispose();
   }
   if (params.descriptor is LiquidWalletDescriptor) await BullSdk.init();
-  final revisions = RevisionStore(writerMetadataPath(params.root));
+  final revisions = RevisionStore(
+    writerMetadataPath(params.root),
+    existingOnly: params.headless,
+  );
   final writer = NativeWalletWriter(
     lockDirectory: writerLockDirectory(params.root),
     revisions: revisions,
@@ -466,7 +469,21 @@ Future<_Attempt> _performSync(_SyncParams params) async {
 }
 
 final class _NativeSyncOperation
-    implements WriterSyncOperation, WriterSyncMutation, WriterSyncChanges {
+    implements
+        WriterSyncOperation,
+        WriterSyncMutation,
+        WriterSyncChanges,
+        WriterSyncSpendObservation {
+  Map<String, Set<String>> _trackedSpends = {};
+  @override
+  Set<String> observedSpendTransactions = {};
+  @override
+  Map<String, Set<String>> spendTransactionInputs = {};
+  @override
+  Set<String> settledSpendTransactions = {};
+  @override
+  void trackSpendTransactions(Map<String, Set<String>> inputsByTxid) =>
+      _trackedSpends = inputsByTxid;
   @override
   bool mayHaveMutated = false;
   @override
@@ -484,6 +501,12 @@ final class _NativeSyncOperation
       issuedReceiveIndex,
       () => mayHaveMutated = true,
       (changed) => hasChanges = changed,
+      _trackedSpends,
+      (evidence) {
+        observedSpendTransactions = evidence.observed;
+        spendTransactionInputs = evidence.inputs;
+        settledSpendTransactions = evidence.settled;
+      },
     );
     result = attempt.result;
     return switch (attempt.result) {
@@ -520,6 +543,8 @@ Future<_Attempt> _performNativeSync(
   int? issuedReceiveIndex,
   void Function() markMutation,
   void Function(bool) reportChanges,
+  Map<String, Set<String>> trackedSpends,
+  void Function(_SpendEvidence) reportSpendEvidence,
 ) async {
   final watch = Stopwatch()..start();
   final descriptor = params.descriptor;
@@ -690,6 +715,10 @@ Future<_Attempt> _performNativeSync(
     // Every pass covers the revealed scripts: the pinned bdk_chain full scan
     // counts the stop gap from index 0 and can miss a revealed script beyond
     // last-used + stop gap. Scan passes then add the unrevealed gap window.
+    failure = const TransactionSyncStorageFailure();
+    final before = wallet.staged();
+    final cleanStage = before == null;
+    before?.dispose();
     failure = const TransactionSyncConnectionFailure();
     final revealed = _syncRevealedScripts(client, wallet, batchSize);
     failure = const TransactionSyncStorageFailure();
@@ -714,7 +743,11 @@ Future<_Attempt> _performNativeSync(
         scanned.dispose();
       }
     }
+    // Spend evidence reads this pass's staged deltas from both updates and the
+    // final canonical state, and is reported only once the pass persisted.
+    final evidence = cleanStage ? _spendEvidence(wallet, trackedSpends) : null;
     reportChanges(wallet.persist(persister: persister));
+    if (evidence != null) reportSpendEvidence(evidence);
     final parents = cache?.rememberParents(client, wallet);
     final syncedWallet = wallet;
     final incoming = params.observePayments
@@ -914,3 +947,114 @@ Future<Result<void, TransactionSyncFailure>> _checkInitialScan(
 @visibleForTesting
 String electrumClientUrl(String url) =>
     url.contains('://') ? url : 'ssl://$url';
+
+typedef _SpendEvidence = ({
+  Set<String> observed,
+  Map<String, Set<String>> inputs,
+  Set<String> settled,
+});
+
+String _outpoint(bdk.OutPoint outpoint) => '${outpoint.txid}:${outpoint.vout}';
+
+/// Returns the outpoints [tx] spends and frees its native handles.
+Set<String> _takeInputs(bdk.CanonicalTx tx) {
+  final inputs = <String>{};
+  for (final input in tx.transaction.input()) {
+    inputs.add(_outpoint(input.previousOutput));
+    input.previousOutput.txid.dispose();
+    input.scriptSig.dispose();
+  }
+  tx.transaction.dispose();
+  if (tx.chainPosition case bdk.ConfirmedChainPosition(
+    :final confirmationBlockTime,
+    :final transitively,
+  )) {
+    confirmationBlockTime.blockId.hash.dispose();
+    transitively?.dispose();
+  }
+  return inputs;
+}
+
+/// No local insertion is performed. Only advancing server deltas can prove
+/// unconfirmed visibility; canonical confirmation is separate chain evidence.
+/// A tracked spend that left the canonical set is settled, for this pass
+/// only, when a canonical transaction spends one of its recorded inputs and
+/// is confirmed, or is itself a tracked spend observed in this pass. An
+/// eviction is one endpoint's omission: like any absence, it settles nothing.
+_SpendEvidence _spendEvidence(
+  bdk.Wallet wallet,
+  Map<String, Set<String>> tracked,
+) {
+  final observed = <String>{};
+  final inputs = <String, Set<String>>{};
+  final settled = <String>{};
+  if (tracked.isEmpty) {
+    return (observed: observed, inputs: inputs, settled: settled);
+  }
+  final staged = wallet.staged();
+  final positive = <String>{};
+  try {
+    final graph = staged?.txGraphChangeset();
+    if (graph != null) {
+      positive.addAll(graph.lastSeen.keys.map((id) => id.toString()));
+      positive.addAll(graph.anchors.map((anchor) => anchor.txid.toString()));
+      for (final tx in graph.txs) {
+        tx.dispose();
+      }
+      for (final entry in graph.txouts.entries) {
+        entry.key.dispose();
+        entry.value.scriptPubkey.dispose();
+        entry.value.value.dispose();
+      }
+      for (final id in {
+        ...graph.lastSeen.keys,
+        ...graph.firstSeen.keys,
+        ...graph.lastEvicted.keys,
+      }) {
+        id.dispose();
+      }
+      for (final anchor in graph.anchors) {
+        anchor.txid.dispose();
+        anchor.confirmationBlockTime.blockId.hash.dispose();
+      }
+    }
+    final displaced = <String>{};
+    for (final id in tracked.keys) {
+      final txid = bdk.Txid.fromString(hex: id);
+      try {
+        final tx = wallet.getTx(txid: txid);
+        if (tx == null) {
+          if (tracked[id]?.isNotEmpty ?? false) displaced.add(id);
+          continue;
+        }
+        if (positive.contains(id) ||
+            tx.chainPosition is bdk.ConfirmedChainPosition) {
+          observed.add(id);
+        }
+        final spent = _takeInputs(tx);
+        if (tracked[id]?.isEmpty ?? true) inputs[id] = spent;
+      } finally {
+        txid.dispose();
+      }
+    }
+    if (displaced.isNotEmpty) {
+      // Outpoints spent by a confirmed transaction, or by a tracked
+      // replacement this pass observed.
+      final spent = <String>{};
+      for (final tx in wallet.transactions()) {
+        final id = tx.transaction.computeTxid();
+        final confirmed = tx.chainPosition is bdk.ConfirmedChainPosition;
+        final proof = confirmed || observed.contains(id.toString());
+        id.dispose();
+        final outpoints = _takeInputs(tx);
+        if (proof) spent.addAll(outpoints);
+      }
+      settled.addAll(
+        displaced.where((id) => tracked[id]?.any(spent.contains) ?? false),
+      );
+    }
+    return (observed: observed, inputs: inputs, settled: settled);
+  } finally {
+    staged?.dispose();
+  }
+}

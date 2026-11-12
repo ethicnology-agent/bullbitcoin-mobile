@@ -1,3 +1,5 @@
+import 'package:bb_mobile/features/wallet/public/wallet_facade.dart'
+    show BitcoinSpendStatus, WalletSpendBlockedException;
 import 'package:bb_mobile/core/wallet/domain/wallet_failure.dart';
 import 'package:bb_mobile/core/fees/domain/fees_entity.dart';
 import 'package:bb_mobile/core/wallet/domain/entities/wallet_utxo.dart';
@@ -42,13 +44,20 @@ class PreparePayBitcoinPayinUsecase {
     } else {
       return const Err(PayUnexpectedFailure('Amount required'));
     }
-    final result = await _prepareBitcoinSendUsecase.execute(
-      walletId: walletId,
-      recipients: [recipient],
-      networkFee: networkFee,
-      selectedInputs: selectedInputs,
-      replaceByFee: replaceByFee,
-    );
+    final Result<PreparedBitcoinSend, WalletFailure> result;
+    try {
+      result = await _prepareBitcoinSendUsecase.execute(
+        walletId: walletId,
+        recipients: [recipient],
+        networkFee: networkFee,
+        selectedInputs: selectedInputs,
+        replaceByFee: replaceByFee,
+      );
+    } on WalletSpendBlockedException catch (e) {
+      return Err(
+        PaySpendBlockedFailure(busy: e.status == BitcoinSpendStatus.busy),
+      );
+    }
     return result
         .map(
           (prepared) => (

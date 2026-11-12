@@ -108,3 +108,14 @@ final class SellUnexpectedFailure extends SellFailure {
 final class SellUnsupportedNetworkFailure extends SellFailure {
   const SellUnsupportedNetworkFailure();
 }
+
+final class SellSpendBlockedFailure extends SellFailure {
+  /// The wallet is only busy with another operation: retrying shortly works.
+  final bool busy;
+  const SellSpendBlockedFailure({this.busy = false});
+}
+
+/// The existing proposal remains reserved until it can safely continue.
+final class SellPayjoinPausedFailure extends SellFailure {
+  const SellPayjoinPausedFailure();
+}

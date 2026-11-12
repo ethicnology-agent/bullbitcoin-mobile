@@ -1,4 +1,3 @@
-import 'package:bb_mobile/features/wallet/domain/wallet.dart';
 import 'package:bb_mobile/features/send/domain/usecases/broadcast_bitcoin_transaction_usecase.dart';
 import 'package:bb_mobile/core/transactions/domain/transaction_port.dart';
 import 'package:bb_mobile/features/send/public/send_facade.dart';

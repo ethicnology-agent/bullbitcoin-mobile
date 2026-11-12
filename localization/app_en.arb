@@ -16048,6 +16048,22 @@
   "@networkWalletReuseSecret": {
     "description": "Create wallets on the selected network with an existing secret"
   },
+  "walletSpendAwaitingObservation": "Spending is unavailable until this wallet is synced and has seen its previous payments on the network. Refresh the wallet or use Scan for missing transactions, then try again.",
+  "@walletSpendAwaitingObservation": {
+    "description": "Bitcoin wallet spend gate. No timeout releases a payment: a sync must see it, or prove it can no longer confirm. A payment no sync ever sees keeps the wallet blocked, so the text promises no end."
+  },
+  "walletSpendReplacementUnavailable": "Fee bumping is unavailable until this wallet sees the payment on the network. Refresh the wallet, then try again.",
+  "@walletSpendReplacementUnavailable": {
+    "description": "RBF is refused only while the tracked Bitcoin broadcast it replaces has not been observed by a sync."
+  },
+  "sendPayjoinSpendPaused": "This Payjoin payment is paused because the wallet cannot safely continue. Its inputs remain reserved. Refresh the wallet or use Scan for missing transactions, then retry this proposal while it is still valid. If it has expired, check the payment in Transactions before taking further action.",
+  "@sendPayjoinSpendPaused": {
+    "description": "A retained Payjoin proposal cannot proceed; keep reservations and retry the same proposal only."
+  },
+  "walletSpendBusy": "The wallet is busy. Try again in a moment.",
+  "@walletSpendBusy": {
+    "description": "Bitcoin spend refused only because another wallet operation, usually a sync, holds the wallet. Retrying shortly works; it says nothing about previous payments."
+  },
   "sendRemainingBalance": "Send remaining balance",
   "@sendRemainingBalance": {
     "description": "Toggle label that assigns the balance left after fixed outputs and fees to a recipient"
@@ -16098,6 +16114,26 @@
   "@sendSelectedCoinsLabel": {
     "description": "Label for the amount available from manually selected transaction inputs"
   },
+  "broadcastSignedTxErrorAlreadyInChain": "This transaction is already in the blockchain. There is nothing left to broadcast.",
+  "@broadcastSignedTxErrorAlreadyInChain": {
+    "description": "Broadcast Transaction error when the node reports the transaction is already confirmed (bitcoind -27)"
+  },
+  "broadcastSignedTxErrorRejected": "The network rejected this transaction. It may be incompletely signed, invalid, or in conflict with another payment.",
+  "@broadcastSignedTxErrorRejected": {
+    "description": "Broadcast Transaction error when the node rejects the transaction (bitcoind -26)"
+  },
+  "broadcastSignedTxErrorOutcomeUnknown": "We couldn't confirm that your transaction was broadcast. Check a block explorer before trying again.",
+  "@broadcastSignedTxErrorOutcomeUnknown": {
+    "description": "Broadcast Transaction error when the failure does not show whether the transaction reached the network"
+  },
+  "broadcastSignedTxErrorNetworkNotEnabled": "Broadcasting on this network is not enabled in the current settings.",
+  "@broadcastSignedTxErrorNetworkNotEnabled": {
+    "description": "Broadcast Transaction error when the app refuses locally to broadcast on a network the settings do not enable"
+  },
+  "coreScreensOutputsExceedInputs": "Outputs exceed inputs: this transaction is invalid and the network will reject it.",
+  "@coreScreensOutputsExceedInputs": {
+    "description": "Transaction review alert when a Bitcoin transaction's outputs exceed its inputs"
+  },
   "passphraseShow": "Show passphrase",
   "@passphraseShow": {
     "description": "Accessible name of the button that reveals the typed passphrase"
@@ -16105,9 +16141,5 @@
   "passphraseHide": "Hide passphrase",
   "@passphraseHide": {
     "description": "Accessible name of the button that hides the typed passphrase"
-    },
-  "coreScreensOutputsExceedInputs": "Outputs exceed inputs: this transaction is invalid and the network will reject it.",
-  "@coreScreensOutputsExceedInputs": {
-    "description": "Transaction review alert when a Bitcoin transaction's outputs exceed its inputs"
   }
 }

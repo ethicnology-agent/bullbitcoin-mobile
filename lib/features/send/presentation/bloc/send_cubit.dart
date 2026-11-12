@@ -1,3 +1,7 @@
+import 'package:bb_mobile/features/send/domain/usecases/retry_payjoin_proposal_usecase.dart';
+import 'package:bb_mobile/features/wallet/public/wallet_facade.dart'
+    show BitcoinSpendStatus, WalletSpendBlockedException;
+import 'package:bb_mobile/features/send/domain/broadcast_failure.dart';
 import 'package:bb_mobile/features/wallet/domain/network_x.dart';
 import 'package:bb_mobile/features/send/domain/usecases/watch_wallet_revisions_usecase.dart';
 import 'package:bb_mobile/features/send/domain/usecases/prepare_send_bitcoin_transaction_usecase.dart';
@@ -101,6 +105,7 @@ class SendCubit extends Cubit<SendState>
     required this._prepareLiquidSendUsecase,
     required this._sendWithPayjoinUsecase,
     required this._watchPayjoinUsecase,
+    required this._retryPayjoinProposalUsecase,
     required this._getWalletsUsecase,
     required this._getWalletUsecase,
     required this._createSendSwapUsecase,
@@ -195,6 +200,7 @@ class SendCubit extends Cubit<SendState>
   final BroadcastBitcoinTransactionUsecase _broadcastBitcoinTxUsecase;
   final SendWithPayjoinUsecase _sendWithPayjoinUsecase;
   final WatchPayjoinUsecase _watchPayjoinUsecase;
+  final RetryPayjoinProposalUsecase _retryPayjoinProposalUsecase;
   final UpdatePaidSendSwapUsecase _updatePaidSendSwapUsecase;
   final CalculateLiquidAbsoluteFeesUsecase _calculateLiquidAbsoluteFeesUsecase;
 
@@ -3037,6 +3043,17 @@ class SendCubit extends Cubit<SendState>
     } catch (e) {
       if (isStale()) return false;
       _invalidateSignedTransaction();
+      if (e is WalletSpendBlockedException) {
+        emit(
+          state.copyWith(
+            failure: SendSpendBlockedFailure(
+              busy: e.status == BitcoinSpendStatus.busy,
+            ),
+            buildingTransaction: false,
+          ),
+        );
+        return false;
+      }
       log.severe(error: e, trace: StackTrace.current);
       if (e is ConsolidationRequiredException) {
         emit(
@@ -3326,6 +3343,7 @@ class SendCubit extends Cubit<SendState>
           persistedPayin ??
               (isPsbt ? state.signedBitcoinPsbt! : state.signedBitcoinTx!),
           network: wallet.network,
+          walletId: wallet.id,
           isPsbt: persistedPayinIsPsbt ?? isPsbt,
         );
       }
@@ -3381,10 +3399,14 @@ class SendCubit extends Cubit<SendState>
       }
 
       unawaited(
-        _getWalletUsecase.execute(wallet.id, sync: true).catchError((e) {
-          log.warning('Failed to sync wallet after broadcast: $e');
-          return null;
-        }),
+        _getWalletUsecase
+            .execute(wallet.id, sync: true)
+            .then<void>((_) {})
+            .catchError((Object _) {
+              log.warning(
+                'send_post_broadcast_refresh_failed category=unexpected',
+              );
+            }),
       );
     } on GetWalletException catch (e) {
       if (!isClosed) {
@@ -3395,8 +3417,21 @@ class SendCubit extends Cubit<SendState>
           ),
         );
       }
+    } on WalletSpendBlockedException catch (e) {
+      if (!isClosed) {
+        emit(
+          state.copyWith(
+            failure: SendSpendBlockedFailure(
+              busy: e.status == BitcoinSpendStatus.busy,
+            ),
+            broadcastingTransaction: false,
+          ),
+        );
+      }
     } on BroadcastTransactionException catch (e) {
-      log.warning('Failed to broadcast transaction: ${e.message}');
+      log.warning(
+        'send_broadcast_failed category=${BroadcastFailureCategory.of(e).name}',
+      );
       if (!isClosed) {
         emit(
           state.copyWith(
@@ -3408,17 +3443,13 @@ class SendCubit extends Cubit<SendState>
           ),
         );
       }
-    } catch (e, st) {
-      log.warning(
-        'Unexpected broadcast transaction error',
-        error: e,
-        trace: st,
-      );
+    } catch (_) {
+      log.warning('send_broadcast_failed category=unexpected');
       if (!isClosed) {
         emit(
           state.copyWith(
-            failure: SendTransactionConfirmationFailure(
-              logMessage: e.toString(),
+            failure: const SendTransactionConfirmationFailure(
+              logMessage: 'send_broadcast_failed',
             ),
             broadcastingTransaction: false,
           ),
@@ -3752,10 +3783,14 @@ class SendCubit extends Cubit<SendState>
         }
         _watchWalletTransactionByTxId(walletId: wallet.id, txId: txId);
       }
-    } catch (e) {
+    } catch (_) {
       if (isStale()) return;
       emit(state.copyWith(step: SendStep.confirm));
-      log.severe(error: e, trace: StackTrace.current);
+      log.severe(
+        message: 'send_confirmation_failed category=unexpected',
+        error: Exception('send_confirmation_failed'),
+        trace: StackTrace.current,
+      );
     }
   }
 
@@ -3826,11 +3861,13 @@ class SendCubit extends Cubit<SendState>
             unawaited(
               _getWalletUsecase
                   .execute(state.selectedWallet!.id, sync: true)
-                  .catchError((Object e) {
+                  .then<void>((_) {})
+                  .catchError((Object _) {
                     // Fire-and-forget refresh: without this the throw becomes
                     // an unhandled zone error, matching the sibling syncs.
-                    log.warning('Failed to sync wallet after transfer: $e');
-                    return null;
+                    log.warning(
+                      'send_post_transfer_refresh_failed category=unexpected',
+                    );
                   }),
             );
           }
@@ -3839,6 +3876,39 @@ class SendCubit extends Cubit<SendState>
           emit(state.copyWith(failure: failure));
       }
     });
+  }
+
+  Future<void> retryPayjoinProposal() async {
+    final sender = state.payjoinSender;
+    // Cubit calls have no event transformer: admit synchronously and drop
+    // duplicate taps until the pending retry settles.
+    if (isClosed ||
+        state.isRetryingPayjoinProposal ||
+        sender == null ||
+        !sender.canRetryProposal) {
+      return;
+    }
+    emit(state.copyWith(isRetryingPayjoinProposal: true));
+    try {
+      final result = await _retryPayjoinProposalUsecase.execute(sender.id);
+      final latest = state.payjoinSender;
+      if (isClosed ||
+          latest == null ||
+          latest.id != sender.id ||
+          !latest.isOngoing) {
+        return;
+      }
+      switch (result) {
+        case Err(:final failure):
+          // The subscription owns session transitions. A late retry failure
+          // must not replace a newer observation, even for the same session.
+          if (identical(latest, sender)) emit(state.copyWith(failure: failure));
+        case Ok():
+          break;
+      }
+    } finally {
+      if (!isClosed) emit(state.copyWith(isRetryingPayjoinProposal: false));
+    }
   }
 
   /// Watches the sender side of an in-flight payjoin and resolves the send
@@ -3890,6 +3960,7 @@ class SendCubit extends Cubit<SendState>
             emit(
               state.copyWith(
                 payjoinSender: payjoin,
+                failure: null,
                 // Prefer the payjoin txid; fall back to the original tx that
                 //  was broadcast when the negotiation didn't complete.
                 txId: payjoin.txId ?? payjoin.originalTxId,
@@ -3899,10 +3970,14 @@ class SendCubit extends Cubit<SendState>
             _payjoinSubscription?.cancel();
             if (walletId != null) {
               unawaited(
-                _getWalletUsecase.execute(walletId, sync: true).catchError((e) {
-                  log.warning('Failed to sync wallet after payjoin: $e');
-                  return null;
-                }),
+                _getWalletUsecase
+                    .execute(walletId, sync: true)
+                    .then<void>((_) {})
+                    .catchError((Object _) {
+                      log.warning(
+                        'send_post_payjoin_refresh_failed category=unexpected',
+                      );
+                    }),
               );
             }
             // broadcastTransaction never reaches its own label-store call for
@@ -3953,7 +4028,14 @@ class SendCubit extends Cubit<SendState>
               ),
             );
           } else {
-            emit(state.copyWith(payjoinSender: payjoin));
+            emit(
+              state.copyWith(
+                payjoinSender: payjoin,
+                failure: payjoin.spendFailure == null
+                    ? null
+                    : const SendPayjoinPausedFailure(),
+              ),
+            );
           }
         });
   }

@@ -1,3 +1,5 @@
+import 'package:transaction_sync/transaction_sync.dart'
+    show WalletRevision, WalletKey;
 import 'package:bull_sdk/bdk.dart' as bdk;
 import 'package:bb_mobile/features/wallet/domain/wallet.dart';
 import 'package:bb_mobile/core/wallet/domain/wallet_failure.dart';
@@ -112,6 +114,11 @@ void main() {
     bdkDatasource = _MockBdkWalletDatasource();
     frozenDatasource = _MockFrozenWalletUtxoDatasource();
     repository = BitcoinWalletRepository(
+      requireSpend: (_, {replacing}) async => WalletRevision(
+        key: WalletKey(id: 'fixture', network: BitcoinNetwork.testnet),
+        generation: 1,
+        revision: 1,
+      ),
       walletMetadataDatasource: metadataDatasource,
       // `Secrets` is final: the seam is the keystore below it, installed in `setUp`. No secret is stored — these cases never reach one.
       secrets: Secrets(scratchDirectory: () async => '/tmp'),

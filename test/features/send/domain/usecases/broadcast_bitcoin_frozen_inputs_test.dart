@@ -1,4 +1,5 @@
-import 'package:bb_mobile/features/wallet/domain/wallet.dart' show Network;
+import 'dart:io';
+import 'package:bb_mobile/features/send/domain/broadcast_failure.dart';
 import 'package:bb_mobile/features/send/data/bitcoin_blockchain_repository.dart';
 import 'package:bb_mobile/features/send/domain/usecases/broadcast_bitcoin_transaction_usecase.dart';
 import 'package:bb_mobile/core/errors/send_errors.dart';
@@ -122,7 +123,13 @@ void main() {
 
       await expectLater(
         usecase().execute(psbt, isPsbt: true, network: Network.bitcoinMainnet),
-        throwsA(isA<BroadcastTransactionException>()),
+        throwsA(
+          isA<CategorizedBroadcastException>().having(
+            (failure) => failure.category,
+            'category',
+            BroadcastFailureCategory.rejected,
+          ),
+        ),
       );
       verifyNothingBroadcast();
     });
@@ -136,7 +143,13 @@ void main() {
           isPsbt: false,
           network: Network.bitcoinMainnet,
         ),
-        throwsA(isA<BroadcastTransactionException>()),
+        throwsA(
+          isA<CategorizedBroadcastException>().having(
+            (failure) => failure.category,
+            'category',
+            BroadcastFailureCategory.rejected,
+          ),
+        ),
       );
       verifyNothingBroadcast();
     });
@@ -183,7 +196,7 @@ void main() {
       final failing = _MockWalletUtxoRepository();
       when(
         failing.getAllFrozenOutpoints,
-      ).thenThrow(StateError('store unavailable'));
+      ).thenThrow(const FileSystemException('store unavailable'));
 
       await expectLater(
         usecase(
@@ -211,7 +224,11 @@ void main() {
       final cubit = BroadcastSignedTxCubit(
         broadcastBitcoinTransactionUsecase: usecase(),
         verifySignedTxUsecase: VerifyBroadcastSignedTxUsecase(
-          SendFacade(VerifySignedTxUsecase()),
+          SendFacade(
+            bitcoin: usecase().execute,
+            liquid: (_) async => throw StateError('Liquid is not used here'),
+            verifySignedTxUsecase: VerifySignedTxUsecase(),
+          ),
         ),
         unsignedPsbt: psbt,
       );
