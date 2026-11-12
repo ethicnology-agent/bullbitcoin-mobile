@@ -259,14 +259,16 @@ sealed class PaymentRequest with _$PaymentRequest {
   static Future<PaymentRequest?> _tryParseLiquidAddress(String data) async {
     try {
       final network = await lwk.Address.validate(addressString: data);
-      // The app has no Liquid regtest environment: an Elements regtest
-      // address is not a destination, rather than a mainnet one.
-      final isTestnet = switch (network) {
-        lwk.LiquidNetwork.mainnet => false,
-        lwk.LiquidNetwork.testnet => true,
-        lwk.LiquidNetwork.regtest => null,
-      };
-      if (isTestnet == null) return null;
+      // Carry the concrete environment just as Bitcoin regtest detection does.
+      // A historical testnet boolean cannot represent this destination safely.
+      if (network == lwk.LiquidNetwork.regtest) {
+        return PaymentRequest.bip21(
+          network: Network.liquidRegtest,
+          uri: data,
+          address: data,
+        );
+      }
+      final isTestnet = network == lwk.LiquidNetwork.testnet;
       return PaymentRequest.liquid(address: data, isTestnet: isTestnet);
     } catch (e) {
       log.warning(e.toString());
