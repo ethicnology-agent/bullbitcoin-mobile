@@ -4,12 +4,12 @@ import 'package:bb_mobile/features/wallet/data/models/wallet_metadata_model.dart
 import 'package:bb_mobile/features/wallet/domain/wallet.dart';
 import 'package:bb_mobile/features/wallet/data/wallet_metadata_service.dart';
 import 'package:bb_mobile/locator.dart';
-import 'package:bb_mobile/init.dart';
+import 'support/integration_harness.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Future<void> main({bool isInitialized = false}) async {
   TestWidgetsFlutterBinding.ensureInitialized();
-  if (!isInitialized) await Bull.init();
+  if (!isInitialized) await IntegrationHarness.init();
 
   final sqlite = locator<SqliteDatabase>();
 

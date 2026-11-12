@@ -2,13 +2,13 @@ import 'package:bb_mobile/core/utils/liquid_address.dart';
 import 'package:bb_mobile/core/utils/payment_request.dart';
 import 'package:bb_mobile/features/wallet/domain/wallet.dart';
 import 'package:bb_mobile/features/send/presentation/bloc/send_state.dart';
-import 'package:bb_mobile/init.dart';
+import 'support/integration_harness.dart';
 import 'package:bull_sdk/lwk.dart' as lwk;
 import 'package:flutter_test/flutter_test.dart';
 
 Future<void> main({bool isInitialized = false}) async {
   TestWidgetsFlutterBinding.ensureInitialized();
-  if (!isInitialized) await Bull.init();
+  if (!isInitialized) await IntegrationHarness.init();
 
   const btcAddress = 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq';
 

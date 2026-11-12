@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:bb_mobile/init.dart';
+import 'support/integration_harness.dart';
 import 'package:bull_sdk/lwk.dart' as lwk;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:primitives/primitives.dart';
@@ -18,7 +18,7 @@ import '../packages/secrets/test/fixtures/liquid_signing_fixture.dart';
 /// Offline signatures cover successful Liquid finalization here and successful Bitcoin finalization in the package unit suite. Refusal cases keep storage failures separate and drop library messages.
 Future<void> main({bool isInitialized = false}) async {
   TestWidgetsFlutterBinding.ensureInitialized();
-  if (!isInitialized) await Bull.init();
+  if (!isInitialized) await IntegrationHarness.init();
 
   // The published BIP39 vector for entropy ffff…ff. Public, so no funds and
   // nothing to leak.

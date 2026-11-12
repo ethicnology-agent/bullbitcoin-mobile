@@ -1,6 +1,8 @@
 import 'package:primitives/primitives.dart' show BitcoinTransactionRecipient;
 import 'dart:io';
 
+import 'support/integration_harness.dart';
+
 import 'package:bb_mobile/core/wallet/domain/wallet_failure.dart';
 import 'package:bb_mobile/core/utils/result.dart';
 import 'package:bb_mobile/core/fees/domain/fees_entity.dart';
@@ -16,7 +18,6 @@ import 'package:bb_mobile/core/wallet/domain/repositories/wallet_utxo_repository
 import 'package:bb_mobile/features/wallet/domain/usecases/prepare_bitcoin_send_usecase.dart';
 import 'package:bb_mobile/features/settings/domain/usecases/set_environment_usecase.dart';
 import 'package:bb_mobile/locator.dart';
-import 'package:bb_mobile/init.dart';
 import 'package:bull_sdk/bdk.dart' as bdk;
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
@@ -40,7 +41,7 @@ import 'package:flutter_test/flutter_test.dart';
 // Run via `make integration-test` (auto-aggregated by tools/gen_all_test.dart).
 Future<void> main({bool isInitialized = false}) async {
   TestWidgetsFlutterBinding.ensureInitialized();
-  if (!isInitialized) await Bull.init();
+  if (!isInitialized) await IntegrationHarness.init();
 
   final frozenDatasource = locator<FrozenWalletUtxoDatasource>();
   final utxoRepository = locator<WalletUtxoRepository>();
@@ -132,13 +133,16 @@ Future<void> main({bool isInitialized = false}) async {
   // silently omitted.
   // -------------------------------------------------------------------------
   const mnemonicDefine = String.fromEnvironment('TEST_ALICE_MNEMONIC');
-  final mnemonic = mnemonicDefine.isNotEmpty
+  final mnemonic = IntegrationHarness.isRegtest
+      ? null
+      : mnemonicDefine.isNotEmpty
       ? mnemonicDefine
       : Platform.environment['TEST_ALICE_MNEMONIC'];
-  final hasFunds = mnemonic != null && mnemonic.isNotEmpty;
+  final hasFunds =
+      IntegrationHarness.isRegtest || (mnemonic != null && mnemonic.isNotEmpty);
 
   group(
-    'Coins / freeze enforcement (funded testnet)',
+    'Coins / freeze enforcement (funded wallet)',
     () {
       // Resolve from the locator inside setUpAll, NOT in the group body: a
       // group callback runs at test-collection time for every group — even a
@@ -154,6 +158,11 @@ Future<void> main({bool isInitialized = false}) async {
         walletRepository = locator<WalletRepository>();
         addressRepository = locator<WalletAddressRepository>();
         prepareBitcoinSendUsecase = locator<PrepareBitcoinSendUsecase>();
+
+        if (IntegrationHarness.isRegtest) {
+          wallet = await IntegrationHarness.fundedWallet();
+          return;
+        }
 
         // Setup: assert rather than discard, so a failed write surfaces here
         // instead of as a confusing failure further down the test.
@@ -184,12 +193,18 @@ Future<void> main({bool isInitialized = false}) async {
       // aggregated run on testnet — later files (e.g. sqlite_transactions)
       // fetch mainnet data through env-bound ports and would otherwise fail.
       // mainnet is the seeded default (database_seeds.dart).
-      tearDownAll(
-        () => locator<SetEnvironmentUsecase>().execute(Environment.mainnet),
-      );
+      tearDownAll(() async {
+        if (!IntegrationHarness.isRegtest) {
+          expect(
+            await locator<SetEnvironmentUsecase>().execute(Environment.mainnet),
+            isA<Ok<void, SettingsFailure>>(),
+          );
+        }
+      });
 
       test('list surfaces confirmations and labels per UTXO', () async {
         final utxos = await utxoRepository.getWalletUtxos(walletId: wallet.id);
+        if (IntegrationHarness.isRegtest) expect(utxos, isNotEmpty);
         if (utxos.isEmpty) {
           // The mnemonic is set but the testnet wallet has no UTXOs (faucet
           // funds expire). Skip rather than hard-fail CI — the D7 exclusion
@@ -213,6 +228,9 @@ Future<void> main({bool isInitialized = false}) async {
       test('a manual drain spends exactly the selected outpoint', () async {
         final utxos = await utxoRepository.getWalletUtxos(walletId: wallet.id);
         final spendable = utxos.where((utxo) => !utxo.isFrozen).toList();
+        if (IntegrationHarness.isRegtest) {
+          expect(spendable.length, greaterThanOrEqualTo(2));
+        }
         if (spendable.length < 2) {
           markTestSkipped('requires at least two testnet UTXOs');
           return;
@@ -251,6 +269,9 @@ Future<void> main({bool isInitialized = false}) async {
       test('a partly frozen manual selection fails closed', () async {
         final utxos = await utxoRepository.getWalletUtxos(walletId: wallet.id);
         final spendable = utxos.where((utxo) => !utxo.isFrozen).toList();
+        if (IntegrationHarness.isRegtest) {
+          expect(spendable.length, greaterThanOrEqualTo(2));
+        }
         if (spendable.length < 2) {
           markTestSkipped('requires at least two testnet UTXOs');
           return;
@@ -289,6 +310,7 @@ Future<void> main({bool isInitialized = false}) async {
 
       test('frozen coins are excluded from every PSBT build (D7)', () async {
         final utxos = await utxoRepository.getWalletUtxos(walletId: wallet.id);
+        if (IntegrationHarness.isRegtest) expect(utxos, isNotEmpty);
         if (utxos.isEmpty) {
           markTestSkipped('testnet wallet $wallet is unfunded');
           return;

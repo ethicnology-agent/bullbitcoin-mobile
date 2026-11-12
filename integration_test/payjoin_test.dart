@@ -1,5 +1,7 @@
 import 'dart:io' show Platform;
 
+import 'support/integration_harness.dart';
+
 import 'package:bb_mobile/core/wallet/domain/wallet_failure.dart';
 
 import 'package:bb_mobile/features/send/domain/usecases/broadcast_bitcoin_transaction_usecase.dart';
@@ -21,6 +23,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:primitives/primitives.dart' hide Network, ScriptType;
 
 Future<void> main({bool isInitialized = false}) async {
+  // Regtest Payjoin is deferred pending the persistence schema decision.
+  if (IntegrationHarness.isRegtest) return;
   TestWidgetsFlutterBinding.ensureInitialized();
   if (!isInitialized) {
     await Bull.init();

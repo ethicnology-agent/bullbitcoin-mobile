@@ -1,4 +1,4 @@
-import 'package:bb_mobile/init.dart';
+import 'support/integration_harness.dart';
 import 'package:bull_pricer/bull_pricer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,13 +6,15 @@ import 'package:primitives/primitives.dart';
 
 Future<void> main({bool isInitialized = false}) async {
   TestWidgetsFlutterBinding.ensureInitialized();
-  if (!isInitialized) await Bull.init();
+  if (!isInitialized) await IntegrationHarness.init();
 
   group('Exchange Rate Integration Tests', () {
     test('the Bull Bitcoin API prices every supported currency', () async {
       for (final currency in SupportedCurrency.values) {
         final price = await Pricer.getIndexPrice(
-          network: BitcoinNetwork.mainnet,
+          network: IntegrationHarness.isRegtest
+              ? BitcoinNetwork.regtest
+              : BitcoinNetwork.mainnet,
           currency: currency,
         );
         switch (price) {
@@ -27,7 +29,9 @@ Future<void> main({bool isInitialized = false}) async {
 
     test('the Bull Bitcoin API has a price history', () async {
       final history = await Pricer.getPriceHistory(
-        network: BitcoinNetwork.mainnet,
+        network: IntegrationHarness.isRegtest
+            ? BitcoinNetwork.regtest
+            : BitcoinNetwork.mainnet,
         currency: SupportedCurrency.usd,
       );
       switch (history) {

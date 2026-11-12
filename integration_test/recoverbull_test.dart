@@ -12,14 +12,15 @@ import 'package:bb_mobile/core/utils/result.dart';
 import 'package:bb_mobile/core/wallet/data/repositories/wallet_repository.dart';
 import 'package:bb_mobile/features/wallet/domain/wallet.dart';
 import 'package:bb_mobile/locator.dart';
-import 'package:bb_mobile/init.dart';
+import 'support/integration_harness.dart';
+import 'support/recoverbull_regtest.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:bull_tor/tor.dart';
 
 Future<void> main({bool isInitialized = false}) async {
   TestWidgetsFlutterBinding.ensureInitialized();
-  if (!isInitialized) await Bull.init();
+  if (!isInitialized) await IntegrationHarness.init();
 
   final ensureTorReadyUsecase = locator<EnsureTorReadyUsecase>();
   final restoreVaultUsecase = locator<RestoreVaultUsecase>();
@@ -56,13 +57,9 @@ Future<void> main({bool isInitialized = false}) async {
   // there would fail every PR. In CI it runs only on PRs to main and manual
   // runs; local runs always exercise it.
   final runLiveKeyServerTest =
+      IntegrationHarness.isRegtest ||
       Platform.environment['CI'] != 'true' ||
       Platform.environment['RUN_LIVE_KEYSERVER_TEST'] == 'true';
-
-  setUpAll(() async {
-    final state = await ensureTorReadyUsecase.execute();
-    expect(state, isA<TorReady>());
-  });
 
   group('Recoverbull', () {
     // Fetches the vault key over Tor from the RecoverBull key server. Tor can
@@ -75,6 +72,12 @@ Future<void> main({bool isInitialized = false}) async {
           ? false
           : 'calls the production key server: runs on PRs to main or a manually dispatched CI run',
       () async {
+        if (IntegrationHarness.isRegtest) {
+          await restoreLocalRecoverbull();
+          return;
+        }
+        final state = await ensureTorReadyUsecase.execute();
+        expect(state, isA<TorReady>());
         debugPrint('''
 
 ╔══════════════════════════════════════════════════════════════════════════╗
