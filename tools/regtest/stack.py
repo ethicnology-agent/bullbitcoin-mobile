@@ -146,7 +146,7 @@ def prepare():
         "volumes": [str(STATE / "bin/recoverbull") + ":/app/recoverbull:ro", "recoverbull:/data"],
         "environment": {
             "DATABASE_URL": "/data/recoverbull.sqlite3", "SERVER_ADDRESS": "0.0.0.0:3000",
-            "SECRET_MAX_LENGTH": "128", "CANARY": "BULL regtest fixture",
+            "SECRET_MAX_LENGTH": "128", "CANARY": "🐦",
             "RATE_LIMIT_COOLDOWN": "1", "RATE_LIMIT_MAX_ATTEMPTS": "3",
             "ATTEMPTS_SNAPSHOT_TTL_SECONDS": "30", "RATE_LIMIT_MEMORY_BUDGET_MB": "512",
         }, "ports": ["8098:3000"],
