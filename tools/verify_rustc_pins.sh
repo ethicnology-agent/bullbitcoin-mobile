@@ -36,6 +36,32 @@ done
 
 for abi_dir in "${abi_dirs[@]}"; do
   abi=${abi_dir##*/}
+  expected_abi=false
+  for wanted_abi in "${expected_abis[@]}"; do
+    if [ "$abi" = "$wanted_abi" ]; then
+      expected_abi=true
+      break
+    fi
+  done
+  if [ "$expected_abi" = false ]; then
+    for so in "$abi_dir"/*.so; do
+      case "${so##*/}" in
+        libonion.so|librust_lib_bull_sdk.so|libbdk_dart_ffi.so|libpayjoin_ffi_wrapper.so)
+          echo "Tracked Rust library in unexpected ABI: $abi/${so##*/}" >&2
+          exit 1
+          ;;
+      esac
+      if ! strings "$so" > "$tmpdir/strings"; then
+        echo "Cannot inspect library: $abi/${so##*/}" >&2
+        exit 1
+      fi
+      if grep -qE 'rustc version [0-9]' "$tmpdir/strings"; then
+        echo "Untracked Rust library in unexpected ABI: $abi/${so##*/}" >&2
+        exit 1
+      fi
+    done
+    continue
+  fi
   for name in libonion.so librust_lib_bull_sdk.so libbdk_dart_ffi.so libpayjoin_ffi_wrapper.so; do
     so="$abi_dir/$name"
     if [ ! -f "$so" ]; then
