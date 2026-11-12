@@ -28,7 +28,7 @@ Future<void> main({bool isInitialized = false}) async {
       test(
         'dummy account deserializes through the BULL account model',
         () async {
-          final account = await accountApi.getUserSummary('dummy');
+          final account = await accountApi.getUserSummary();
           expect(account, isNotNull);
           expect(account!.toEntity().email, 'developer@example.invalid');
           expect(account.autoBuy.isActive, isFalse);
@@ -80,7 +80,6 @@ Future<void> main({bool isInitialized = false}) async {
 
       test('buy and confirmation use the real BULL enums', () async {
         final order = await accountApi.createBuyOrder(
-          apiKey: 'dummy',
           fiatCurrency: FiatCurrency.cad,
           orderAmount: const BitcoinAmount(0.001),
           network: OrderBitcoinNetwork.bitcoin,
@@ -92,16 +91,12 @@ Future<void> main({bool isInitialized = false}) async {
           order.toEntity(isTestnet: true).orderStatus,
           OrderStatus.awaitingConfirmation,
         );
-        final confirmed = await accountApi.confirmOrder(
-          apiKey: 'dummy',
-          orderId: order.orderId,
-        );
+        final confirmed = await accountApi.confirmOrder(orderId: order.orderId);
         expect(
           confirmed.toEntity(isTestnet: true).orderStatus,
           OrderStatus.inProgress,
         );
         final another = await accountApi.createBuyOrder(
-          apiKey: 'dummy',
           fiatCurrency: FiatCurrency.cad,
           orderAmount: const BitcoinAmount(0.001),
           network: OrderBitcoinNetwork.bitcoin,
