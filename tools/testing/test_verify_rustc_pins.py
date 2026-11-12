@@ -41,6 +41,22 @@ class VerifyRustcPinsTest(unittest.TestCase):
     def test_accepts_arm64_only_when_requested(self):
         self.assertEqual(self.check_apk().returncode, 0)
 
+    def test_allows_non_rust_libraries_in_extra_abis(self):
+        result = self.check_apk(
+            changed={
+                "lib/armeabi-v7a/libsqlite3.so": b"native library",
+                "lib/x86_64/libsqlite3.so": b"native library",
+            }
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_rejects_rust_library_in_extra_abi(self):
+        result = self.check_apk(
+            changed={"lib/x86_64/libonion.so": b"rustc version 1.95.0\n"}
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("unexpected ABI", result.stderr)
+
     def test_accepts_all_release_abis(self):
         self.assertEqual(
             self.check_apk(abis=("armeabi-v7a", "arm64-v8a", "x86_64")).returncode,
