@@ -65,3 +65,9 @@ Podman-compose 1.0.3 may recreate dependencies even with `--no-deps --force-recr
 For a physical Android device, keep host services on loopback and use a reserved ADB transport with port forwarding. Do not change Tailscale routes, ACLs or firewall settings to expose development RPCs.
 
 The launcher sets `DBUS_SESSION_BUS_ADDRESS=disabled` only for its Podman commands and their children. Rootless cgroupfs needs no session bus, and disabling autolaunch prevents orphan D-Bus processes from exhausting the shared inotify quota. Set the same environment variable for standalone host tests that invoke Podman. No host session or global configuration is changed.
+
+### Ark wallet fixture
+
+The loopback controller exposes bounded Ark funding, board and offboard operations for the wallet integration runner. It verifies both Bark wallets and providers are on regtest, accepts a confirmed 150,000-sat BULL deposit at a run-owned address, verifies the new 100,000-sat board, transfers that amount to the peer and offboards only the VTXOs received by that run. The final Bitcoin destination belongs to the BULL test wallet. This validates the BULL on-chain boundary with the real Bark provider; it does not claim native Ark custody support in BULL. Controller auth-token volumes are read-only and tokens are never returned.
+
+Run `python3 tools/regtest/ark_smoke.py` to verify this host fixture before the phone journey. Fixtures are serialized and expire after 15 minutes; the controller retains at most 16.

@@ -8,11 +8,15 @@ from pathlib import Path
 import time
 import signal
 import sys
+import threading
 import urllib.request
+import urllib.error
 from uuid import uuid4
 
 
 POLICY_ASSET = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"
+ARK_LOCK = threading.Lock()
+ARK_RUNS = {}
 
 
 def post(url, body, headers=None, timeout=120):
@@ -48,6 +52,143 @@ def verify_networks():
     for node in ("cln-peer", "boltz-cln"):
         if lightning(node, "getinfo")["network"] != "regtest":
             raise RuntimeError("Unexpected Lightning network")
+
+
+def mine_indexed(network, count):
+    address = rpc(network, "getnewaddress")
+    rpc(network, "generatetoaddress", [count, address])
+    height = rpc(network, "getblockcount")
+    indexer, port = ("electrs", 30000) if network == "bitcoin" else ("electrs-liquid", 30001)
+    deadline = time.monotonic() + 20
+    while True:
+        with urllib.request.urlopen(f"http://{indexer}:{port}/blocks/tip/height", timeout=5) as response:
+            indexed = int(response.read())
+        if indexed >= height:
+            return height
+        if time.monotonic() >= deadline:
+            raise RuntimeError("Indexer tip unavailable")
+        time.sleep(0.1)
+
+
+def bark(method, path, body=None, peer=False):
+    allowed = {"wallet/debug-info", "wallet/ark-info", "onchain/addresses/next",
+               "onchain/sync", "onchain/utxos", "boards/board-amount", "wallet/sync",
+               "wallet/vtxos", "wallet/send", "wallet/addresses/next", "wallet/offboard/vtxos"}
+    if path not in allowed:
+        raise ValueError("Unknown Bark fixture operation")
+    host = "bark-peer" if peer else "bark"
+    token = Path(f"/data/{host}/.bark/auth_token").read_text().strip()
+    request = urllib.request.Request(
+        f"http://{host}:3000/api/v1/{path}",
+        None if body is None else json.dumps(body).encode(),
+        {"Content-Type": "application/json", "Authorization": "Bearer " + token}, method=method,
+    )
+    with urllib.request.urlopen(request, timeout=90) as response:
+        payload = response.read()
+        return json.loads(payload) if payload else None
+
+
+def verify_ark():
+    for peer in (False, True):
+        for path in ("wallet/debug-info", "wallet/ark-info"):
+            if bark("GET", path, peer=peer)["network"] != "regtest":
+                raise RuntimeError("Unexpected Bark network")
+
+
+def spendable(vtxos):
+    return [v for v in vtxos if v["state"]["type"] == "spendable"]
+
+
+def ark_fixture(path, body):
+    verify_ark()
+    if path == "/ark/funding-address":
+        now = time.monotonic()
+        for key in list(ARK_RUNS):
+            if now - ARK_RUNS[key]["created"] > 900:
+                del ARK_RUNS[key]
+        if len(ARK_RUNS) >= 16:
+            raise RuntimeError("Too many Ark fixtures")
+        address = bark("POST", "onchain/addresses/next", {})["address"]
+        run_id = str(uuid4())
+        ARK_RUNS[run_id] = {"created": now, "address": address}
+        return {"run_id": run_id, "address": address, "deposit_sat": 150000}
+    run = ARK_RUNS[body["run_id"]]
+    if time.monotonic() - run["created"] > 900:
+        raise ValueError("Ark fixture expired")
+    if path == "/ark/board":
+        txid = body["deposit_txid"]
+        if not isinstance(txid, str) or len(txid) != 64 or any(c not in "0123456789abcdef" for c in txid):
+            raise ValueError("Invalid deposit transaction")
+        if "deposit_txid" in run and run["deposit_txid"] != txid:
+            raise ValueError("Fixture deposit already selected")
+        if "board_ids" not in run:
+            bark("POST", "onchain/sync", {})
+            coins = bark("GET", "onchain/utxos")
+            deposit = next((coin for coin in coins if coin["outpoint"].startswith(txid + ":")
+                            and coin["amount_sat"] == 150000 and coin["confirmation_height"]), None)
+            if deposit is None:
+                raise RuntimeError("Bark did not observe the confirmed BULL deposit")
+            vout = int(deposit["outpoint"].rsplit(":", 1)[1])
+            output = rpc("bitcoin", "gettxout", [txid, vout, True])
+            if not output or output["scriptPubKey"].get("address") != run["address"]:
+                raise RuntimeError("Deposit does not belong to this fixture")
+            run["deposit_txid"] = txid
+            # The pinned provider charges its 330-sat minimum board fee.
+            board = bark("POST", "boards/board-amount", {"amount_sat": 100330})
+            if board["amount_sat"] != 100000 or not board["vtxos"]:
+                raise RuntimeError("Unexpected Ark board amount")
+            run["board_ids"] = set(board["vtxos"])
+            funding_txid = board["funding_tx"]["txid"]
+            deadline = time.monotonic() + 30
+            while True:
+                try:
+                    rpc("bitcoin", "getrawtransaction", [funding_txid, True])
+                    break
+                except RuntimeError:
+                    if time.monotonic() >= deadline:
+                        raise RuntimeError("The Ark board funding was not broadcast") from None
+                    time.sleep(0.2)
+            mine_indexed("bitcoin", 3)
+        deadline = time.monotonic() + 60
+        while True:
+            bark("POST", "wallet/sync", {})
+            boarded = [v for v in spendable(bark("GET", "wallet/vtxos")) if v["id"] in run["board_ids"]]
+            if {v["id"] for v in boarded} == run["board_ids"] and sum(v["amount_sat"] for v in boarded) == 100000:
+                run["boarded"] = True
+                return {"deposit_confirmed": True, "board_spendable": True, "amount_sat": 100000}
+            if time.monotonic() >= deadline:
+                raise RuntimeError("The new Ark board did not become spendable")
+            time.sleep(0.5)
+    if path == "/ark/offboard":
+        address = body["address"]
+        if not isinstance(address, str) or not address.startswith("bcrt1") or not rpc("bitcoin", "validateaddress", [address])["isvalid"]:
+            raise ValueError("Bitcoin regtest destination required")
+        if not run.get("boarded"):
+            raise ValueError("Complete the deposit and board first")
+        if "offboard_txid" in run:
+            if address != run["destination"]:
+                raise ValueError("Fixture destination already selected")
+            return {"offboard_txid": run["offboard_txid"], "transferred_sat": 100000}
+        if "peer_ids" not in run:
+            if "transfer_before" not in run:
+                run["transfer_before"] = {v["id"] for v in bark("GET", "wallet/vtxos", peer=True)}
+                recipient = bark("POST", "wallet/addresses/next", {}, peer=True)["address"]
+                bark("POST", "wallet/send", {"destination": recipient, "amount_sat": 100000})
+            deadline = time.monotonic() + 60
+            while True:
+                bark("POST", "wallet/sync", {}, peer=True)
+                received = [v for v in spendable(bark("GET", "wallet/vtxos", peer=True)) if v["id"] not in run["transfer_before"]]
+                if received and sum(v["amount_sat"] for v in received) == 100000:
+                    run["peer_ids"] = [v["id"] for v in received]
+                    break
+                if time.monotonic() >= deadline:
+                    raise RuntimeError("The Ark peer did not receive this fixture transfer")
+                time.sleep(0.5)
+        result = bark("POST", "wallet/offboard/vtxos", {"address": address, "vtxos": run["peer_ids"]}, peer=True)
+        run["offboard_txid"] = result["offboard_txid"]
+        run["destination"] = address
+        return {"offboard_txid": run["offboard_txid"], "transferred_sat": 100000}
+    raise ValueError("Unknown Ark fixture")
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -86,26 +227,21 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError("Invalid request size")
             body = json.loads(self.rfile.read(length))
             verify_networks()
+            if self.path.startswith("/ark/"):
+                if not ARK_LOCK.acquire(blocking=False):
+                    self.respond(409, {"error": "Ark fixture busy"})
+                    return
+                try:
+                    self.respond(200, ark_fixture(self.path, body))
+                finally:
+                    ARK_LOCK.release()
+                return
             if self.path == "/mine":
                 network = body["network"]
                 count = body.get("count", 1)
                 if type(count) is not int or not 1 <= count <= 6:
                     raise ValueError("Invalid block count")
-                address = rpc(network, "getnewaddress")
-                rpc(network, "generatetoaddress", [count, address])
-                height = rpc(network, "getblockcount")
-                indexer = "electrs" if network == "bitcoin" else "electrs-liquid"
-                indexer_port = 30000 if network == "bitcoin" else 30001
-                deadline = time.monotonic() + 20
-                while True:
-                    with urllib.request.urlopen(f"http://{indexer}:{indexer_port}/blocks/tip/height", timeout=5) as response:
-                        indexed = int(response.read())
-                    if indexed >= height:
-                        break
-                    if time.monotonic() >= deadline:
-                        raise RuntimeError("Indexer tip unavailable")
-                    time.sleep(0.1)
-                self.respond(200, {"height": height})
+                self.respond(200, {"height": mine_indexed(network, count)})
             elif self.path == "/faucet":
                 network = body["network"]
                 address = body["address"]
@@ -142,8 +278,18 @@ class Handler(BaseHTTPRequestHandler):
                 self.respond(200, {"status": payment["status"]})
             else:
                 self.respond(404, {"error": "Unknown utility"})
-        except (OSError, RuntimeError, ValueError, TypeError, KeyError):
-            self.respond(400, {"error": "Regtest utility request failed"})
+        except (OSError, RuntimeError, ValueError, TypeError, KeyError) as error:
+            reasons = {
+                "Bark did not observe the confirmed BULL deposit": "deposit_not_observed",
+                "Deposit does not belong to this fixture": "deposit_address_mismatch",
+                "Unexpected Ark board amount": "board_amount_mismatch",
+                "The Ark board funding was not broadcast": "board_not_broadcast",
+                "The new Ark board did not become spendable": "board_not_spendable",
+                "The Ark peer did not receive this fixture transfer": "peer_transfer_not_observed",
+            }
+            self.respond(400, {"error": "Regtest utility request failed",
+                               "reason": reasons.get(str(error), "upstream_or_invalid_request"),
+                               "upstream_status": error.code if isinstance(error, urllib.error.HTTPError) else None})
 
 
 if __name__ == "__main__":

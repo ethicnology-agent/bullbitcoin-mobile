@@ -130,6 +130,7 @@ def prepare():
         "command": ["python3", "/app/controller.py"],
         "volumes": [str(Path(__file__).with_name("controller.py").resolve()) + ":/app/controller.py:ro",
                     "cln-peer:/data/cln-peer:ro", "boltz-cln:/data/boltz-cln:ro",
+                    "bark:/data/bark:ro", "bark-peer:/data/bark-peer:ro",
                     str(STATE / "mailrooms") + ":/data/mailrooms:ro"],
         "ports": ["8099:8099"], "depends_on": ["bitcoin", "liquid", "cln-peer", "boltz-cln"],
     }
