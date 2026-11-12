@@ -2,6 +2,7 @@ import 'package:bb_mobile/background_setup.dart';
 import 'package:bb_mobile/core_locator.dart';
 import 'package:bb_mobile/features/status_check/status_core_locator.dart';
 import 'package:bb_mobile/core/storage/sqlite_database.dart';
+import 'package:bb_mobile/core/storage/database_seeds.dart';
 import 'package:bb_mobile/features/wallet/public/wallet_facade.dart';
 import 'package:bb_mobile/features/settings/public/settings_facade.dart';
 import 'package:bb_mobile/features/transactions/public/transactions_facade.dart';
@@ -70,6 +71,7 @@ class AppLocator {
     bool startOrderSwapWatcher = true,
     bool startAutoswapWatcher = true,
   }) async {
+    await DatabaseSeeds.ensureRegtestDefaults(database);
     locator.enableRegisteringMultipleInstancesOfOneType();
 
     // One instance per isolate; background tasks must not use its keystore.

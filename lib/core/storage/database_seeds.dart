@@ -3,8 +3,38 @@ import 'package:bb_mobile/features/settings/domain/settings_entity.dart';
 import 'package:bb_mobile/core/storage/sqlite_database.dart';
 import 'package:bb_mobile/core/utils/constants.dart';
 import 'package:bull_logger/bull_logger.dart';
+import 'package:drift/drift.dart';
 
 class DatabaseSeeds {
+  /// Add development endpoints to existing installs without replacing settings.
+  static Future<void> ensureRegtestDefaults(SqliteDatabase db) async {
+    await db.transaction(() async {
+      await db
+          .into(db.electrumServers)
+          .insert(
+            const ElectrumServerRow(
+              url: 'tcp://127.0.0.1:50001',
+              network: 'liquidRegtest',
+              priority: 0,
+              isCustom: false,
+            ),
+            mode: InsertMode.insertOrIgnore,
+          );
+      await db
+          .into(db.electrumSettings)
+          .insert(
+            const ElectrumSettingsRow(
+              network: ElectrumServerNetwork.liquidRegtest,
+              validateDomain: true,
+              stopGap: 20,
+              timeout: 5,
+              retry: 5,
+            ),
+            mode: InsertMode.insertOrIgnore,
+          );
+    });
+  }
+
   static Future<void> seedDefaultSettings(SqliteDatabase db) async {
     log.info('[SqliteDatabase] seeding default settings...');
     await db
