@@ -63,7 +63,13 @@ sealed class PayjoinSession {
   bool get isAborted => status == PayjoinStatus.aborted;
   bool get isExpired => status == PayjoinStatus.expired;
   bool get isOngoing => !isCompleted && !isAborted && !isExpired;
-  bool get isTestnet => !network.isMainnet;
+  bool get isTestnet => switch (network) {
+    BitcoinNetwork.mainnet => false,
+    BitcoinNetwork.testnet => true,
+    BitcoinNetwork.regtest || BitcoinNetwork.signet => throw UnsupportedError(
+      'Use the concrete Payjoin network',
+    ),
+  };
   bool get isBitcoin => true;
   bool get isLiquid => false;
   int? get amountSat => amount?.value.toInt();

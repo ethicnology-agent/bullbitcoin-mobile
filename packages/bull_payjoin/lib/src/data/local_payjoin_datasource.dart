@@ -1,3 +1,4 @@
+import 'payjoin_network_codec.dart';
 import 'package:bull_payjoin/src/data/payjoin_database.dart';
 import 'package:bull_payjoin/src/data/payjoin_model.dart';
 import 'package:drift/drift.dart';
@@ -53,7 +54,8 @@ class LocalPayjoinDatasource {
             ))
             .write(
               PayjoinSendersCompanion(
-                isTestnet: Value(sender.isTestnet),
+                isTestnet: Value(!sender.network.isMainnet),
+                network: Value(PayjoinNetworkCodec.encode(sender.network)),
                 sender: Value(sender.sender),
                 walletId: Value(sender.walletId),
                 originalPsbt: Value(sender.originalPsbt),
@@ -283,8 +285,6 @@ class LocalPayjoinDatasource {
     bool onlyUnfinished = false,
     BitcoinNetwork? network,
   }) async {
-    final isTestnet = network == null ? null : !network.isMainnet;
-
     final receiverFilter = _db.managers.payjoinReceivers.filter((row) {
       Expression<bool> expr = const Constant(true); // identity
 
@@ -304,8 +304,8 @@ class LocalPayjoinDatasource {
         expr = expr & row.walletId.equals(walletId);
       }
 
-      if (isTestnet != null) {
-        expr = expr & row.isTestnet.equals(isTestnet);
+      if (network != null) {
+        expr = expr & row.network.equals(PayjoinNetworkCodec.encode(network));
       }
 
       return expr;
@@ -326,8 +326,8 @@ class LocalPayjoinDatasource {
         expr = expr & row.walletId.equals(walletId);
       }
 
-      if (isTestnet != null) {
-        expr = expr & row.isTestnet.equals(isTestnet);
+      if (network != null) {
+        expr = expr & row.network.equals(PayjoinNetworkCodec.encode(network));
       }
 
       return expr;

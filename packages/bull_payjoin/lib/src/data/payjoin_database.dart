@@ -2,8 +2,10 @@ import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
+import 'package:drift/isolate.dart' show DriftRemoteException;
 
 import 'payjoin_database.steps.dart';
+import 'migration_guards.dart';
 
 part 'payjoin_database.g.dart';
 
@@ -11,6 +13,7 @@ part 'payjoin_database.g.dart';
 class PayjoinSenders extends Table {
   TextColumn get uri => text()();
   BoolColumn get isTestnet => boolean()();
+  TextColumn get network => text().withDefault(const Constant(''))();
   TextColumn get sender => text()();
   TextColumn get walletId => text()();
   TextColumn get originalPsbt => text()();
@@ -39,6 +42,7 @@ class PayjoinReceivers extends Table {
   TextColumn get id => text()();
   TextColumn get address => text()();
   BoolColumn get isTestnet => boolean()();
+  TextColumn get network => text().withDefault(const Constant(''))();
   TextColumn get receiver => text()();
   TextColumn get walletId => text()();
   TextColumn get pjUri => text()();
@@ -124,6 +128,9 @@ final class PayjoinDatabase extends _$PayjoinDatabase {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+    beforeOpen: (details) async {
+      if (details.versionNow >= 3) await _ensurePendingV3();
+    },
     onUpgrade: stepByStep(
       from1To2: (m, schema) async {
         await m.addColumn(
@@ -148,40 +155,56 @@ final class PayjoinDatabase extends _$PayjoinDatabase {
           'UPDATE payjoin_policies SET send_enabled = enabled',
         );
       },
-      from2To3: (m, schema) async {
-        try {
-          // One transaction: the column never exists without its backfill.
-          await transaction(() async {
+      from2To3: (m, schema) => _ensurePendingV3(),
+    ),
+  );
+  // The version stays 3: development phones already opened the evidence-only
+  // v3. Repair its physical shape before any typed query, without replaying
+  // evidence backfills or changing existing concrete networks.
+  Future<void> _ensurePendingV3() async {
+    for (var attempt = 0; ; attempt++) {
+      try {
+        await transaction(() async {
+          final m = createMigrator();
+          if (!await m.hasColumn('payjoin_senders', 'has_network_evidence')) {
             await m.addColumn(
-              schema.payjoinSenders,
-              schema.payjoinSenders.hasNetworkEvidence,
+              payjoinSenders,
+              payjoinSenders.hasNetworkEvidence,
             );
-            // Schema 2 kept no trace of a payment that went out without a
-            // recorded outcome. An unfinished sender is therefore assumed to
-            // hold evidence; only sessions created from now on start without.
             await customStatement(
               'UPDATE payjoin_senders SET has_network_evidence = 1 '
               'WHERE is_expired = 0 AND is_completed = 0 AND is_aborted = 0',
             );
-          });
-        } catch (e) {
-          // A re-run, or another connection migrating at the same time, finds
-          // the column already there with its backfill: nothing left to do,
-          // and never a second backfill over later rows. Anything else is a
-          // real storage failure.
-          if (!'$e'.contains('duplicate column name: has_network_evidence')) {
-            rethrow;
           }
-          final columns = await customSelect(
-            "PRAGMA table_info('payjoin_senders')",
-          ).get();
-          if (!columns.any(
-            (column) => column.read<String>('name') == 'has_network_evidence',
-          )) {
-            rethrow;
+          for (final (table, column)
+              in <(TableInfo<Table, dynamic>, GeneratedColumn<String>)>[
+                (payjoinSenders, payjoinSenders.network),
+                (payjoinReceivers, payjoinReceivers.network),
+              ]) {
+            if (!await m.hasColumn(table.actualTableName, 'network')) {
+              await m.addColumn(table, column);
+              await customStatement(
+                'UPDATE "${table.actualTableName}" SET network = '
+                "CASE WHEN is_testnet = 1 THEN 'testnet' ELSE 'mainnet' END",
+              );
+            }
           }
+        });
+        return;
+      } catch (error) {
+        Object cause = error;
+        while (cause is DriftRemoteException) {
+          cause = cause.remoteCause;
         }
-      },
-    ),
-  );
+        if (cause is! SqliteException) rethrow;
+        final retryable =
+            cause.resultCode == 5 ||
+            cause.resultCode == 6 ||
+            cause.message == 'duplicate column name: network' ||
+            cause.message == 'duplicate column name: has_network_evidence';
+        if (!retryable || attempt >= 5) rethrow;
+        await Future<void>.delayed(Duration(milliseconds: 20 * (attempt + 1)));
+      }
+    }
+  }
 }

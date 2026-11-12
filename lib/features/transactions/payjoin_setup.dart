@@ -26,6 +26,7 @@ abstract final class PayjoinSetup {
     SqliteDatabase database,
     String databasePath, {
     bool startRecovery = true,
+    PayjoinRegtestTransport? regtestTransport,
   }) {
     final runtime = RecoverablePayjoin(() async {
       return openPayjoin(
@@ -52,6 +53,7 @@ abstract final class PayjoinSetup {
         labels: locator<LabelsFacade>().payjoinLabels(),
         legacyData: PayjoinLegacyDataAdapter(database),
         log: const AppPayjoinLogAdapter(),
+        regtestTransport: regtestTransport,
       );
     });
     _registerRoles(locator, runtime.payjoin);

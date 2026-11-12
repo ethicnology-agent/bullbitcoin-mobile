@@ -32,6 +32,7 @@ class PayjoinRepositoryImpl implements PayjoinRepository {
   final Lock _utxoSelectionLock;
   final Lock _resumeLock;
   final PayjoinLogger _log;
+  final api.PayjoinRegtestTransport? _regtestTransport;
 
   // All effects for one protocol session run in order. These locks are kept
   // until repository disposal so a lock is never replaced while callbacks are
@@ -106,11 +107,13 @@ class PayjoinRepositoryImpl implements PayjoinRepository {
     required api.PayjoinTransactionPort transactions,
     required PayjoinPolicyStore policy,
     required api.PayjoinLabelsPort labels,
+    api.PayjoinRegtestTransport? regtestTransport,
   }) : _wallet = wallet,
        _blockchain = blockchain,
        _transactions = transactions,
        _policy = policy,
        _labels = labels,
+       _regtestTransport = regtestTransport,
        _utxoSelectionLock = Lock(),
        _resumeLock = Lock(),
        _payjoinStreamController = StreamController<Payjoin>.broadcast() {
@@ -183,7 +186,39 @@ class PayjoinRepositoryImpl implements PayjoinRepository {
   Future<T> _withSessionLock<T>(
     String payjoinId,
     Future<T> Function() action,
-  ) => _sessionLocks.putIfAbsent(payjoinId, Lock.new).synchronized(action);
+  ) => _sessionLocks.putIfAbsent(payjoinId, Lock.new).synchronized(() async {
+    final stored = await getPayjoinById(payjoinId);
+    if (stored != null && !permitsSession(stored)) {
+      throw StateError('The stored Payjoin is unavailable in this runtime');
+    }
+    return action();
+  });
+
+  bool permitsNetwork(primitives.BitcoinNetwork network) =>
+      _regtestTransport == null
+      ? network == primitives.BitcoinNetwork.mainnet ||
+            network == primitives.BitcoinNetwork.testnet
+      : network == primitives.BitcoinNetwork.regtest;
+
+  bool permitsAddress(primitives.BitcoinNetwork network, String address) {
+    if (!permitsNetwork(network)) return false;
+    final regtestAddress = address.toLowerCase().startsWith('bcrt1');
+    return network == primitives.BitcoinNetwork.regtest
+        ? regtestAddress
+        : !regtestAddress;
+  }
+
+  bool permitsRequest(primitives.BitcoinNetwork network, String bip21) {
+    final uri = Uri.tryParse(bip21);
+    if (uri == null || !permitsAddress(network, uri.path)) return false;
+    return _regtestTransport?.allowsBip21(bip21) ?? true;
+  }
+
+  bool permitsSession(Payjoin session) =>
+      permitsRequest(session.network, switch (session) {
+        PayjoinReceiver(:final pjUri) => pjUri,
+        PayjoinSender(:final uri) => uri,
+      });
 
   @override
   Future<Payjoin?> getPayjoinById(String payjoinId) async {
@@ -269,12 +304,15 @@ class PayjoinRepositoryImpl implements PayjoinRepository {
   Future<PayjoinReceiver> createPayjoinReceiver({
     required String walletId,
     required String address,
-    required bool isTestnet,
+    required primitives.BitcoinNetwork network,
     required BigInt maxFeeRateSatPerVb,
     required int expireAfterSec,
     int? amountSat,
     bool isTrade = false,
   }) async {
+    if (!permitsAddress(network, address)) {
+      throw StateError('Payjoin network unavailable');
+    }
     final initialPolicy = await _policy.load();
     if (!_isReceiverPermitted(initialPolicy, isTrade: isTrade)) {
       throw StateError('Payjoin is disabled for this receiver');
@@ -283,7 +321,7 @@ class PayjoinRepositoryImpl implements PayjoinRepository {
     final model = await _pdkPayjoinDatasource.createReceiver(
       walletId: walletId,
       address: address,
-      isTestnet: isTestnet,
+      network: network,
       maxFeeRateSatPerVb: maxFeeRateSatPerVb,
       expireAfterSec: expireAfterSec,
       amountSat: amountSat,
@@ -331,13 +369,16 @@ class PayjoinRepositoryImpl implements PayjoinRepository {
   @override
   Future<PayjoinSender> createPayjoinSender({
     required String walletId,
-    required bool isTestnet,
+    required primitives.BitcoinNetwork network,
     required String bip21,
     required String originalPsbt,
     required int amountSat,
     required double networkFeesSatPerVb,
     int? expireAfterSec,
   }) => _withSessionLock(bip21, () async {
+    if (!permitsRequest(network, bip21)) {
+      throw StateError('Payjoin network or endpoint unavailable');
+    }
     // A sender id is the payment request itself. Reject a live or resolved
     // duplicate before posting another original proposal to the directory;
     // only an expired payment with no known broadcast outcome is retryable.
@@ -353,7 +394,7 @@ class PayjoinRepositoryImpl implements PayjoinRepository {
 
     final model = await _pdkPayjoinDatasource.createSender(
       walletId: walletId,
-      isTestnet: isTestnet,
+      network: network,
       bip21: bip21,
       originalPsbt: originalPsbt,
       networkFeesSatPerVb: networkFeesSatPerVb,
@@ -717,9 +758,7 @@ class PayjoinRepositoryImpl implements PayjoinRepository {
   Future<Payjoin?> _broadcastOriginalTransaction(Payjoin payjoin) async {
     var broadcasted = false;
     try {
-      final network = payjoin.isTestnet
-          ? primitives.BitcoinNetwork.testnet
-          : primitives.BitcoinNetwork.mainnet;
+      final network = payjoin.network;
 
       PayjoinModel? model;
       if (payjoin is PayjoinReceiver) {
@@ -916,9 +955,7 @@ class PayjoinRepositoryImpl implements PayjoinRepository {
         );
         result = await _settleReceiverAfterDisable(model);
       } else {
-        final network = model.isTestnet
-            ? primitives.BitcoinNetwork.testnet
-            : primitives.BitcoinNetwork.mainnet;
+        final network = model.network;
         final unspentUtxos = await _wallet.spendableUtxos(
           walletId: model.walletId,
           network: network,
@@ -1262,9 +1299,7 @@ class PayjoinRepositoryImpl implements PayjoinRepository {
     try {
       finalizedPsbt = await _wallet.signPsbt(
         walletId: payjoin.walletId,
-        network: payjoin.isTestnet
-            ? primitives.BitcoinNetwork.testnet
-            : primitives.BitcoinNetwork.mainnet,
+        network: payjoin.network,
         psbt: proposalPsbt,
       );
       _log.fine(
@@ -1279,9 +1314,7 @@ class PayjoinRepositoryImpl implements PayjoinRepository {
       result = await _broadcastPsbt(
         payjoinModel: payjoinModel,
         finalizedPsbt: finalizedPsbt,
-        network: payjoinModel.isTestnet
-            ? primitives.BitcoinNetwork.testnet
-            : primitives.BitcoinNetwork.mainnet,
+        network: payjoinModel.network,
       );
       // logRef, never id/raw txid: a sender payjoin id is the full BIP21 URI
       //  and a raw txid identifies the payment on-chain — both off-limits in
@@ -1843,6 +1876,7 @@ class PayjoinRepositoryImpl implements PayjoinRepository {
     // recovery retry, not a manual action.
     final receivers = await _localPayjoinDatasource.fetchReceivers();
     for (final receiver in receivers) {
+      if (!permitsSession(receiver.toEntity())) continue;
       if (receiver.isCompleted || receiver.isAborted) continue;
       try {
         await _withSessionLock(receiver.id, () async {
@@ -1904,6 +1938,7 @@ class PayjoinRepositoryImpl implements PayjoinRepository {
     // counterparty's funds rather than free our own.
     final senders = await _localPayjoinDatasource.fetchSenders();
     for (final sender in senders) {
+      if (!permitsSession(sender.toEntity())) continue;
       if (!sender.isExpired || sender.isAborted || sender.isCompleted) continue;
       try {
         // An expired sender has its txId cleared for display hygiene (see
@@ -1945,6 +1980,7 @@ class PayjoinRepositoryImpl implements PayjoinRepository {
 
     final models = await _localPayjoinDatasource.fetchAll(onlyUnfinished: true);
     for (final model in models) {
+      if (!permitsSession(model.toEntity())) continue;
       if (model is PayjoinReceiverModel &&
           !_isReceiverPermitted(policy, isTrade: model.isTrade)) {
         continue;
@@ -2111,9 +2147,7 @@ class PayjoinRepositoryImpl implements PayjoinRepository {
         return null;
       }
 
-      final network = payjoin.isTestnet
-          ? primitives.BitcoinNetwork.testnet
-          : primitives.BitcoinNetwork.mainnet;
+      final network = payjoin.network;
       final isMineSync = await _wallet.createOwnershipChecker(
         walletId: payjoin.walletId,
         network: network,

@@ -74,11 +74,11 @@ final class PayjoinSessionFilter {
 }
 
 void _requireSupportedNetwork(BitcoinNetwork network) {
-  if (network != BitcoinNetwork.mainnet && network != BitcoinNetwork.testnet) {
+  if (network == BitcoinNetwork.signet) {
     throw ArgumentError.value(
       network,
       'network',
-      'Payjoin supports only mainnet and testnet',
+      'Signet Payjoin is unavailable',
     );
   }
 }

@@ -1,3 +1,5 @@
+import 'payjoin_network_codec.dart';
+import 'package:primitives/primitives.dart' show BitcoinNetwork;
 import 'dart:typed_data';
 
 import 'package:bull_payjoin/src/data/payjoin_database.dart';
@@ -11,7 +13,7 @@ sealed class PayjoinModel with _$PayjoinModel {
   const factory PayjoinModel.receiver({
     required String id,
     required String address,
-    required bool isTestnet,
+    required BitcoinNetwork network,
     required String receiver,
     required String walletId,
     required String pjUri,
@@ -30,7 +32,7 @@ sealed class PayjoinModel with _$PayjoinModel {
   }) = PayjoinReceiverModel;
   const factory PayjoinModel.sender({
     required String uri,
-    required bool isTestnet,
+    required BitcoinNetwork network,
     required String sender,
     required String walletId,
     required String originalPsbt,
@@ -57,7 +59,7 @@ sealed class PayjoinModel with _$PayjoinModel {
       PayjoinReceiverModel(
         id: table.id,
         address: table.address,
-        isTestnet: table.isTestnet,
+        network: PayjoinNetworkCodec.decode(table.network, table.isTestnet),
         receiver: table.receiver,
         walletId: table.walletId,
         pjUri: table.pjUri,
@@ -78,7 +80,7 @@ sealed class PayjoinModel with _$PayjoinModel {
   factory PayjoinModel.fromSenderTable(PayjoinSenderRow table) =>
       PayjoinSenderModel(
         uri: table.uri,
-        isTestnet: table.isTestnet,
+        network: PayjoinNetworkCodec.decode(table.network, table.isTestnet),
         sender: table.sender,
         walletId: table.walletId,
         originalPsbt: table.originalPsbt,
@@ -147,7 +149,7 @@ sealed class PayjoinModel with _$PayjoinModel {
         return Payjoin.receiver(
           status: status,
           id: id,
-          isTestnet: receiver.isTestnet,
+          network: receiver.network,
           pjUri: receiver.pjUri,
           createdAt: DateTime.fromMillisecondsSinceEpoch(createdAt * 1000),
           expiresAt: DateTime.fromMillisecondsSinceEpoch(expiresAt * 1000),
@@ -162,7 +164,7 @@ sealed class PayjoinModel with _$PayjoinModel {
         return Payjoin.sender(
           status: status,
           uri: sender.uri,
-          isTestnet: sender.isTestnet,
+          network: sender.network,
           createdAt: DateTime.fromMillisecondsSinceEpoch(createdAt * 1000),
           expiresAt: DateTime.fromMillisecondsSinceEpoch(expiresAt * 1000),
           walletId: walletId,
@@ -180,7 +182,8 @@ extension PayjoinReceiverSqlite on PayjoinReceiverModel {
   PayjoinReceiverRow toSqlite() => PayjoinReceiverRow(
     id: id,
     address: address,
-    isTestnet: isTestnet,
+    isTestnet: !network.isMainnet,
+    network: PayjoinNetworkCodec.encode(network),
     receiver: receiver,
     walletId: walletId,
     pjUri: pjUri,
@@ -202,7 +205,8 @@ extension PayjoinReceiverSqlite on PayjoinReceiverModel {
 extension PayjoinSenderSqlite on PayjoinSenderModel {
   PayjoinSenderRow toSqlite() => PayjoinSenderRow(
     uri: uri,
-    isTestnet: isTestnet,
+    isTestnet: !network.isMainnet,
+    network: PayjoinNetworkCodec.encode(network),
     sender: sender,
     walletId: walletId,
     originalPsbt: originalPsbt,

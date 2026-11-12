@@ -22,7 +22,7 @@ abstract class PayjoinRepository {
   /// carries no amount and the caller composes one.
   Future<PayjoinReceiver> createPayjoinReceiver({
     required String walletId,
-    required bool isTestnet,
+    required BitcoinNetwork network,
     required String address,
     required BigInt maxFeeRateSatPerVb,
     required int expireAfterSec,
@@ -31,7 +31,7 @@ abstract class PayjoinRepository {
   });
   Future<PayjoinSender> createPayjoinSender({
     required String walletId,
-    required bool isTestnet,
+    required BitcoinNetwork network,
     required String bip21,
     required String originalPsbt,
     required int amountSat,

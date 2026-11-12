@@ -1,6 +1,8 @@
 /// Public Payjoin capabilities and domain types.
 library;
 
+export 'src/public/payjoin_regtest_transport.dart' show PayjoinRegtestTransport;
+
 export 'src/domain/payjoin_failure.dart'
     show
         PayjoinFailure,

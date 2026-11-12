@@ -35,6 +35,7 @@ Future<void> importLegacyPayjoinData(
             PayjoinSendersCompanion.insert(
               uri: sender.uri,
               isTestnet: sender.isTestnet,
+              network: Value(sender.isTestnet ? 'testnet' : 'mainnet'),
               sender: sender.protocolState,
               walletId: sender.walletId,
               originalPsbt: sender.originalPsbt,
@@ -66,6 +67,7 @@ Future<void> importLegacyPayjoinData(
               id: receiver.id,
               address: receiver.address,
               isTestnet: receiver.isTestnet,
+              network: Value(receiver.isTestnet ? 'testnet' : 'mainnet'),
               receiver: receiver.protocolState,
               walletId: receiver.walletId,
               pjUri: receiver.payjoinUri,

@@ -21,7 +21,7 @@ import 'package:dio/dio.dart';
 import 'package:meta/meta.dart';
 import 'package:payjoin/payjoin.dart';
 import 'package:payjoin/http.dart' show fetchOhttpKeys;
-import 'package:primitives/primitives.dart' show Outpoint;
+import 'package:primitives/primitives.dart' show Outpoint, BitcoinNetwork;
 
 /// Fetches the OHTTP key config published by [directoryUrl] through
 /// [ohttpRelayUrl]. Matches the signature of `payjoin/http.dart`'s top-level
@@ -324,7 +324,7 @@ class PdkPayjoinDatasource {
   Future<PayjoinReceiverModel> createReceiver({
     required String walletId,
     required String address,
-    required bool isTestnet,
+    required BitcoinNetwork network,
     required BigInt maxFeeRateSatPerVb,
     required int expireAfterSec,
     int? amountSat,
@@ -362,7 +362,7 @@ class PdkPayjoinDatasource {
           PayjoinModel.receiver(
                 id: id,
                 address: address,
-                isTestnet: isTestnet,
+                network: network,
                 receiver: persister.toJson(),
                 walletId: walletId,
                 pjUri: pjUri,
@@ -385,7 +385,7 @@ class PdkPayjoinDatasource {
 
   Future<PayjoinSenderModel> createSender({
     required String walletId,
-    required bool isTestnet,
+    required BitcoinNetwork network,
     required String bip21,
     required String originalPsbt,
     required int amountSat,
@@ -422,7 +422,7 @@ class PdkPayjoinDatasource {
     final model =
         PayjoinModel.sender(
               uri: parsedUri.asString(),
-              isTestnet: isTestnet,
+              network: network,
               sender: persister.toJson(),
               walletId: walletId,
               originalPsbt: originalPsbt,
@@ -1001,7 +1001,7 @@ class PdkPayjoinDatasource {
       final originalTx = await BitcoinTx.fromBytes(originalTxBytes);
       final amountSat = await originalTx.getAmountReceived(
         address: receiverModel.address,
-        isTestnet: receiverModel.isTestnet,
+        network: receiverModel.network,
       );
 
       _pollRecovered(receiverModel, PayjoinLogRole.receiver);

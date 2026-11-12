@@ -1,3 +1,4 @@
+import 'package:bull_payjoin/bull_payjoin.dart' show PayjoinRegtestTransport;
 import 'package:bb_mobile/background_setup.dart';
 import 'package:bb_mobile/core_locator.dart';
 import 'package:bb_mobile/features/status_check/status_core_locator.dart';
@@ -68,6 +69,7 @@ class AppLocator {
     SqliteDatabase database, {
     required String payjoinDatabasePath,
     bool startPayjoinRecovery = true,
+    PayjoinRegtestTransport? payjoinRegtestTransport,
     bool startOrderSwapWatcher = true,
     bool startAutoswapWatcher = true,
     bool startSpWatchers = true,
@@ -102,6 +104,7 @@ class AppLocator {
       database,
       payjoinDatabasePath,
       startRecovery: startPayjoinRecovery,
+      regtestTransport: payjoinRegtestTransport,
     );
 
     SyncLocator.setupForeground(locator);

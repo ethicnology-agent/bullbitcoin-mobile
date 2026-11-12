@@ -1,3 +1,4 @@
+import 'package:primitives/primitives.dart' show BitcoinNetwork;
 import 'dart:typed_data';
 
 import 'package:bull_payjoin/src/domain/payjoin_session.dart';
@@ -50,14 +51,14 @@ final class BitcoinTx {
   }
 
   Future<int> getAmountReceived({
-    required bool isTestnet,
+    required BitcoinNetwork network,
     required String address,
   }) async {
     var total = 0;
     for (final output in outputs) {
       final outputAddress = bdk.Address.fromScript(
         script: bdk.Script(rawOutputScript: output.scriptPubkey),
-        network: isTestnet ? bdk.Network.testnet : bdk.Network.bitcoin,
+        network: _bdkNetwork(network),
       );
       if (outputAddress.toString() == address) total += output.value;
     }
@@ -136,13 +137,16 @@ PayjoinOwnership? derivePayjoinOwnership({
   return PayjoinOwnership(inputs: inputOwners, outputs: outputOwners);
 }
 
-Uint8List? paymentScriptFromBip21(String bip21, {required bool isTestnet}) {
+Uint8List? paymentScriptFromBip21(
+  String bip21, {
+  required BitcoinNetwork network,
+}) {
   try {
     final address = Uri.parse(bip21).path;
     if (address.isEmpty) return null;
     return bdk.Address(
       address: address,
-      network: isTestnet ? bdk.Network.testnet : bdk.Network.bitcoin,
+      network: _bdkNetwork(network),
     ).scriptPubkey().toBytes();
   } catch (_) {
     return null;
@@ -156,3 +160,10 @@ bool _sameScript(Uint8List left, Uint8List right) {
   }
   return true;
 }
+
+bdk.Network _bdkNetwork(BitcoinNetwork network) => switch (network) {
+  BitcoinNetwork.mainnet => bdk.Network.bitcoin,
+  BitcoinNetwork.testnet => bdk.Network.testnet,
+  BitcoinNetwork.regtest => bdk.Network.regtest,
+  BitcoinNetwork.signet => throw ArgumentError('Signet Payjoin is unavailable'),
+};

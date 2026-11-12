@@ -1,3 +1,4 @@
+import 'package:primitives/primitives.dart' show BitcoinNetwork;
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -21,7 +22,7 @@ sealed class Payjoin with _$Payjoin {
   const factory Payjoin.receiver({
     @Default(PayjoinStatus.requested) PayjoinStatus status,
     required String id,
-    required bool isTestnet,
+    required BitcoinNetwork network,
     required String walletId,
     required String pjUri,
     required DateTime createdAt,
@@ -35,7 +36,7 @@ sealed class Payjoin with _$Payjoin {
   const factory Payjoin.sender({
     @Default(PayjoinStatus.requested) PayjoinStatus status,
     required String uri,
-    required bool isTestnet,
+    required BitcoinNetwork network,
     required String walletId,
     required String originalPsbt,
     required String originalTxId,
