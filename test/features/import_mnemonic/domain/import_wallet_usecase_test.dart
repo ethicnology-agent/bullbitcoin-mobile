@@ -130,6 +130,90 @@ void main() {
       expect(storage.entries, isEmpty);
     });
 
+    group('a seed already stored', () {
+      Future<void> storeFirst({String passphrase = ''}) async {
+        expect(
+          await secrets.import(words: words, passphrase: passphrase),
+          isA<Ok<Secret, SecretFailure>>(),
+        );
+      }
+
+      Map<String, String> seeds() => {
+        for (final e in storage.entries.entries)
+          if (e.key.startsWith('seed_')) e.key: e.value,
+      };
+
+      Wallet signingWith(String fingerprint) {
+        final wallet = _MockWallet();
+        when(() => wallet.signsLocally).thenReturn(true);
+        when(() => wallet.masterFingerprint).thenReturn(fingerprint);
+        return wallet;
+      }
+
+      for (final passphrase in ['', 'TREZOR']) {
+        test(
+          'no wallet uses it${passphrase.isEmpty ? '' : ' (with a passphrase)'}: it is reused, nothing written or removed',
+          () async {
+            await storeFirst(passphrase: passphrase);
+            final before = seeds();
+            final wallet = _MockWallet();
+            stubCreateWallet(() async => wallet);
+
+            final result = await usecase.execute(
+              mnemonicWords: words,
+              passphrase: passphrase,
+            );
+
+            expect((result as Ok).value, wallet);
+            expect(seeds(), before);
+          },
+        );
+      }
+
+      test('a wallet uses it: still a duplicate, nothing touched', () async {
+        await storeFirst();
+        final before = seeds();
+        when(() => walletRepository.getWallets()).thenAnswer(
+          (_) async =>
+              Ok<List<Wallet>, WalletFailure>([signingWith('73c5da0a')]),
+        );
+
+        final result = await usecase.execute(mnemonicWords: words);
+
+        expect((result as Err).failure, isA<ImportMnemonicDuplicateFailure>());
+        expect(seeds(), before);
+      });
+
+      test('its use cannot be checked: a duplicate, nothing touched', () async {
+        await storeFirst();
+        final before = seeds();
+        when(() => walletRepository.getWallets()).thenAnswer(
+          (_) async => const Err<List<Wallet>, WalletFailure>(
+            WalletStorageFailure('unavailable'),
+          ),
+        );
+
+        final result = await usecase.execute(mnemonicWords: words);
+
+        expect((result as Err).failure, isA<ImportMnemonicDuplicateFailure>());
+        expect(seeds(), before);
+      });
+
+      test(
+        'a reused seed is never removed when the wallet cannot be built',
+        () async {
+          await storeFirst();
+          final before = seeds();
+          stubCreateWallet(() async => throw Exception('wallet build failed'));
+
+          final result = await usecase.execute(mnemonicWords: words);
+
+          expect(result, isA<Err<Wallet, ImportMnemonicFailure>>());
+          expect(seeds(), before);
+        },
+      );
+    });
+
     test(
       'a secret this import created is removed when the wallet cannot be built (#2634)',
       () async {
@@ -150,11 +234,18 @@ void main() {
       'strict import rejects a duplicate missed by preflight without cleanup',
       () async {
         // The mocked preflight says the words are new, as it can after a stale
-        // read or a concurrent storage operation. Import still rejects them.
+        // read or a concurrent storage operation. Import still rejects them,
+        // because a wallet signs with that seed.
         expect(
           await secrets.import(words: words),
           isA<Ok<Secret, SecretFailure>>(),
         );
+        final existing = _MockWallet();
+        when(() => existing.signsLocally).thenReturn(true);
+        when(() => existing.masterFingerprint).thenReturn('73c5da0a');
+        when(
+          () => walletRepository.getWallets(),
+        ).thenAnswer((_) async => Ok<List<Wallet>, WalletFailure>([existing]));
 
         final result = await usecase.execute(mnemonicWords: words);
 
@@ -169,7 +260,6 @@ void main() {
             label: any(named: 'label'),
           ),
         );
-        verifyNever(() => walletRepository.getWallets());
         expect(
           storage.entries.keys.where((k) => k.startsWith('seed_')),
           hasLength(1),
@@ -184,6 +274,12 @@ void main() {
         var creations = 0;
         stubCreateWallet(() async {
           creations++;
+          // From now on, the wallet store holds a wallet signing with that seed.
+          when(() => wallet.signsLocally).thenReturn(true);
+          when(() => wallet.masterFingerprint).thenReturn('73c5da0a');
+          when(
+            () => walletRepository.getWallets(),
+          ).thenAnswer((_) async => Ok<List<Wallet>, WalletFailure>([wallet]));
           return wallet;
         });
 
