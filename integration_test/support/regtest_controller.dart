@@ -139,7 +139,9 @@ final class RegtestController {
       request.followRedirects = false;
       if (body != null) {
         request.headers.contentType = ContentType.json;
-        request.write(jsonEncode(body));
+        final bytes = utf8.encode(jsonEncode(body));
+        request.contentLength = bytes.length;
+        request.add(bytes);
       }
       final response = await request.close().timeout(timeout);
       if (response.statusCode != HttpStatus.ok) {
