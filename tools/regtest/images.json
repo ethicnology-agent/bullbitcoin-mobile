@@ -1,0 +1,17 @@
+{
+  "ghcr.io/getumbrel/docker-bitcoind:v30.0": "ghcr.io/getumbrel/docker-bitcoind@sha256:52a08bfeb0447b31e3c610e3c8179b6944e30e0062125e250a2bd2b6b8f9bf81",
+  "ghcr.io/vulpemventures/elements:latest": "ghcr.io/vulpemventures/elements@sha256:47a1bcc8acd1b390a737f1c4004194feac2e60015e9feabc9e66f3e057847f1a",
+  "ghcr.io/vulpemventures/electrs:latest": "ghcr.io/vulpemventures/electrs@sha256:999a2218f423c0fb167ee53b282aa7929a9d4abba38ef16f67f407acd00589d4",
+  "ghcr.io/vulpemventures/electrs-liquid:latest": "ghcr.io/vulpemventures/electrs-liquid@sha256:d801d1ab07e7a3379462b9d09cf5bb4fada1ced67b001a1a2de31e027c2f6055",
+  "ghcr.io/vi/websocat:latest": "ghcr.io/vi/websocat@sha256:727ea29701d1e5e57056bd098fe82a80a8210856d4053803a6be29a77410370f",
+  "ghcr.io/vulpemventures/nigiri-chopsticks:latest": "ghcr.io/vulpemventures/nigiri-chopsticks@sha256:8b0d775f9e4123e0302dd34955553b83dd6e598e2bb1af8929e6e6b326b5e1d7",
+  "ghcr.io/vulpemventures/esplora:latest": "ghcr.io/vulpemventures/esplora@sha256:21ed797bd9ed7328b65ef7abeb2bda842421169c5bfa042294726784037c3390",
+  "docker.io/secondark/cln-hold:v26.06.10-efc7d5f": "docker.io/secondark/cln-hold@sha256:a7f0a18ac97f2d3f2ca976aa478aae7028ad1fd01957df7687aa9592a500f0ad",
+  "docker.io/secondark/captaind:0.8.1": "docker.io/secondark/captaind@sha256:837e433aabbd275c2ae0b3376cd06bc4a0e07d8a9445d40c6dfed9e9bf16eb9b",
+  "docker.io/secondark/bark:0.8.1": "docker.io/secondark/bark@sha256:461620508b3105a417bbe2369bc16ed486561e7218f41046bb6169c432fe357c",
+  "docker.io/library/python:3.11-slim-bookworm": "docker.io/library/python@sha256:a83ba18aef0f865b1a4a611c2cf460fe446f2795673bbb9fe43be570439e3b39",
+  "docker.io/library/postgres:18-alpine": "docker.io/library/postgres@sha256:300ebd02c6d4de9ee27ad7f6855d5d21b4d3a4a5117767c1197d284c635d9736",
+  "docker.io/boltz/boltz:v3.13.0": "docker.io/boltz/boltz@sha256:37b038da97e60f9e4b1aa00b8270da342abdcdf98d1f328cece95d82bb59ab81",
+  "docker.io/secondark/cln-hold:v26.04.1": "docker.io/secondark/cln-hold@sha256:14b65c649cb01fb0cac9c705ff4cbf38159f0312f9503c5b555da35943d63cfc",
+  "ghcr.io/getumbrel/docker-bitcoind:v31.0": "ghcr.io/getumbrel/docker-bitcoind@sha256:75864f14cde92e35e27c49627f70b5393b90bc686a471dd1fb8f924e56497b74"
+}

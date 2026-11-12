@@ -1,0 +1,108 @@
+mnemonicpath = "/data/boltz/seed.dat"
+
+[api]
+host = "0.0.0.0"
+port = 9001
+
+[grpc]
+host = "127.0.0.1"
+port = 9000
+
+[postgres]
+host = "boltz-postgres"
+port = 5432
+database = "boltz"
+username = "boltz"
+password = "boltz"
+
+[sidecar]
+dataDir = "/data/boltz/sidecar"
+
+[sidecar.grpc]
+host = "127.0.0.1"
+port = 9003
+
+[sidecar.ws]
+host = "0.0.0.0"
+port = 9004
+
+[sidecar.api]
+host = "0.0.0.0"
+port = 9005
+
+[[pairs]]
+base = "BTC"
+quote = "BTC"
+rate = 1
+fee = 0.5
+swapInFee = 0.1
+maxSwapAmount = 40000000
+minSwapAmount = 10000
+
+[pairs.timeoutDelta]
+chain = 1440
+reverse = 1440
+swapMinimal = 1440
+swapMaximal = 2880
+swapTaproot = 10080
+
+[[pairs]]
+base = "L-BTC"
+quote = "BTC"
+rate = 1
+fee = 0.25
+swapInFee = 0.1
+maxSwapAmount = 40000000
+minSwapAmount = 1000
+
+[pairs.timeoutDelta]
+chain = 1440
+reverse = 1440
+swapMinimal = 1440
+swapMaximal = 2880
+swapTaproot = 10080
+
+[[currencies]]
+symbol = "BTC"
+network = "bitcoinRegtest"
+preferredWallet = "core"
+minWalletBalance = 10000000
+minLocalBalance = 1000000
+minRemoteBalance = 1000000
+maxZeroConfAmount = 0
+
+[currencies.chain]
+feeFloor = 1
+host = "bitcoin"
+port = 18443
+user = "admin1"
+password = "123"
+wallet = "boltz"
+
+[currencies.cln]
+host = "boltz-cln"
+port = 9736
+rootCertPath = "/data/cln/regtest/ca.pem"
+certChainPath = "/data/cln/regtest/client.pem"
+privateKeyPath = "/data/cln/regtest/client-key.pem"
+
+[currencies.cln.hold]
+host = "boltz-cln"
+port = 9988
+rootCertPath = "/data/cln/regtest/hold/ca.pem"
+certChainPath = "/data/cln/regtest/hold/client.pem"
+privateKeyPath = "/data/cln/regtest/hold/client-key.pem"
+
+[liquid]
+symbol = "L-BTC"
+network = "liquidRegtest"
+maxSwapAmount = 40000000
+minSwapAmount = 1000
+maxZeroConfAmount = 40000000
+
+[liquid.chain]
+host = "liquid"
+port = 18884
+user = "admin1"
+password = "123"
+wallet = "boltz"
