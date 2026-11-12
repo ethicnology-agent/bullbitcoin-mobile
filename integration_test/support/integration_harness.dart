@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:bb_mobile/core/storage/sqlite_database.dart';
 import 'package:bb_mobile/features/wallet/public/wallet_facade.dart';
+import 'package:bb_mobile/features/settings/domain/settings_entity.dart';
 import 'package:bb_mobile/features/wallet/data/wallet_native_runtime.dart';
 import 'package:bb_mobile/features/wallet/data/wallet_repository.dart';
 import 'package:bb_mobile/core/wallet/data/repositories/wallet_address_repository.dart';
@@ -43,13 +44,57 @@ abstract final class IntegrationHarness {
         'Regtest custody creation failed: ${failure.runtimeType}',
       ),
     };
-    _ownedSecrets.add(secret);
+    ownSecret(secret);
     return secret;
   }
 
+  static void ownSecret(Secret secret) {
+    if (!isRegtest || !_initialized) {
+      throw StateError('An isolated regtest run is required');
+    }
+    if (!_ownedSecrets.any((owned) => owned.id == secret.id)) {
+      _ownedSecrets.add(secret);
+    }
+  }
+
   static void ownWallets(Iterable<Wallet> wallets) {
+    if (!isRegtest || !_initialized) {
+      throw StateError('An isolated regtest run is required');
+    }
     for (final wallet in wallets) {
       if (!_ownedWalletIds.contains(wallet.id)) _ownedWalletIds.add(wallet.id);
+    }
+  }
+
+  /// RecoverBull restores defaults; the earlier BIP85 fixture owns that slot.
+  static Future<void> clearDefaultWalletsForRestore() async {
+    if (!isRegtest || !_initialized) {
+      throw StateError('An isolated regtest run is required');
+    }
+    final repository = locator<WalletRepository>();
+    final defaults = switch (await repository.getWallets(
+      onlyDefaults: true,
+      environment: Environment.regtest,
+    )) {
+      Ok(:final value) => value,
+      Err(:final failure) => throw StateError(
+        'Default fixture lookup failed: ${failure.runtimeType}',
+      ),
+    };
+    for (final wallet in defaults) {
+      if (!wallet.isDefault ||
+          (wallet.network != Network.bitcoinRegtest &&
+              wallet.network != Network.liquidRegtest) ||
+          !_ownedWalletIds.contains(wallet.id)) {
+        throw StateError('Cannot remove an unowned default-wallet fixture');
+      }
+      final result = await repository.deleteWallet(walletId: wallet.id);
+      if (result case Err(:final failure)) {
+        throw StateError(
+          'Default fixture removal failed: ${failure.runtimeType}',
+        );
+      }
+      _ownedWalletIds.remove(wallet.id);
     }
   }
 

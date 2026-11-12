@@ -81,6 +81,7 @@ Future<void> restoreLocalRecoverbull() async {
     };
     // Compare as a boolean: an assertion must never render a vault key.
     expect(key == backup.key.hex, isTrue);
+    await IntegrationHarness.clearDefaultWalletsForRestore();
     final removed = await locator<Secrets>().trash(source.id);
     if (removed case Err(:final failure)) {
       fail('Fixture removal failed: ${failure.runtimeType}');

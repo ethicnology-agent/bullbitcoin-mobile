@@ -63,6 +63,7 @@ Future<void> main({bool isInitialized = false}) async {
     switch (imported) {
       case Ok(:final value):
         secret = value;
+        if (IntegrationHarness.isRegtest) IntegrationHarness.ownSecret(secret);
       case Err(failure: SecretAlreadyExistsFailure(:final id)):
         secret = switch (await secrets.fetch(id)) {
           Ok(:final value) => value,
@@ -71,7 +72,8 @@ Future<void> main({bool isInitialized = false}) async {
       case Err(:final failure):
         fail('import failed: ${failure.runtimeType}');
     }
-    await createDefaultWalletsUsecase.execute(secret: secret);
+    final defaults = await createDefaultWalletsUsecase.execute(secret: secret);
+    if (IntegrationHarness.isRegtest) IntegrationHarness.ownWallets(defaults);
   });
 
   setUp(() async {
