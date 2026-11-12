@@ -1,3 +1,4 @@
+import 'package:bb_mobile/features/transactions/payjoin_setup.dart';
 import 'dart:io';
 
 import 'package:bb_mobile/core/storage/sqlite_database.dart';
@@ -33,6 +34,7 @@ abstract final class IntegrationHarness {
   static final List<Secret> _ownedSecrets = [];
   static final List<String> _ownedWalletIds = [];
   static late String _payjoinPath;
+  static late PayjoinRegtestTransport _payjoinTransport;
 
   static Future<Secret> generateSecret() async {
     if (!isRegtest || !_initialized) {
@@ -145,6 +147,31 @@ abstract final class IntegrationHarness {
     return wallet;
   }
 
+  static Future<void> reopenPayjoin() async {
+    if (!isRegtest || !_initialized) {
+      throw StateError('An isolated regtest run is required');
+    }
+    await locator<PayjoinLifecycle>().dispose();
+    await locator.unregister<Payjoin>();
+    await locator.unregister<PayjoinSender>();
+    await locator.unregister<PayjoinReceiver>();
+    await locator.unregister<PayjoinSessions>();
+    await locator.unregister<PayjoinPolicyAccess>();
+    await locator.unregister<PayjoinDiagnostics>();
+    await locator.unregister<PayjoinLifecycle>();
+    PayjoinSetup.setup(
+      locator,
+      locator<SqliteDatabase>(),
+      _payjoinPath,
+      startRecovery: false,
+      regtestTransport: _payjoinTransport,
+    );
+    final resumed = await locator<PayjoinLifecycle>().resume();
+    if (resumed case Err(:final failure)) {
+      throw StateError('Payjoin resume failed: ${failure.runtimeType}');
+    }
+  }
+
   static Future<void> init() async {
     if (_initialized) return;
     if (!isRegtest) {
@@ -202,11 +229,19 @@ abstract final class IntegrationHarness {
       regtestEndpoint: Uri.parse('http://127.0.0.1:8088'),
     );
     _payjoinPath = p.join(run.path, 'payjoin.sqlite');
+    _payjoinTransport = PayjoinRegtestTransport(
+      servers: [
+        Uri.parse('https://localhost:8040'),
+        Uri.parse('https://127.0.0.1:8041'),
+      ],
+      certificate: await controller.payjoinCertificate(),
+    );
     await AppLocator.setup(
       locator,
       database,
       payjoinDatabasePath: _payjoinPath,
       startPayjoinRecovery: false,
+      payjoinRegtestTransport: _payjoinTransport,
       startOrderSwapWatcher: false,
       startAutoswapWatcher: false,
       startSpWatchers: false,
