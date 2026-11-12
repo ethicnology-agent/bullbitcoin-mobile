@@ -15,7 +15,9 @@ final class PricerApiDatasource {
 
   static const _timeout = Duration(seconds: 10);
 
-  const PricerApiDatasource();
+  final Uri? regtestEndpoint;
+
+  const PricerApiDatasource({this.regtestEndpoint});
 
   /// Public price: no auth needed.
   Future<PriceResponseModel> indexPrice(
@@ -60,9 +62,11 @@ final class PricerApiDatasource {
     );
   }
 
-  static String _baseUrl(BitcoinNetwork network) => switch (network) {
+  String _baseUrl(BitcoinNetwork network) => switch (network) {
     BitcoinNetwork.mainnet => _mainnetBaseUrl,
     BitcoinNetwork.testnet => _testnetBaseUrl,
+    BitcoinNetwork.regtest when regtestEndpoint != null =>
+      regtestEndpoint.toString(),
     BitcoinNetwork.signet ||
     BitcoinNetwork.regtest => throw PricerUnsupportedNetworkException(network),
   };

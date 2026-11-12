@@ -10,15 +10,44 @@ import 'package:primitives/primitives.dart';
 
 abstract final class Pricer {
   static PricerRepository? _repository;
+  static PricerDatabase? _database;
 
-  static Future<void> init({required String databasePath}) async {
+  static Future<void> init({
+    required String databasePath,
+    Uri? regtestEndpoint,
+  }) async {
+    if (regtestEndpoint != null &&
+        (regtestEndpoint.scheme != 'http' ||
+            !const {
+              '127.0.0.1',
+              '::1',
+              'localhost',
+            }.contains(regtestEndpoint.host) ||
+            regtestEndpoint.userInfo.isNotEmpty ||
+            regtestEndpoint.hasQuery ||
+            regtestEndpoint.hasFragment ||
+            regtestEndpoint.path.isNotEmpty && regtestEndpoint.path != '/')) {
+      throw ArgumentError(
+        'Regtest pricing requires an explicit loopback origin',
+      );
+    }
     if (_repository != null) return;
 
     final database = PricerDatabase.open(databasePath);
+    _database = database;
 
     _repository = PricerRepository(
       pricerCacheDatasource: PricerCacheDatasource(database),
+      regtestEndpoint: regtestEndpoint,
     );
+  }
+
+  /// Call after outstanding reads settle, before removing the owned cache.
+  static Future<void> close() async {
+    final database = _database;
+    _repository = null;
+    _database = null;
+    await database?.close();
   }
 
   /// The approximate price of one bitcoin, the same for everyone; works

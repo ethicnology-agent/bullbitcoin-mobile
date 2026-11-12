@@ -20,12 +20,15 @@ typedef _PriceKey = (BitcoinNetwork, SupportedCurrency);
 final class PricerRepository {
   static const _maxAge = Duration(seconds: 60);
 
-  final PricerApiDatasource _pricerApiDatasource = const PricerApiDatasource();
+  final PricerApiDatasource _pricerApiDatasource;
   final PricerCacheDatasource _pricerCacheDatasource;
   final Map<_PriceKey, Future<Result<BitcoinPrice, PricerFailure>>> _lookups =
       {};
 
-  PricerRepository({required this._pricerCacheDatasource});
+  PricerRepository({required this._pricerCacheDatasource, Uri? regtestEndpoint})
+    : _pricerApiDatasource = PricerApiDatasource(
+        regtestEndpoint: regtestEndpoint,
+      );
 
   @useResult
   Future<Result<BitcoinPrice, PricerFailure>> indexPrice({
