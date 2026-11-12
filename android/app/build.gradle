@@ -119,6 +119,11 @@ android {
 
     flavorDimensions = ['channel']
     productFlavors {
+        regtest {
+            dimension 'channel'
+            applicationIdSuffix '.regtest'
+            versionNameSuffix '-regtest'
+        }
         // Official channel. Zero overrides: same applicationId, version and
         // (release) signing key, so already-distributed releases keep updating
         // in place (Android matches on applicationId + signing cert).

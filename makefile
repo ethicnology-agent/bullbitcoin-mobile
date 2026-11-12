@@ -434,6 +434,19 @@ integration-test:
 	@fvm dart run tools/gen_all_test.dart
 	@fvm flutter test integration_test/all_test.dart --reporter=expanded
 
+.PHONY: integration-test-regtest android-regtest-debug
+.PHONY: integration-test-regtest-linux
+integration-test-regtest-linux:
+	@python3 tools/testing/pinned_rust.py -- python3 tools/testing/regtest_linux.py
+
+integration-test-regtest:
+	@test -n "$(REGTEST_DEVICE)" || (echo "Set REGTEST_DEVICE to the reserved Android transport serial" >&2; exit 1)
+	@python3 tools/testing/pinned_rust.py -- fvm dart run tools/gen_all_test.dart
+	@python3 tools/testing/pinned_rust.py -- fvm flutter test integration_test/all_test.dart --flavor regtest --dart-define=BULL_REGTEST_VALIDATION=true -d "$(REGTEST_DEVICE)" --reporter=expanded
+
+android-regtest-debug:
+	@python3 tools/testing/pinned_rust.py -- fvm flutter build apk --debug --flavor regtest --target-platform android-arm64
+
 # Build & render the bull_ui design-system catalogue (Widgetbook) locally in the
 # browser. Dev-only tooling — never shipped in the app. Regenerates the
 # @UseCase directories, then runs the catalogue app on Chrome (hot-reload).

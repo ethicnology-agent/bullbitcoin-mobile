@@ -70,6 +70,7 @@ class AppLocator {
     bool startPayjoinRecovery = true,
     bool startOrderSwapWatcher = true,
     bool startAutoswapWatcher = true,
+    bool startSpWatchers = true,
   }) async {
     await DatabaseSeeds.ensureRegtestDefaults(database);
     locator.enableRegisteringMultipleInstancesOfOneType();
@@ -118,7 +119,7 @@ class AppLocator {
     // SP starts watchers eagerly, so its wallet infrastructure must exist.
     // Wallet's SP use cases resolve the facade lazily, after registration.
     WalletLocator.setup(locator);
-    SpLocator.setup(locator, startForegroundWatchers: true);
+    SpLocator.setup(locator, startForegroundWatchers: startSpWatchers);
     SettingsLocator.setup(locator);
     setupBackgroundPreferences(
       locator,
