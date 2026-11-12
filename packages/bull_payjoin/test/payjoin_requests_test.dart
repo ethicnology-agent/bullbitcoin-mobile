@@ -32,20 +32,30 @@ void main() {
     expect(() => PayjoinSessionFilter(walletId: ''), throwsArgumentError);
   });
 
-  test(
-    'receiver requests reject networks collapsed to testnet by the engine',
-    () {
-      for (final network in [BitcoinNetwork.signet, BitcoinNetwork.regtest]) {
-        expect(
-          () => StartPayjoinReceiver(
-            walletId: 'wallet',
-            network: network,
-            address: 'address',
-          ),
-          throwsArgumentError,
-          reason: '$network must not be silently executed on testnet',
-        );
-      }
-    },
-  );
+  test('receiver requests reject unsupported signet', () {
+    for (final network in [BitcoinNetwork.signet]) {
+      expect(
+        () => StartPayjoinReceiver(
+          walletId: 'wallet',
+          network: network,
+          address: 'address',
+        ),
+        throwsArgumentError,
+        reason: '$network must not be silently executed on testnet',
+      );
+    }
+  });
+
+  test('regtest requests preserve their network for runtime authorization', () {
+    final receiver = StartPayjoinReceiver(
+      walletId: 'regtest-wallet',
+      network: BitcoinNetwork.regtest,
+      address: 'bcrt1qfixture',
+    );
+    expect(receiver.network, BitcoinNetwork.regtest);
+    expect(
+      PayjoinSessionFilter(network: BitcoinNetwork.regtest).network,
+      BitcoinNetwork.regtest,
+    );
+  });
 }

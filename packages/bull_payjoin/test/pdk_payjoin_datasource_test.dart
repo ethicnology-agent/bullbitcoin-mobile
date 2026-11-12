@@ -1,3 +1,4 @@
+import 'package:primitives/primitives.dart' show BitcoinNetwork;
 import 'dart:convert';
 import 'dart:core';
 import 'dart:core' as core;
@@ -378,7 +379,7 @@ void main() {
             .createReceiver(
               walletId: 'w1',
               address: 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
-              isTestnet: true,
+              network: BitcoinNetwork.testnet,
               maxFeeRateSatPerVb: BigInt.from(10),
               expireAfterSec: 600,
             )
@@ -497,7 +498,7 @@ void main() {
       return PayjoinModel.receiver(
             id: 'receiver-1',
             address: receiverAddress,
-            isTestnet: true,
+            network: BitcoinNetwork.testnet,
             receiver: persister.toJson(),
             walletId: 'w1',
             pjUri:
@@ -527,7 +528,7 @@ void main() {
     }) =>
         PayjoinModel.sender(
               uri: 'bitcoin:tb1qsender?pj=https://payjo.in',
-              isTestnet: true,
+              network: BitcoinNetwork.testnet,
               sender: '[]',
               walletId: 'w1',
               originalPsbt: 'cHNidP8=',

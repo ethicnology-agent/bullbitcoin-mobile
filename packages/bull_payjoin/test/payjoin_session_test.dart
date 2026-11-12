@@ -133,7 +133,7 @@ void main() {
   test('derives both parties from the original and proposal', () {
     final paymentScript = paymentScriptFromBip21(
       'bitcoin:bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq?amount=0.0005',
-      isTestnet: false,
+      network: BitcoinNetwork.mainnet,
     );
     expect(paymentScript, isNotNull);
 

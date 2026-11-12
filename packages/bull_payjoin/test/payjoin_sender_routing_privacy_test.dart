@@ -1,3 +1,4 @@
+import 'package:primitives/primitives.dart' show BitcoinNetwork;
 import 'dart:convert';
 import 'dart:math';
 
@@ -48,7 +49,7 @@ void main() {
       await expectLater(
         datasource.createSender(
           walletId: 'fixture-wallet',
-          isTestnet: true,
+          network: BitcoinNetwork.testnet,
           bip21: _expiredBip21,
           originalPsbt: _originalPsbt,
           amountSat: 10000,
@@ -169,7 +170,7 @@ Future<void> _expectSenderRoutes({
       await expectLater(
         datasource.createSender(
           walletId: 'fixture-wallet',
-          isTestnet: true,
+          network: BitcoinNetwork.testnet,
           bip21: receiver.pjUri().asString(),
           originalPsbt: _originalPsbt,
           amountSat: 10000,

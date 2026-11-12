@@ -1,3 +1,4 @@
+import 'package:primitives/primitives.dart' show BitcoinNetwork;
 import 'dart:convert';
 
 import 'package:bull_payjoin/bull_payjoin.dart'
@@ -37,7 +38,7 @@ void main() {
         PayjoinModel.receiver(
               id: '0123456789abcdef',
               address: address,
-              isTestnet: true,
+              network: BitcoinNetwork.testnet,
               receiver: persister.toJson(),
               walletId: 'w1',
               pjUri: initialized.pjUri().asString(),

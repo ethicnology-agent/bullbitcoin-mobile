@@ -1,3 +1,6 @@
+import 'fixtures/evidence_only_v3.dart' as v3e;
+import 'package:bull_payjoin/src/data/payjoin_model.dart';
+import 'package:primitives/primitives.dart' show BitcoinNetwork;
 // dart format width=80
 // ignore_for_file: unused_local_variable, unused_import
 import 'dart:async';
@@ -268,6 +271,184 @@ void main() {
     };
     expect(evidence, [migrated, migrated]);
   });
+  group('concrete network in pending v3', () {
+    Future<File> legacyFile() async {
+      final dir = await Directory.systemTemp.createTemp('payjoin-network-');
+      addTearDown(() => dir.delete(recursive: true));
+      final file = File('${dir.path}/sessions.sqlite');
+      final old = v3e.DatabaseAtV3(NativeDatabase(file));
+      for (final (name, testnet, evidence) in [
+        ('main-clear', 0, 0),
+        ('main-evidence', 0, 1),
+        ('test-clear', 1, 0),
+        ('test-evidence', 1, 1),
+      ]) {
+        await old.customStatement(
+          'INSERT INTO payjoin_senders '
+          '(uri,is_testnet,sender,wallet_id,original_psbt,original_tx_id,'
+          'amount_sat,created_at,expire_after_sec,is_expired,is_completed,'
+          'is_aborted,has_network_evidence) '
+          "VALUES (?,?,'opaque-state','wallet','opaque-psbt','original',10000,10,3600,0,0,0,?)",
+          [name, testnet, evidence],
+        );
+        await old.customStatement(
+          'INSERT INTO payjoin_receivers '
+          '(id,address,is_testnet,receiver,wallet_id,pj_uri,max_fee_rate_sat_per_vb,'
+          'created_at,expire_after_sec,is_expired,is_completed,is_aborted,is_trade) '
+          "VALUES (?,'address',?,'receiver-state','wallet','bitcoin:fixture',20,10,3600,0,0,0,0)",
+          [name, testnet],
+        );
+      }
+      await old.close();
+      return file;
+    }
+
+    Future<void> verify(PayjoinDatabase db) async {
+      final senders = await db.select(db.payjoinSenders).get();
+      final receivers = await db.select(db.payjoinReceivers).get();
+      expect(senders, hasLength(4));
+      expect(receivers, hasLength(4));
+      for (final row in senders) {
+        expect(row.network, row.uri.startsWith('main') ? 'mainnet' : 'testnet');
+        expect(row.hasNetworkEvidence, row.uri.endsWith('evidence'));
+        expect(row.sender, 'opaque-state');
+        expect(row.originalPsbt, 'opaque-psbt');
+        expect(row.originalTxId, 'original');
+        expect(row.amountSat, 10000);
+        expect(row.createdAt, 10);
+        expect(row.expireAfterSec, 3600);
+      }
+      for (final row in receivers) {
+        expect(row.network, row.id.startsWith('main') ? 'mainnet' : 'testnet');
+        expect(row.receiver, 'receiver-state');
+        expect(row.isTrade, isFalse);
+      }
+      expect(
+        (await db.customSelect('PRAGMA user_version').getSingle()).read<int>(
+          'user_version',
+        ),
+        3,
+      );
+    }
+
+    test(
+      'repairs evidence-only v3 without changing evidence or protocol',
+      () async {
+        final file = await legacyFile();
+        for (var pass = 0; pass < 3; pass++) {
+          final db = PayjoinDatabase.open(file.path);
+          try {
+            await verify(db);
+            if (pass == 0) {
+              await db.customStatement(
+                "UPDATE payjoin_senders SET network='regtest' WHERE uri='test-clear'",
+              );
+              expect(
+                (await db.select(db.payjoinSenders).get())
+                    .singleWhere((r) => r.uri == 'test-clear')
+                    .hasNetworkEvidence,
+                isFalse,
+              );
+              await db.customStatement(
+                "UPDATE payjoin_senders SET network='testnet' WHERE uri='test-clear'",
+              );
+            }
+          } finally {
+            await db.close();
+          }
+        }
+      },
+    );
+
+    test(
+      'reopening retains a stored concrete regtest rather than backfilling again',
+      () async {
+        final file = await legacyFile();
+        final first = PayjoinDatabase.open(file.path);
+        await verify(first);
+        await first.customStatement(
+          "UPDATE payjoin_senders SET network='regtest' WHERE uri='test-clear'",
+        );
+        await first.customStatement(
+          "UPDATE payjoin_receivers SET network='regtest' WHERE id='test-clear'",
+        );
+        await first.close();
+        final second = PayjoinDatabase.open(file.path);
+        addTearDown(second.close);
+        final sender = (await second.select(second.payjoinSenders).get())
+            .singleWhere((r) => r.uri == 'test-clear');
+        final receiver = (await second.select(second.payjoinReceivers).get())
+            .singleWhere((r) => r.id == 'test-clear');
+        expect(sender.network, 'regtest');
+        expect(receiver.network, 'regtest');
+        expect(sender.hasNetworkEvidence, isFalse);
+        expect(
+          PayjoinModel.fromSenderTable(sender).toEntity().network,
+          BitcoinNetwork.regtest,
+        );
+        expect(
+          PayjoinModel.fromReceiverTable(receiver).toEntity().network,
+          BitcoinNetwork.regtest,
+        );
+      },
+    );
+
+    test(
+      'network columns and backfills roll back together after interruption',
+      () async {
+        final file = await legacyFile();
+        final failing = PayjoinDatabase.forTesting(
+          NativeDatabase(file).interceptWith(_InterruptNetworkUpgrade()),
+        );
+        await expectLater(
+          failing.customSelect('SELECT 1').get(),
+          throwsA(anything),
+        );
+        await failing.close();
+        final old = v3e.DatabaseAtV3(NativeDatabase(file));
+        for (final table in ['payjoin_senders', 'payjoin_receivers']) {
+          final cols = await old
+              .customSelect('PRAGMA table_info($table)')
+              .get();
+          expect(
+            cols.map((c) => c.read<String>('name')),
+            isNot(contains('network')),
+          );
+        }
+        expect(
+          (await old
+                  .customSelect(
+                    'SELECT has_network_evidence FROM payjoin_senders '
+                    "WHERE uri='test-clear'",
+                  )
+                  .getSingle())
+              .read<int>('has_network_evidence'),
+          0,
+        );
+        await old.close();
+        final recovered = PayjoinDatabase.open(file.path);
+        addTearDown(recovered.close);
+        await verify(recovered);
+      },
+    );
+
+    test('two connections repair old v3 without promoting evidence', () async {
+      final file = await legacyFile();
+      final barrier = _NetworkAlterBarrier();
+      PayjoinDatabase open() => PayjoinDatabase.forTesting(
+        NativeDatabase.createInBackground(
+          file,
+          setup: (db) => db.execute('PRAGMA busy_timeout = 2000;'),
+        ).interceptWith(barrier),
+      );
+      final a = open();
+      final b = open();
+      addTearDown(a.close);
+      addTearDown(b.close);
+      await Future.wait([verify(a), verify(b)]);
+      expect(barrier.arrivals, 2);
+    });
+  });
 }
 
 /// Routes the migration's own statements through [interceptor]: drift hands
@@ -305,6 +486,48 @@ final class _AlterBarrier extends QueryInterceptor {
   ) async {
     if (statement.startsWith('ALTER TABLE') &&
         statement.contains('has_network_evidence')) {
+      arrivals++;
+      if (arrivals == 2) _both.complete();
+      await _both.future.timeout(const Duration(seconds: 10));
+    }
+    return executor.runCustom(statement, args);
+  }
+}
+
+final class _InterruptNetworkUpgrade extends QueryInterceptor {
+  @override
+  Future<bool> ensureOpen(QueryExecutor executor, QueryExecutorUser user) =>
+      executor.ensureOpen(_MigrationUser(user, this));
+  @override
+  Future<void> runCustom(
+    QueryExecutor executor,
+    String statement,
+    List<Object?> args,
+  ) {
+    if (statement.startsWith('ALTER TABLE') &&
+        statement.contains('payjoin_receivers') &&
+        statement.contains('network')) {
+      throw StateError('Injected migration interruption');
+    }
+    return executor.runCustom(statement, args);
+  }
+}
+
+final class _NetworkAlterBarrier extends QueryInterceptor {
+  final _both = Completer<void>();
+  int arrivals = 0;
+  @override
+  Future<bool> ensureOpen(QueryExecutor executor, QueryExecutorUser user) =>
+      executor.ensureOpen(_MigrationUser(user, this));
+  @override
+  Future<void> runCustom(
+    QueryExecutor executor,
+    String statement,
+    List<Object?> args,
+  ) async {
+    if (statement.startsWith('ALTER TABLE') &&
+        statement.contains('payjoin_senders') &&
+        statement.contains('network')) {
       arrivals++;
       if (arrivals == 2) _both.complete();
       await _both.future.timeout(const Duration(seconds: 10));

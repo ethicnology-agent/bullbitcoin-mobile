@@ -1,3 +1,4 @@
+import 'package:primitives/primitives.dart' show BitcoinNetwork;
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -30,7 +31,7 @@ void main() {
       PayjoinModel.receiver(
             id: 'r1',
             address: 'bcrt1qaddress',
-            isTestnet: true,
+            network: BitcoinNetwork.testnet,
             receiver: '[]',
             walletId: 'w1',
             pjUri: 'bitcoin:bcrt1qaddress?pj=https://payjo.in/x',
@@ -48,7 +49,7 @@ void main() {
   PayjoinSenderModel sender({bool expired = false, bool completed = false}) =>
       PayjoinModel.sender(
             uri: 'bitcoin:tb1qsender?pj=https://payjo.in',
-            isTestnet: true,
+            network: BitcoinNetwork.testnet,
             sender: '[]',
             walletId: 'w1',
             originalPsbt: 'cHNidP8=',
@@ -62,6 +63,47 @@ void main() {
           as PayjoinSenderModel;
 
   group('fetchByTxId', () {
+    test('filters regtest independently from historical testnet', () async {
+      for (final network in [
+        BitcoinNetwork.mainnet,
+        BitcoinNetwork.testnet,
+        BitcoinNetwork.regtest,
+      ]) {
+        await datasource.storeSender(
+          sender().copyWith(
+            uri: 'bitcoin:${network.name}?pj=https://localhost:8040',
+            network: network,
+          ),
+        );
+        await datasource.storeReceiver(
+          receiver().copyWith(id: network.name, network: network),
+        );
+      }
+      for (final network in [
+        BitcoinNetwork.mainnet,
+        BitcoinNetwork.testnet,
+        BitcoinNetwork.regtest,
+      ]) {
+        final sessions = await datasource.fetchAll(network: network);
+        expect(sessions, hasLength(2));
+        expect(
+          sessions.map((session) => session.network),
+          everyElement(network),
+        );
+        expect(
+          sessions.map((session) => session.toEntity().network),
+          everyElement(network),
+        );
+        for (final row
+            in await database.select(database.payjoinSenders).get()) {
+          expect(row.isTestnet, row.network != 'mainnet');
+        }
+        for (final row
+            in await database.select(database.payjoinReceivers).get()) {
+          expect(row.isTestnet, row.network != 'mainnet');
+        }
+      }
+    });
     test('finds an aborted fallback by its original transaction id', () async {
       await datasource.storeReceiver(
         receiver(originalTransactionId: originalTxId, aborted: true),
@@ -85,6 +127,23 @@ void main() {
       expect(await datasource.fetchByTxId('c' * 64), isEmpty);
     });
   });
+
+  test(
+    'stored invalid networks fail instead of using the historical boolean',
+    () async {
+      await datasource.storeSender(sender());
+      await datasource.storeReceiver(receiver());
+      for (final table in ['payjoin_senders', 'payjoin_receivers']) {
+        for (final code in ['', 'unknown', 'signet', 'mainnet']) {
+          await database.customStatement('UPDATE $table SET network = ?', [
+            code,
+          ]);
+          await expectLater(datasource.fetchAll(), throwsFormatException);
+        }
+        await database.customStatement("UPDATE $table SET network = 'testnet'");
+      }
+    },
+  );
 
   test('unfinished sessions exclude aborted rows', () async {
     await datasource.storeReceiver(

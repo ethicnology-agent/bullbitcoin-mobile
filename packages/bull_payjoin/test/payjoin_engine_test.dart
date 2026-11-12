@@ -125,7 +125,7 @@ void main() {
       PayjoinModel.receiver(
             id: id,
             address: 'tb1qreceiver',
-            isTestnet: true,
+            network: BitcoinNetwork.testnet,
             receiver: '[]',
             walletId: 'wallet-1',
             pjUri: 'bitcoin:tb1qreceiver?pj=https://payjo.in/$id',
@@ -144,7 +144,7 @@ void main() {
   PayjoinSenderModel sender() =>
       PayjoinModel.sender(
             uri: 'bitcoin:tb1qsender?pj=https://payjo.in',
-            isTestnet: true,
+            network: BitcoinNetwork.testnet,
             sender: '[]',
             walletId: 'wallet-1',
             originalPsbt: 'cHNidP8=',
@@ -171,7 +171,7 @@ void main() {
   }) =>
       PayjoinModel.sender(
             uri: uri,
-            isTestnet: true,
+            network: BitcoinNetwork.testnet,
             sender: '[]',
             walletId: 'wallet-1',
             originalPsbt: oneInputPsbt,
@@ -280,7 +280,7 @@ void main() {
       () => pdk.createReceiver(
         walletId: any(named: 'walletId'),
         address: any(named: 'address'),
-        isTestnet: any(named: 'isTestnet'),
+        network: any(named: 'network'),
         maxFeeRateSatPerVb: any(named: 'maxFeeRateSatPerVb'),
         expireAfterSec: any(named: 'expireAfterSec'),
         amountSat: any(named: 'amountSat'),
@@ -295,7 +295,7 @@ void main() {
     when(
       () => pdk.createSender(
         walletId: any(named: 'walletId'),
-        isTestnet: any(named: 'isTestnet'),
+        network: any(named: 'network'),
         bip21: any(named: 'bip21'),
         originalPsbt: any(named: 'originalPsbt'),
         networkFeesSatPerVb: any(named: 'networkFeesSatPerVb'),
@@ -318,7 +318,7 @@ void main() {
       () => pdk.createReceiver(
         walletId: any(named: 'walletId'),
         address: any(named: 'address'),
-        isTestnet: any(named: 'isTestnet'),
+        network: any(named: 'network'),
         maxFeeRateSatPerVb: any(named: 'maxFeeRateSatPerVb'),
         expireAfterSec: any(named: 'expireAfterSec'),
         amountSat: any(named: 'amountSat'),
@@ -329,7 +329,7 @@ void main() {
     final created = await engine.createPayjoinReceiver(
       walletId: model.walletId,
       address: model.address,
-      isTestnet: true,
+      network: BitcoinNetwork.testnet,
       maxFeeRateSatPerVb: model.maxFeeRateSatPerVb,
       expireAfterSec: model.expireAfterSec,
       amountSat: model.amountSat,
@@ -348,7 +348,7 @@ void main() {
     final creation = engine.createPayjoinReceiver(
       walletId: model.walletId,
       address: model.address,
-      isTestnet: true,
+      network: BitcoinNetwork.testnet,
       maxFeeRateSatPerVb: model.maxFeeRateSatPerVb,
       expireAfterSec: model.expireAfterSec,
       amountSat: model.amountSat,
@@ -391,7 +391,7 @@ void main() {
       engine.createPayjoinReceiver(
         walletId: model.walletId,
         address: model.address,
-        isTestnet: true,
+        network: BitcoinNetwork.testnet,
         maxFeeRateSatPerVb: model.maxFeeRateSatPerVb,
         expireAfterSec: model.expireAfterSec,
         amountSat: model.amountSat,
@@ -408,7 +408,7 @@ void main() {
       () => pdk.createReceiver(
         walletId: any(named: 'walletId'),
         address: any(named: 'address'),
-        isTestnet: any(named: 'isTestnet'),
+        network: any(named: 'network'),
         maxFeeRateSatPerVb: any(named: 'maxFeeRateSatPerVb'),
         expireAfterSec: any(named: 'expireAfterSec'),
         amountSat: any(named: 'amountSat'),
@@ -424,7 +424,7 @@ void main() {
       engine.createPayjoinReceiver(
         walletId: model.walletId,
         address: model.address,
-        isTestnet: true,
+        network: BitcoinNetwork.testnet,
         maxFeeRateSatPerVb: model.maxFeeRateSatPerVb,
         expireAfterSec: model.expireAfterSec,
         amountSat: model.amountSat,
@@ -443,7 +443,7 @@ void main() {
         () => pdk.createReceiver(
           walletId: any(named: 'walletId'),
           address: any(named: 'address'),
-          isTestnet: any(named: 'isTestnet'),
+          network: any(named: 'network'),
           maxFeeRateSatPerVb: any(named: 'maxFeeRateSatPerVb'),
           expireAfterSec: any(named: 'expireAfterSec'),
           amountSat: any(named: 'amountSat'),
@@ -454,7 +454,7 @@ void main() {
       await engine.createPayjoinReceiver(
         walletId: model.walletId,
         address: model.address,
-        isTestnet: true,
+        network: BitcoinNetwork.testnet,
         maxFeeRateSatPerVb: model.maxFeeRateSatPerVb,
         expireAfterSec: model.expireAfterSec,
         amountSat: model.amountSat,
@@ -628,7 +628,7 @@ void main() {
       () => engine.createPayjoinReceiver(
         walletId: 'wallet-1',
         address: 'tb1qreceiver',
-        isTestnet: true,
+        network: BitcoinNetwork.testnet,
         maxFeeRateSatPerVb: BigInt.from(10000),
         expireAfterSec: 3600,
       ),
@@ -638,7 +638,7 @@ void main() {
       () => pdk.createReceiver(
         walletId: any(named: 'walletId'),
         address: any(named: 'address'),
-        isTestnet: any(named: 'isTestnet'),
+        network: any(named: 'network'),
         maxFeeRateSatPerVb: any(named: 'maxFeeRateSatPerVb'),
         expireAfterSec: any(named: 'expireAfterSec'),
         amountSat: any(named: 'amountSat'),
@@ -656,7 +656,7 @@ void main() {
         () => pdk.createReceiver(
           walletId: any(named: 'walletId'),
           address: any(named: 'address'),
-          isTestnet: any(named: 'isTestnet'),
+          network: any(named: 'network'),
           maxFeeRateSatPerVb: any(named: 'maxFeeRateSatPerVb'),
           expireAfterSec: any(named: 'expireAfterSec'),
           amountSat: any(named: 'amountSat'),
@@ -667,7 +667,7 @@ void main() {
       final created = await engine.createPayjoinReceiver(
         walletId: model.walletId,
         address: model.address,
-        isTestnet: true,
+        network: BitcoinNetwork.testnet,
         maxFeeRateSatPerVb: model.maxFeeRateSatPerVb,
         expireAfterSec: model.expireAfterSec,
         amountSat: model.amountSat,
@@ -691,7 +691,7 @@ void main() {
         () => engine.createPayjoinReceiver(
           walletId: 'wallet-1',
           address: 'tb1qreceiver',
-          isTestnet: true,
+          network: BitcoinNetwork.testnet,
           maxFeeRateSatPerVb: BigInt.from(10000),
           expireAfterSec: 3600,
           isTrade: true,
@@ -915,7 +915,7 @@ void main() {
     expect(
       () => engine.createPayjoinSender(
         walletId: model.walletId,
-        isTestnet: model.isTestnet,
+        network: model.network,
         bip21: model.id,
         originalPsbt: model.originalPsbt,
         amountSat: model.amountSat,
@@ -926,7 +926,7 @@ void main() {
     verifyNever(
       () => pdk.createSender(
         walletId: model.walletId,
-        isTestnet: model.isTestnet,
+        network: model.network,
         bip21: model.id,
         originalPsbt: model.originalPsbt,
         networkFeesSatPerVb: 1,
@@ -966,7 +966,7 @@ void main() {
 
     final creation = engine.createPayjoinSender(
       walletId: posted.walletId,
-      isTestnet: true,
+      network: BitcoinNetwork.testnet,
       bip21: posted.id,
       originalPsbt: posted.originalPsbt,
       amountSat: posted.amountSat,
@@ -988,7 +988,7 @@ void main() {
 
     await engine.createPayjoinSender(
       walletId: posted.walletId,
-      isTestnet: true,
+      network: BitcoinNetwork.testnet,
       bip21: posted.id,
       originalPsbt: posted.originalPsbt,
       amountSat: posted.amountSat,
@@ -1013,7 +1013,7 @@ void main() {
     await expectLater(
       engine.createPayjoinSender(
         walletId: posted.walletId,
-        isTestnet: true,
+        network: BitcoinNetwork.testnet,
         bip21: posted.id,
         originalPsbt: posted.originalPsbt,
         amountSat: posted.amountSat,
@@ -1940,7 +1940,7 @@ void main() {
       when(
         () => pdk.createSender(
           walletId: any(named: 'walletId'),
-          isTestnet: any(named: 'isTestnet'),
+          network: any(named: 'network'),
           bip21: any(named: 'bip21'),
           originalPsbt: any(named: 'originalPsbt'),
           networkFeesSatPerVb: any(named: 'networkFeesSatPerVb'),
@@ -1957,7 +1957,7 @@ void main() {
       });
       await engine.createPayjoinSender(
         walletId: retried.walletId,
-        isTestnet: true,
+        network: BitcoinNetwork.testnet,
         bip21: retried.id,
         originalPsbt: retried.originalPsbt,
         amountSat: retried.amountSat,
@@ -2645,7 +2645,7 @@ void main() {
       when(
         () => pdk.createSender(
           walletId: any(named: 'walletId'),
-          isTestnet: any(named: 'isTestnet'),
+          network: any(named: 'network'),
           bip21: any(named: 'bip21'),
           originalPsbt: any(named: 'originalPsbt'),
           networkFeesSatPerVb: any(named: 'networkFeesSatPerVb'),
@@ -2662,7 +2662,7 @@ void main() {
       });
       await engine.createPayjoinSender(
         walletId: retried.walletId,
-        isTestnet: true,
+        network: BitcoinNetwork.testnet,
         bip21: retried.id,
         originalPsbt: retried.originalPsbt,
         amountSat: retried.amountSat,
@@ -2895,7 +2895,7 @@ void main() {
       when(
         () => pdk.createSender(
           walletId: any(named: 'walletId'),
-          isTestnet: any(named: 'isTestnet'),
+          network: any(named: 'network'),
           bip21: any(named: 'bip21'),
           originalPsbt: any(named: 'originalPsbt'),
           networkFeesSatPerVb: any(named: 'networkFeesSatPerVb'),
@@ -2920,7 +2920,7 @@ void main() {
 
       await engine.createPayjoinSender(
         walletId: first.walletId,
-        isTestnet: true,
+        network: BitcoinNetwork.testnet,
         bip21: first.id,
         originalPsbt: first.originalPsbt,
         amountSat: first.amountSat,
@@ -2937,7 +2937,7 @@ void main() {
       when(
         () => pdk.createSender(
           walletId: any(named: 'walletId'),
-          isTestnet: any(named: 'isTestnet'),
+          network: any(named: 'network'),
           bip21: any(named: 'bip21'),
           originalPsbt: any(named: 'originalPsbt'),
           networkFeesSatPerVb: any(named: 'networkFeesSatPerVb'),
@@ -2955,7 +2955,7 @@ void main() {
 
       await engine.createPayjoinSender(
         walletId: retried.walletId,
-        isTestnet: true,
+        network: BitcoinNetwork.testnet,
         bip21: retried.id,
         originalPsbt: retried.originalPsbt,
         amountSat: retried.amountSat,
@@ -3011,7 +3011,7 @@ void main() {
         when(
           () => pdk.createSender(
             walletId: any(named: 'walletId'),
-            isTestnet: any(named: 'isTestnet'),
+            network: any(named: 'network'),
             bip21: any(named: 'bip21'),
             originalPsbt: any(named: 'originalPsbt'),
             networkFeesSatPerVb: any(named: 'networkFeesSatPerVb'),
@@ -3029,7 +3029,7 @@ void main() {
 
         await engine.createPayjoinSender(
           walletId: model.walletId,
-          isTestnet: model.isTestnet,
+          network: model.network,
           bip21: model.id,
           originalPsbt: model.originalPsbt,
           amountSat: model.amountSat,
