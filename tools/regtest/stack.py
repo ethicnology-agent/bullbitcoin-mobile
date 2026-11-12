@@ -30,11 +30,12 @@ SERVICES = (
 def run(*args, capture=False, stdin=None):
     if args[0] == "podman":
         args = ("podman", "--cgroup-manager=cgroupfs", *args[1:])
-    if args[0] in ("podman", "podman-compose") and not os.environ.get("DBUS_SESSION_BUS_ADDRESS"):
-        # Headless rootless Podman may autolaunch an orphan bus per command.
-        # The private bus exits with this command and changes no host settings.
-        args = ("dbus-run-session", "--", *args)
-    return subprocess.run(args, check=True, text=True, capture_output=capture, input=stdin).stdout
+    environment = None
+    if args[0] in ("podman", "podman-compose"):
+        # Rootless cgroupfs needs no session bus. Disable D-Bus autolaunch only
+        # for this command and its children; leave the host session untouched.
+        environment = {**os.environ, "DBUS_SESSION_BUS_ADDRESS": "disabled"}
+    return subprocess.run(args, check=True, text=True, capture_output=capture, input=stdin, env=environment).stdout
 
 
 def compose(*args, capture=False):

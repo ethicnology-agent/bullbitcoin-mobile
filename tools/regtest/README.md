@@ -2,7 +2,7 @@
 
 This development stack uses rootless Podman and Nigiri's Bitcoin/Liquid configuration. It is intended for disposable regtest funds. The exchange is an in-memory interaction simulator; it does not settle orders or maintain a financial ledger.
 
-Requirements: Nigiri 0.5.17, Podman, podman-compose, `dbus-run-session`, Python 3.11 with PyYAML. Images are pinned by digest in `images.json`. Bitcoin Core 31 is used because Bark 0.8.1 requires it. Elements uses Liquid's relay floor of 0.1 sat/vB and accepts discounted confidential transactions, matching the Liquid mainnet/testnet relay defaults and Boltz's fee policy. Bark and Boltz use separate compatible CLN versions, each connected to a shared liquidity peer.
+Requirements: Nigiri 0.5.17, Podman, podman-compose, Python 3.11 with PyYAML. Images are pinned by digest in `images.json`. Bitcoin Core 31 is used because Bark 0.8.1 requires it. Elements uses Liquid's relay floor of 0.1 sat/vB and accepts discounted confidential transactions, matching the Liquid mainnet/testnet relay defaults and Boltz's fee policy. Bark and Boltz use separate compatible CLN versions, each connected to a shared liquidity peer.
 
 Build the ancillary RecoverBull and Payjoin executables with `python3 tools/regtest/build-services.py` before starting the stack. The builder verifies pinned source revisions and uses Rust 1.99.0 for RecoverBull and Rust 1.95.0 for Payjoin. Install these toolchains explicitly beforehand. Executables, source checkouts and private TLS material stay in the local state directory.
 
@@ -64,4 +64,4 @@ Podman-compose 1.0.3 may recreate dependencies even with `--no-deps --force-recr
 
 For a physical Android device, keep host services on loopback and use a reserved ADB transport with port forwarding. Do not change Tailscale routes, ACLs or firewall settings to expose development RPCs.
 
-On a headless host without a session bus, the launcher runs Podman commands under a private `dbus-run-session`. This prevents abandoned autolaunched D-Bus processes from exhausting the shared inotify quota. Run standalone host tests that invoke Podman under `dbus-run-session --` for the same reason.
+The launcher sets `DBUS_SESSION_BUS_ADDRESS=disabled` only for its Podman commands and their children. Rootless cgroupfs needs no session bus, and disabling autolaunch prevents orphan D-Bus processes from exhausting the shared inotify quota. Set the same environment variable for standalone host tests that invoke Podman. No host session or global configuration is changed.
