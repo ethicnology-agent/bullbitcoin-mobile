@@ -12,6 +12,7 @@ import 'package:bb_mobile/locator.dart';
 import 'package:bb_mobile/native_libraries.dart';
 import 'package:drift/native.dart';
 import 'package:bull_payjoin/bull_payjoin.dart';
+import 'package:bull_logger/bull_logger.dart';
 import 'package:bull_pricer/bull_pricer.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -126,6 +127,12 @@ abstract final class IntegrationHarness {
     }
     await controller.verify();
     final parent = await getTemporaryDirectory();
+    // The logger outlives the disposable DB directory; retain support logs in
+    // this isolated application's cache, without a reporting destination.
+    final logs = await Directory(
+      p.join(parent.path, 'regtest-integration-logs'),
+    ).create(recursive: true);
+    await initializeLogging(directory: logs);
     final run = await Directory(parent.path).createTemp('wallet-integration-');
     final database = SqliteDatabase(
       NativeDatabase(File(p.join(run.path, 'app.sqlite'))),
@@ -163,33 +170,37 @@ abstract final class IntegrationHarness {
     await initializeWalletRuntime(locator);
     _initialized = true;
     tearDownAll(() async {
-      await locator<PayjoinLifecycle>().dispose();
-      for (final walletId in _ownedWalletIds) {
-        final removed = await locator<WalletRepository>().deleteWallet(
-          walletId: walletId,
-        );
-        if (removed case Err(:final failure)) {
-          throw StateError(
-            'Regtest wallet cleanup failed: ${failure.runtimeType}',
+      try {
+        await locator<PayjoinLifecycle>().dispose();
+        for (final walletId in _ownedWalletIds) {
+          final removed = await locator<WalletRepository>().deleteWallet(
+            walletId: walletId,
           );
+          if (removed case Err(:final failure)) {
+            throw StateError(
+              'Regtest wallet cleanup failed: ${failure.runtimeType}',
+            );
+          }
         }
-      }
-      _ownedWalletIds.clear();
-      await locator<WalletNativeRuntime>().close();
-      for (final secret in _ownedSecrets) {
-        final removed = await locator<Secrets>().trash(secret.id);
-        if (removed case Err(:final failure)) {
-          throw StateError(
-            'Regtest custody cleanup failed: ${failure.runtimeType}',
-          );
+        _ownedWalletIds.clear();
+        await locator<WalletNativeRuntime>().close();
+        for (final secret in _ownedSecrets) {
+          final removed = await locator<Secrets>().trash(secret.id);
+          if (removed case Err(:final failure)) {
+            throw StateError(
+              'Regtest custody cleanup failed: ${failure.runtimeType}',
+            );
+          }
         }
+        _ownedSecrets.clear();
+        await Pricer.close();
+        await locator.reset();
+        await database.close();
+        await run.delete(recursive: true);
+        _initialized = false;
+      } finally {
+        await log.flush();
       }
-      _ownedSecrets.clear();
-      await Pricer.close();
-      await locator.reset();
-      await database.close();
-      await run.delete(recursive: true);
-      _initialized = false;
     });
   }
 
