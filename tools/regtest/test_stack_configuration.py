@@ -37,6 +37,7 @@ class StackConfigurationTest(unittest.TestCase):
                 services["recoverbull-proxy"]["ports"],
                 ["127.0.0.1:59051:9051"],
             )
+            self.assertEqual(services["recoverbull"]["environment"]["CANARY"], "🐦")
             self.assertIn("-acceptdiscountct=1", services["liquid"]["command"])
             self.assertEqual(services["bitcoin"]["user"], "0:0")
 
