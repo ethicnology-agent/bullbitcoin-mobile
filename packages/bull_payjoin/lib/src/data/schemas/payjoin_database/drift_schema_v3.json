@@ -40,6 +40,16 @@
             "dsl_features": []
           },
           {
+            "name": "network",
+            "getter_name": "network",
+            "moor_type": "string",
+            "nullable": false,
+            "customConstraints": null,
+            "default_dart": "const CustomExpression('\\'\\'')",
+            "default_client_dart": null,
+            "dsl_features": []
+          },
+          {
             "name": "sender",
             "getter_name": "sender",
             "moor_type": "string",
@@ -233,6 +243,16 @@
               "sqlite": "CHECK (\"is_testnet\" IN (0, 1))"
             },
             "default_dart": null,
+            "default_client_dart": null,
+            "dsl_features": []
+          },
+          {
+            "name": "network",
+            "getter_name": "network",
+            "moor_type": "string",
+            "nullable": false,
+            "customConstraints": null,
+            "default_dart": "const CustomExpression('\\'\\'')",
             "default_client_dart": null,
             "dsl_features": []
           },
@@ -598,7 +618,7 @@
       "sql": [
         {
           "dialect": "sqlite",
-          "sql": "CREATE TABLE IF NOT EXISTS \"payjoin_senders\" (\"uri\" TEXT NOT NULL, \"is_testnet\" INTEGER NOT NULL CHECK (\"is_testnet\" IN (0, 1)), \"sender\" TEXT NOT NULL, \"wallet_id\" TEXT NOT NULL, \"original_psbt\" TEXT NOT NULL, \"original_tx_id\" TEXT NOT NULL, \"amount_sat\" INTEGER NOT NULL, \"created_at\" INTEGER NOT NULL, \"expire_after_sec\" INTEGER NOT NULL, \"proposal_psbt\" TEXT NULL, \"tx_id\" TEXT NULL, \"is_expired\" INTEGER NOT NULL CHECK (\"is_expired\" IN (0, 1)), \"is_completed\" INTEGER NOT NULL CHECK (\"is_completed\" IN (0, 1)), \"is_aborted\" INTEGER NOT NULL CHECK (\"is_aborted\" IN (0, 1)), \"has_network_evidence\" INTEGER NOT NULL DEFAULT 0 CHECK (\"has_network_evidence\" IN (0, 1)), PRIMARY KEY (\"uri\"));"
+          "sql": "CREATE TABLE IF NOT EXISTS \"payjoin_senders\" (\"uri\" TEXT NOT NULL, \"is_testnet\" INTEGER NOT NULL CHECK (\"is_testnet\" IN (0, 1)), \"network\" TEXT NOT NULL DEFAULT '', \"sender\" TEXT NOT NULL, \"wallet_id\" TEXT NOT NULL, \"original_psbt\" TEXT NOT NULL, \"original_tx_id\" TEXT NOT NULL, \"amount_sat\" INTEGER NOT NULL, \"created_at\" INTEGER NOT NULL, \"expire_after_sec\" INTEGER NOT NULL, \"proposal_psbt\" TEXT NULL, \"tx_id\" TEXT NULL, \"is_expired\" INTEGER NOT NULL CHECK (\"is_expired\" IN (0, 1)), \"is_completed\" INTEGER NOT NULL CHECK (\"is_completed\" IN (0, 1)), \"is_aborted\" INTEGER NOT NULL CHECK (\"is_aborted\" IN (0, 1)), \"has_network_evidence\" INTEGER NOT NULL DEFAULT 0 CHECK (\"has_network_evidence\" IN (0, 1)), PRIMARY KEY (\"uri\"));"
         }
       ]
     },
@@ -607,7 +627,7 @@
       "sql": [
         {
           "dialect": "sqlite",
-          "sql": "CREATE TABLE IF NOT EXISTS \"payjoin_receivers\" (\"id\" TEXT NOT NULL, \"address\" TEXT NOT NULL, \"is_testnet\" INTEGER NOT NULL CHECK (\"is_testnet\" IN (0, 1)), \"receiver\" TEXT NOT NULL, \"wallet_id\" TEXT NOT NULL, \"pj_uri\" TEXT NOT NULL, \"max_fee_rate_sat_per_vb\" INTEGER NOT NULL, \"created_at\" INTEGER NOT NULL, \"expire_after_sec\" INTEGER NOT NULL, \"original_tx_bytes\" BLOB NULL, \"original_tx_id\" TEXT NULL, \"amount_sat\" INTEGER NULL, \"proposal_psbt\" TEXT NULL, \"tx_id\" TEXT NULL, \"is_expired\" INTEGER NOT NULL CHECK (\"is_expired\" IN (0, 1)), \"is_completed\" INTEGER NOT NULL CHECK (\"is_completed\" IN (0, 1)), \"is_aborted\" INTEGER NOT NULL CHECK (\"is_aborted\" IN (0, 1)), \"is_trade\" INTEGER NOT NULL DEFAULT 0 CHECK (\"is_trade\" IN (0, 1)), PRIMARY KEY (\"id\"));"
+          "sql": "CREATE TABLE IF NOT EXISTS \"payjoin_receivers\" (\"id\" TEXT NOT NULL, \"address\" TEXT NOT NULL, \"is_testnet\" INTEGER NOT NULL CHECK (\"is_testnet\" IN (0, 1)), \"network\" TEXT NOT NULL DEFAULT '', \"receiver\" TEXT NOT NULL, \"wallet_id\" TEXT NOT NULL, \"pj_uri\" TEXT NOT NULL, \"max_fee_rate_sat_per_vb\" INTEGER NOT NULL, \"created_at\" INTEGER NOT NULL, \"expire_after_sec\" INTEGER NOT NULL, \"original_tx_bytes\" BLOB NULL, \"original_tx_id\" TEXT NULL, \"amount_sat\" INTEGER NULL, \"proposal_psbt\" TEXT NULL, \"tx_id\" TEXT NULL, \"is_expired\" INTEGER NOT NULL CHECK (\"is_expired\" IN (0, 1)), \"is_completed\" INTEGER NOT NULL CHECK (\"is_completed\" IN (0, 1)), \"is_aborted\" INTEGER NOT NULL CHECK (\"is_aborted\" IN (0, 1)), \"is_trade\" INTEGER NOT NULL DEFAULT 0 CHECK (\"is_trade\" IN (0, 1)), PRIMARY KEY (\"id\"));"
         }
       ]
     },

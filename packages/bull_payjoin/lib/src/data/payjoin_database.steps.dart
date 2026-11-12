@@ -530,6 +530,7 @@ final class Schema3 extends i0.VersionedSchema {
       columns: [
         _column_0,
         _column_1,
+        _column_36,
         _column_2,
         _column_3,
         _column_4,
@@ -542,13 +543,13 @@ final class Schema3 extends i0.VersionedSchema {
         _column_11,
         _column_12,
         _column_13,
-        _column_36,
+        _column_37,
       ],
       attachedDatabase: database,
     ),
     alias: null,
   );
-  late final Shape1 payjoinReceivers = Shape1(
+  late final Shape5 payjoinReceivers = Shape5(
     source: i0.VersionedTable(
       entityName: 'payjoin_receivers',
       withoutRowId: false,
@@ -558,6 +559,7 @@ final class Schema3 extends i0.VersionedSchema {
         _column_14,
         _column_15,
         _column_1,
+        _column_36,
         _column_16,
         _column_3,
         _column_17,
@@ -623,6 +625,8 @@ class Shape4 extends i0.VersionedTable {
       columnsByName['uri']! as i1.GeneratedColumn<String>;
   i1.GeneratedColumn<int> get isTestnet =>
       columnsByName['is_testnet']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get network =>
+      columnsByName['network']! as i1.GeneratedColumn<String>;
   i1.GeneratedColumn<String> get sender =>
       columnsByName['sender']! as i1.GeneratedColumn<String>;
   i1.GeneratedColumn<String> get walletId =>
@@ -651,7 +655,16 @@ class Shape4 extends i0.VersionedTable {
       columnsByName['has_network_evidence']! as i1.GeneratedColumn<int>;
 }
 
-i1.GeneratedColumn<int> _column_36(String aliasedName) =>
+i1.GeneratedColumn<String> _column_36(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'network',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NOT NULL DEFAULT \'\'',
+      defaultValue: const i1.CustomExpression('\'\''),
+    );
+i1.GeneratedColumn<int> _column_37(String aliasedName) =>
     i1.GeneratedColumn<int>(
       'has_network_evidence',
       aliasedName,
@@ -661,6 +674,49 @@ i1.GeneratedColumn<int> _column_36(String aliasedName) =>
           'NOT NULL DEFAULT 0 CHECK (has_network_evidence IN (0, 1))',
       defaultValue: const i1.CustomExpression('0'),
     );
+
+class Shape5 extends i0.VersionedTable {
+  Shape5({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<String> get id =>
+      columnsByName['id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get address =>
+      columnsByName['address']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get isTestnet =>
+      columnsByName['is_testnet']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get network =>
+      columnsByName['network']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get receiver =>
+      columnsByName['receiver']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get walletId =>
+      columnsByName['wallet_id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get pjUri =>
+      columnsByName['pj_uri']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get maxFeeRateSatPerVb =>
+      columnsByName['max_fee_rate_sat_per_vb']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get createdAt =>
+      columnsByName['created_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get expireAfterSec =>
+      columnsByName['expire_after_sec']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<i2.Uint8List> get originalTxBytes =>
+      columnsByName['original_tx_bytes']! as i1.GeneratedColumn<i2.Uint8List>;
+  i1.GeneratedColumn<String> get originalTxId =>
+      columnsByName['original_tx_id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get amountSat =>
+      columnsByName['amount_sat']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get proposalPsbt =>
+      columnsByName['proposal_psbt']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get txId =>
+      columnsByName['tx_id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get isExpired =>
+      columnsByName['is_expired']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get isCompleted =>
+      columnsByName['is_completed']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get isAborted =>
+      columnsByName['is_aborted']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get isTrade =>
+      columnsByName['is_trade']! as i1.GeneratedColumn<int>;
+}
+
 i0.MigrationStepWithVersion migrationSteps({
   required Future<void> Function(i1.Migrator m, Schema2 schema) from1To2,
   required Future<void> Function(i1.Migrator m, Schema3 schema) from2To3,

@@ -27,6 +27,15 @@ class PayjoinSenders extends Table
     requiredDuringInsert: true,
     $customConstraints: 'NOT NULL CHECK (is_testnet IN (0, 1))',
   );
+  late final GeneratedColumn<String> network = GeneratedColumn<String>(
+    'network',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT \'\'',
+    defaultValue: const CustomExpression('\'\''),
+  );
   late final GeneratedColumn<String> sender = GeneratedColumn<String>(
     'sender',
     aliasedName,
@@ -137,6 +146,7 @@ class PayjoinSenders extends Table
   List<GeneratedColumn> get $columns => [
     uri,
     isTestnet,
+    network,
     sender,
     walletId,
     originalPsbt,
@@ -169,6 +179,10 @@ class PayjoinSenders extends Table
       isTestnet: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}is_testnet'],
+      )!,
+      network: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}network'],
       )!,
       sender: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -240,6 +254,7 @@ class PayjoinSendersData extends DataClass
     implements Insertable<PayjoinSendersData> {
   final String uri;
   final int isTestnet;
+  final String network;
   final String sender;
   final String walletId;
   final String originalPsbt;
@@ -256,6 +271,7 @@ class PayjoinSendersData extends DataClass
   const PayjoinSendersData({
     required this.uri,
     required this.isTestnet,
+    required this.network,
     required this.sender,
     required this.walletId,
     required this.originalPsbt,
@@ -275,6 +291,7 @@ class PayjoinSendersData extends DataClass
     final map = <String, Expression>{};
     map['uri'] = Variable<String>(uri);
     map['is_testnet'] = Variable<int>(isTestnet);
+    map['network'] = Variable<String>(network);
     map['sender'] = Variable<String>(sender);
     map['wallet_id'] = Variable<String>(walletId);
     map['original_psbt'] = Variable<String>(originalPsbt);
@@ -299,6 +316,7 @@ class PayjoinSendersData extends DataClass
     return PayjoinSendersCompanion(
       uri: Value(uri),
       isTestnet: Value(isTestnet),
+      network: Value(network),
       sender: Value(sender),
       walletId: Value(walletId),
       originalPsbt: Value(originalPsbt),
@@ -325,6 +343,7 @@ class PayjoinSendersData extends DataClass
     return PayjoinSendersData(
       uri: serializer.fromJson<String>(json['uri']),
       isTestnet: serializer.fromJson<int>(json['isTestnet']),
+      network: serializer.fromJson<String>(json['network']),
       sender: serializer.fromJson<String>(json['sender']),
       walletId: serializer.fromJson<String>(json['walletId']),
       originalPsbt: serializer.fromJson<String>(json['originalPsbt']),
@@ -346,6 +365,7 @@ class PayjoinSendersData extends DataClass
     return <String, dynamic>{
       'uri': serializer.toJson<String>(uri),
       'isTestnet': serializer.toJson<int>(isTestnet),
+      'network': serializer.toJson<String>(network),
       'sender': serializer.toJson<String>(sender),
       'walletId': serializer.toJson<String>(walletId),
       'originalPsbt': serializer.toJson<String>(originalPsbt),
@@ -365,6 +385,7 @@ class PayjoinSendersData extends DataClass
   PayjoinSendersData copyWith({
     String? uri,
     int? isTestnet,
+    String? network,
     String? sender,
     String? walletId,
     String? originalPsbt,
@@ -381,6 +402,7 @@ class PayjoinSendersData extends DataClass
   }) => PayjoinSendersData(
     uri: uri ?? this.uri,
     isTestnet: isTestnet ?? this.isTestnet,
+    network: network ?? this.network,
     sender: sender ?? this.sender,
     walletId: walletId ?? this.walletId,
     originalPsbt: originalPsbt ?? this.originalPsbt,
@@ -399,6 +421,7 @@ class PayjoinSendersData extends DataClass
     return PayjoinSendersData(
       uri: data.uri.present ? data.uri.value : this.uri,
       isTestnet: data.isTestnet.present ? data.isTestnet.value : this.isTestnet,
+      network: data.network.present ? data.network.value : this.network,
       sender: data.sender.present ? data.sender.value : this.sender,
       walletId: data.walletId.present ? data.walletId.value : this.walletId,
       originalPsbt: data.originalPsbt.present
@@ -432,6 +455,7 @@ class PayjoinSendersData extends DataClass
     return (StringBuffer('PayjoinSendersData(')
           ..write('uri: $uri, ')
           ..write('isTestnet: $isTestnet, ')
+          ..write('network: $network, ')
           ..write('sender: $sender, ')
           ..write('walletId: $walletId, ')
           ..write('originalPsbt: $originalPsbt, ')
@@ -453,6 +477,7 @@ class PayjoinSendersData extends DataClass
   int get hashCode => Object.hash(
     uri,
     isTestnet,
+    network,
     sender,
     walletId,
     originalPsbt,
@@ -473,6 +498,7 @@ class PayjoinSendersData extends DataClass
       (other is PayjoinSendersData &&
           other.uri == this.uri &&
           other.isTestnet == this.isTestnet &&
+          other.network == this.network &&
           other.sender == this.sender &&
           other.walletId == this.walletId &&
           other.originalPsbt == this.originalPsbt &&
@@ -491,6 +517,7 @@ class PayjoinSendersData extends DataClass
 class PayjoinSendersCompanion extends UpdateCompanion<PayjoinSendersData> {
   final Value<String> uri;
   final Value<int> isTestnet;
+  final Value<String> network;
   final Value<String> sender;
   final Value<String> walletId;
   final Value<String> originalPsbt;
@@ -508,6 +535,7 @@ class PayjoinSendersCompanion extends UpdateCompanion<PayjoinSendersData> {
   const PayjoinSendersCompanion({
     this.uri = const Value.absent(),
     this.isTestnet = const Value.absent(),
+    this.network = const Value.absent(),
     this.sender = const Value.absent(),
     this.walletId = const Value.absent(),
     this.originalPsbt = const Value.absent(),
@@ -526,6 +554,7 @@ class PayjoinSendersCompanion extends UpdateCompanion<PayjoinSendersData> {
   PayjoinSendersCompanion.insert({
     required String uri,
     required int isTestnet,
+    this.network = const Value.absent(),
     required String sender,
     required String walletId,
     required String originalPsbt,
@@ -555,6 +584,7 @@ class PayjoinSendersCompanion extends UpdateCompanion<PayjoinSendersData> {
   static Insertable<PayjoinSendersData> custom({
     Expression<String>? uri,
     Expression<int>? isTestnet,
+    Expression<String>? network,
     Expression<String>? sender,
     Expression<String>? walletId,
     Expression<String>? originalPsbt,
@@ -573,6 +603,7 @@ class PayjoinSendersCompanion extends UpdateCompanion<PayjoinSendersData> {
     return RawValuesInsertable({
       if (uri != null) 'uri': uri,
       if (isTestnet != null) 'is_testnet': isTestnet,
+      if (network != null) 'network': network,
       if (sender != null) 'sender': sender,
       if (walletId != null) 'wallet_id': walletId,
       if (originalPsbt != null) 'original_psbt': originalPsbt,
@@ -594,6 +625,7 @@ class PayjoinSendersCompanion extends UpdateCompanion<PayjoinSendersData> {
   PayjoinSendersCompanion copyWith({
     Value<String>? uri,
     Value<int>? isTestnet,
+    Value<String>? network,
     Value<String>? sender,
     Value<String>? walletId,
     Value<String>? originalPsbt,
@@ -612,6 +644,7 @@ class PayjoinSendersCompanion extends UpdateCompanion<PayjoinSendersData> {
     return PayjoinSendersCompanion(
       uri: uri ?? this.uri,
       isTestnet: isTestnet ?? this.isTestnet,
+      network: network ?? this.network,
       sender: sender ?? this.sender,
       walletId: walletId ?? this.walletId,
       originalPsbt: originalPsbt ?? this.originalPsbt,
@@ -637,6 +670,9 @@ class PayjoinSendersCompanion extends UpdateCompanion<PayjoinSendersData> {
     }
     if (isTestnet.present) {
       map['is_testnet'] = Variable<int>(isTestnet.value);
+    }
+    if (network.present) {
+      map['network'] = Variable<String>(network.value);
     }
     if (sender.present) {
       map['sender'] = Variable<String>(sender.value);
@@ -688,6 +724,7 @@ class PayjoinSendersCompanion extends UpdateCompanion<PayjoinSendersData> {
     return (StringBuffer('PayjoinSendersCompanion(')
           ..write('uri: $uri, ')
           ..write('isTestnet: $isTestnet, ')
+          ..write('network: $network, ')
           ..write('sender: $sender, ')
           ..write('walletId: $walletId, ')
           ..write('originalPsbt: $originalPsbt, ')
@@ -736,6 +773,15 @@ class PayjoinReceivers extends Table
     type: DriftSqlType.int,
     requiredDuringInsert: true,
     $customConstraints: 'NOT NULL CHECK (is_testnet IN (0, 1))',
+  );
+  late final GeneratedColumn<String> network = GeneratedColumn<String>(
+    'network',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT \'\'',
+    defaultValue: const CustomExpression('\'\''),
   );
   late final GeneratedColumn<String> receiver = GeneratedColumn<String>(
     'receiver',
@@ -864,6 +910,7 @@ class PayjoinReceivers extends Table
     id,
     address,
     isTestnet,
+    network,
     receiver,
     walletId,
     pjUri,
@@ -902,6 +949,10 @@ class PayjoinReceivers extends Table
       isTestnet: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}is_testnet'],
+      )!,
+      network: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}network'],
       )!,
       receiver: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -982,6 +1033,7 @@ class PayjoinReceiversData extends DataClass
   final String id;
   final String address;
   final int isTestnet;
+  final String network;
   final String receiver;
   final String walletId;
   final String pjUri;
@@ -1001,6 +1053,7 @@ class PayjoinReceiversData extends DataClass
     required this.id,
     required this.address,
     required this.isTestnet,
+    required this.network,
     required this.receiver,
     required this.walletId,
     required this.pjUri,
@@ -1023,6 +1076,7 @@ class PayjoinReceiversData extends DataClass
     map['id'] = Variable<String>(id);
     map['address'] = Variable<String>(address);
     map['is_testnet'] = Variable<int>(isTestnet);
+    map['network'] = Variable<String>(network);
     map['receiver'] = Variable<String>(receiver);
     map['wallet_id'] = Variable<String>(walletId);
     map['pj_uri'] = Variable<String>(pjUri);
@@ -1056,6 +1110,7 @@ class PayjoinReceiversData extends DataClass
       id: Value(id),
       address: Value(address),
       isTestnet: Value(isTestnet),
+      network: Value(network),
       receiver: Value(receiver),
       walletId: Value(walletId),
       pjUri: Value(pjUri),
@@ -1091,6 +1146,7 @@ class PayjoinReceiversData extends DataClass
       id: serializer.fromJson<String>(json['id']),
       address: serializer.fromJson<String>(json['address']),
       isTestnet: serializer.fromJson<int>(json['isTestnet']),
+      network: serializer.fromJson<String>(json['network']),
       receiver: serializer.fromJson<String>(json['receiver']),
       walletId: serializer.fromJson<String>(json['walletId']),
       pjUri: serializer.fromJson<String>(json['pjUri']),
@@ -1117,6 +1173,7 @@ class PayjoinReceiversData extends DataClass
       'id': serializer.toJson<String>(id),
       'address': serializer.toJson<String>(address),
       'isTestnet': serializer.toJson<int>(isTestnet),
+      'network': serializer.toJson<String>(network),
       'receiver': serializer.toJson<String>(receiver),
       'walletId': serializer.toJson<String>(walletId),
       'pjUri': serializer.toJson<String>(pjUri),
@@ -1139,6 +1196,7 @@ class PayjoinReceiversData extends DataClass
     String? id,
     String? address,
     int? isTestnet,
+    String? network,
     String? receiver,
     String? walletId,
     String? pjUri,
@@ -1158,6 +1216,7 @@ class PayjoinReceiversData extends DataClass
     id: id ?? this.id,
     address: address ?? this.address,
     isTestnet: isTestnet ?? this.isTestnet,
+    network: network ?? this.network,
     receiver: receiver ?? this.receiver,
     walletId: walletId ?? this.walletId,
     pjUri: pjUri ?? this.pjUri,
@@ -1181,6 +1240,7 @@ class PayjoinReceiversData extends DataClass
       id: data.id.present ? data.id.value : this.id,
       address: data.address.present ? data.address.value : this.address,
       isTestnet: data.isTestnet.present ? data.isTestnet.value : this.isTestnet,
+      network: data.network.present ? data.network.value : this.network,
       receiver: data.receiver.present ? data.receiver.value : this.receiver,
       walletId: data.walletId.present ? data.walletId.value : this.walletId,
       pjUri: data.pjUri.present ? data.pjUri.value : this.pjUri,
@@ -1217,6 +1277,7 @@ class PayjoinReceiversData extends DataClass
           ..write('id: $id, ')
           ..write('address: $address, ')
           ..write('isTestnet: $isTestnet, ')
+          ..write('network: $network, ')
           ..write('receiver: $receiver, ')
           ..write('walletId: $walletId, ')
           ..write('pjUri: $pjUri, ')
@@ -1241,6 +1302,7 @@ class PayjoinReceiversData extends DataClass
     id,
     address,
     isTestnet,
+    network,
     receiver,
     walletId,
     pjUri,
@@ -1264,6 +1326,7 @@ class PayjoinReceiversData extends DataClass
           other.id == this.id &&
           other.address == this.address &&
           other.isTestnet == this.isTestnet &&
+          other.network == this.network &&
           other.receiver == this.receiver &&
           other.walletId == this.walletId &&
           other.pjUri == this.pjUri &&
@@ -1288,6 +1351,7 @@ class PayjoinReceiversCompanion extends UpdateCompanion<PayjoinReceiversData> {
   final Value<String> id;
   final Value<String> address;
   final Value<int> isTestnet;
+  final Value<String> network;
   final Value<String> receiver;
   final Value<String> walletId;
   final Value<String> pjUri;
@@ -1308,6 +1372,7 @@ class PayjoinReceiversCompanion extends UpdateCompanion<PayjoinReceiversData> {
     this.id = const Value.absent(),
     this.address = const Value.absent(),
     this.isTestnet = const Value.absent(),
+    this.network = const Value.absent(),
     this.receiver = const Value.absent(),
     this.walletId = const Value.absent(),
     this.pjUri = const Value.absent(),
@@ -1329,6 +1394,7 @@ class PayjoinReceiversCompanion extends UpdateCompanion<PayjoinReceiversData> {
     required String id,
     required String address,
     required int isTestnet,
+    this.network = const Value.absent(),
     required String receiver,
     required String walletId,
     required String pjUri,
@@ -1361,6 +1427,7 @@ class PayjoinReceiversCompanion extends UpdateCompanion<PayjoinReceiversData> {
     Expression<String>? id,
     Expression<String>? address,
     Expression<int>? isTestnet,
+    Expression<String>? network,
     Expression<String>? receiver,
     Expression<String>? walletId,
     Expression<String>? pjUri,
@@ -1382,6 +1449,7 @@ class PayjoinReceiversCompanion extends UpdateCompanion<PayjoinReceiversData> {
       if (id != null) 'id': id,
       if (address != null) 'address': address,
       if (isTestnet != null) 'is_testnet': isTestnet,
+      if (network != null) 'network': network,
       if (receiver != null) 'receiver': receiver,
       if (walletId != null) 'wallet_id': walletId,
       if (pjUri != null) 'pj_uri': pjUri,
@@ -1406,6 +1474,7 @@ class PayjoinReceiversCompanion extends UpdateCompanion<PayjoinReceiversData> {
     Value<String>? id,
     Value<String>? address,
     Value<int>? isTestnet,
+    Value<String>? network,
     Value<String>? receiver,
     Value<String>? walletId,
     Value<String>? pjUri,
@@ -1427,6 +1496,7 @@ class PayjoinReceiversCompanion extends UpdateCompanion<PayjoinReceiversData> {
       id: id ?? this.id,
       address: address ?? this.address,
       isTestnet: isTestnet ?? this.isTestnet,
+      network: network ?? this.network,
       receiver: receiver ?? this.receiver,
       walletId: walletId ?? this.walletId,
       pjUri: pjUri ?? this.pjUri,
@@ -1457,6 +1527,9 @@ class PayjoinReceiversCompanion extends UpdateCompanion<PayjoinReceiversData> {
     }
     if (isTestnet.present) {
       map['is_testnet'] = Variable<int>(isTestnet.value);
+    }
+    if (network.present) {
+      map['network'] = Variable<String>(network.value);
     }
     if (receiver.present) {
       map['receiver'] = Variable<String>(receiver.value);
@@ -1515,6 +1588,7 @@ class PayjoinReceiversCompanion extends UpdateCompanion<PayjoinReceiversData> {
           ..write('id: $id, ')
           ..write('address: $address, ')
           ..write('isTestnet: $isTestnet, ')
+          ..write('network: $network, ')
           ..write('receiver: $receiver, ')
           ..write('walletId: $walletId, ')
           ..write('pjUri: $pjUri, ')
