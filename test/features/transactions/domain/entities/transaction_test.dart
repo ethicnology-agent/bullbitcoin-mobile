@@ -31,10 +31,11 @@ PayjoinSession _senderPayjoin({
   String? txId,
   int amountSat = 50000,
   PayjoinOwnership? ownership,
+  BitcoinNetwork network = BitcoinNetwork.mainnet,
 }) => PayjoinSenderSession(
   status: status,
   uri: 'bitcoin:tb1qsender?pj=https://payjo.in',
-  network: BitcoinNetwork.mainnet,
+  network: network,
   walletId: 'w1',
   originalTransactionId: originalTxId,
   amount: Sats.fromInt(amountSat),
@@ -45,6 +46,25 @@ PayjoinSession _senderPayjoin({
 );
 
 void main() {
+  for (final network in [
+    BitcoinNetwork.mainnet,
+    BitcoinNetwork.testnet,
+    BitcoinNetwork.regtest,
+  ]) {
+    test(
+      'an ongoing $network Payjoin uses its concrete explorer capability',
+      () {
+        final transaction = Transaction(
+          payjoin: _senderPayjoin(network: network),
+        );
+        expect(
+          transaction.supportsPublicExplorer,
+          network != BitcoinNetwork.regtest,
+        );
+      },
+    );
+  }
+
   test('exposes ownership only for the displayed payjoin proposal', () {
     const ownership = PayjoinOwnership(
       inputs: [PayjoinParty.sender, PayjoinParty.recipient],
