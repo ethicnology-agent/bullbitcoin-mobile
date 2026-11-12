@@ -95,9 +95,10 @@ class Handler(BaseHTTPRequestHandler):
                 rpc(network, "generatetoaddress", [count, address])
                 height = rpc(network, "getblockcount")
                 indexer = "electrs" if network == "bitcoin" else "electrs-liquid"
+                indexer_port = 30000 if network == "bitcoin" else 30001
                 deadline = time.monotonic() + 20
                 while True:
-                    with urllib.request.urlopen(f"http://{indexer}:3000/blocks/tip/height", timeout=5) as response:
+                    with urllib.request.urlopen(f"http://{indexer}:{indexer_port}/blocks/tip/height", timeout=5) as response:
                         indexed = int(response.read())
                     if indexed >= height:
                         break
