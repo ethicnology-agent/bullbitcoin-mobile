@@ -109,27 +109,24 @@ void main() {
     },
   );
 
-  test(
-    'a corrupt source is reported as corrupt, and a candidate next to it is kept',
-    () async {
-      corruptPlaintext(path);
-      final candidate = SqliteFamily(path).candidate
-        ..writeAsStringSync('an earlier copy');
+  test('a corrupt source is reported as corrupt, and a candidate next to it is kept', () async {
+    corruptPlaintext(path);
+    final candidate = SqliteFamily(path).candidate
+      ..writeAsStringSync('an earlier copy');
 
-      final result = await EncryptedSqlite.encrypt(path, keyOf(10));
+    final result = await EncryptedSqlite.encrypt(path, keyOf(10));
 
-      expect(
-        result,
-        isA<Err<void, SqliteStorageFailure>>().having(
-          (e) => e.failure,
-          'failure',
-          isA<SqliteCorruptFailure>(),
-        ),
-      );
-      expect(candidate.readAsStringSync(), 'an earlier copy');
-      expect(headerOf(path), 'SQLite format 3');
-    },
-  );
+    expect(
+      result,
+      isA<Err<void, SqliteStorageFailure>>().having(
+        (e) => e.failure,
+        'failure',
+        isA<SqliteCorruptFailure>(),
+      ),
+    );
+    expect(candidate.readAsStringSync(), 'an earlier copy');
+    expect(headerOf(path), 'SQLite format 3');
+  });
 
   group('an error at a step', () {
     for (final step in EncryptionStep.values.where(
@@ -193,54 +190,48 @@ void main() {
 
     tearDown(() => readOnly(false));
 
-    test(
-      'a rename refused by the filesystem leaves the plaintext database, and a retry encrypts it',
-      () async {
-        expect(
-          () => encryptInPlace(
-            SqliteFamily(path),
-            keyOf(10),
-            onStep: (s) {
-              if (s == EncryptionStep.flushed) readOnly(true);
-            },
-          ),
-          throwsA(isA<FileSystemException>()),
-        );
-        readOnly(false);
-        expect(SqliteFamily(path).inspect(), SqliteFileState.plaintext);
+    test('a rename refused by the filesystem leaves the plaintext database, and a retry encrypts it', () async {
+      expect(
+        () => encryptInPlace(
+          SqliteFamily(path),
+          keyOf(10),
+          onStep: (s) {
+            if (s == EncryptionStep.flushed) readOnly(true);
+          },
+        ),
+        throwsA(isA<FileSystemException>()),
+      );
+      readOnly(false);
+      expect(SqliteFamily(path).inspect(), SqliteFileState.plaintext);
 
-        await encrypt(keyOf(10));
-        expectIntact(keyOf(10));
-        expectNoLeftovers();
-      },
-    );
+      await encrypt(keyOf(10));
+      expectIntact(keyOf(10));
+      expectNoLeftovers();
+    });
 
-    test(
-      'a deletion refused by the filesystem keeps the marker, and a resume finishes it',
-      () {
-        final family = SqliteFamily(path);
-        expect(
-          () => retire(
-            family,
-            const Retirement.delete(),
-            onStep: (s) {
-              if (s == RetirementStep.marked) readOnly(true);
-            },
-          ),
-          throwsA(isA<FileSystemException>()),
-        );
-        readOnly(false);
-        expect(family.retirement.existsSync(), isTrue);
-        expect(family.database.existsSync(), isTrue);
+    test('a deletion refused by the filesystem keeps the marker, and a resume finishes it', () {
+      final family = SqliteFamily(path);
+      expect(
+        () => retire(
+          family,
+          const Retirement.delete(),
+          onStep: (s) {
+            if (s == RetirementStep.marked) readOnly(true);
+          },
+        ),
+        throwsA(isA<FileSystemException>()),
+      );
+      readOnly(false);
+      expect(family.retirement.existsSync(), isTrue);
+      expect(family.database.existsSync(), isTrue);
 
-        expect(
-          EncryptedSqlite.resumeRetirement(path),
-          isA<Ok<bool, SqliteStorageFailure>>(),
-        );
-        expect(family.database.existsSync(), isFalse);
-        expect(family.retirement.existsSync(), isFalse);
-      },
-    );
+      expect(
+        EncryptedSqlite.resumeRetirement(path),
+        isA<Ok<bool, SqliteStorageFailure>>(),
+      );
+      expect(family.database.existsSync(), isFalse);
+      expect(family.retirement.existsSync(), isFalse);
+    });
   });
 
   group('SIGKILL', () {

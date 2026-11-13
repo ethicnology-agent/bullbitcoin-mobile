@@ -8,8 +8,9 @@ import 'package:go_router/go_router.dart';
 import 'package:bull_ui/bull_ui.dart' show BullButton;
 
 /// Callback for when a payment request is detected from a QR code
-typedef OnScannedPaymentRequestCallback =
-    void Function((String, PaymentRequest?) data);
+typedef OnScannedPaymentRequestCallback = void Function(
+  (String, PaymentRequest?) data,
+);
 
 class FullScreenScannerPage extends StatefulWidget {
   final OnScannedPaymentRequestCallback onScannedPaymentRequest;

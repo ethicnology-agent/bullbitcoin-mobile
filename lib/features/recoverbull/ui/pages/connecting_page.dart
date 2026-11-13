@@ -145,9 +145,8 @@ class _ConnectingPageState extends State<ConnectingPage> {
               : const VaultProviderSelectionPage(),
       };
 
-      Navigator.of(
-        context,
-      ).pushReplacement(MaterialPageRoute(builder: (context) => nextPage));
+      Navigator.of(context)
+          .pushReplacement(MaterialPageRoute(builder: (context) => nextPage));
     }
   }
 

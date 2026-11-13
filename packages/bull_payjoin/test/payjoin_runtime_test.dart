@@ -222,36 +222,31 @@ void main() {
     });
 
     test('a plaintext file is refused, never quarantined', () async {
-      File(
-        databasePath(),
-      ).writeAsStringSync('SQLite format 3\u0000${'x' * 200}');
+      File(databasePath())
+          .writeAsStringSync('SQLite format 3\u0000${'x' * 200}');
       final result = await open();
       expect(result, isA<Err<PayjoinLifecycle, PayjoinFailure>>());
       expect(files(), ['payjoin.sqlite']);
     });
 
-    test(
-      'a file newer than this build is moved aside, whole, and a fresh one opens',
-      () async {
-        await (await opened()).dispose();
-        final raw = sqlite3.open(databasePath());
-        SqliteCipher.key(raw, key);
-        raw.execute('PRAGMA user_version = 99;');
-        raw.close();
+    test('a file newer than this build is moved aside, whole, and a fresh one opens', () async {
+      await (await opened()).dispose();
+      final raw = sqlite3.open(databasePath());
+      SqliteCipher.key(raw, key);
+      raw.execute('PRAGMA user_version = 99;');
+      raw.close();
 
-        final lifecycle = await opened();
-        await lifecycle.dispose();
-        final quarantined = files().where((f) => f.contains('.unreadable-'));
-        expect(quarantined, contains(startsWith('payjoin.sqlite.unreadable-')));
-        expect(files(), isNot(contains('payjoin.sqlite.retire-pending')));
-      },
-    );
+      final lifecycle = await opened();
+      await lifecycle.dispose();
+      final quarantined = files().where((f) => f.contains('.unreadable-'));
+      expect(quarantined, contains(startsWith('payjoin.sqlite.unreadable-')));
+      expect(files(), isNot(contains('payjoin.sqlite.retire-pending')));
+    });
 
     test('an interrupted quarantine is finished before the open', () async {
       await (await opened()).dispose();
-      File(
-        '${databasePath()}.retire-pending',
-      ).writeAsStringSync('quarantine:.unreadable-1');
+      File('${databasePath()}.retire-pending')
+          .writeAsStringSync('quarantine:.unreadable-1');
       final lifecycle = await opened();
       await lifecycle.dispose();
       expect(files(), contains('payjoin.sqlite.unreadable-1'));

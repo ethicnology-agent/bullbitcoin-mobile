@@ -30,14 +30,12 @@ void main() {
   testWidgets('opens Tor settings from an onion server input', (tester) async {
     final electrumBloc = _MockElectrumSettingsBloc();
     when(() => electrumBloc.state).thenReturn(const ElectrumSettingsState());
-    when(
-      () => electrumBloc.stream,
-    ).thenAnswer((_) => const Stream<ElectrumSettingsState>.empty());
+    when(() => electrumBloc.stream)
+        .thenAnswer((_) => const Stream<ElectrumSettingsState>.empty());
     final torCubit = _MockTorSettingsCubit();
     when(() => torCubit.state).thenReturn(const TorSettingsState());
-    when(
-      () => torCubit.stream,
-    ).thenAnswer((_) => const Stream<TorSettingsState>.empty());
+    when(() => torCubit.stream)
+        .thenAnswer((_) => const Stream<TorSettingsState>.empty());
 
     await tester.pumpWidget(
       MaterialApp(

@@ -155,8 +155,7 @@ void main() {
           expect(
             observer.pushes,
             pushesBeforeFailure,
-            reason:
-                'Neither the fetch error nor clearing it selects another vault.',
+            reason: 'Neither the fetch error nor clearing it selects another vault.',
           );
           expect(find.byType(PasswordInputPage), findsOneWidget);
           expect(

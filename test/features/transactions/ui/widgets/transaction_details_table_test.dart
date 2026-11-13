@@ -47,9 +47,8 @@ void main() {
         transaction: Transaction(orderSwap: _orderSwap()),
       ),
     );
-    when(
-      () => detailsCubit.stream,
-    ).thenAnswer((_) => const Stream<TransactionDetailsState>.empty());
+    when(() => detailsCubit.stream)
+        .thenAnswer((_) => const Stream<TransactionDetailsState>.empty());
     when(() => settingsCubit.state).thenReturn(
       const SettingsState(
         storedSettings: SettingsEntity(
@@ -59,9 +58,8 @@ void main() {
         ),
       ),
     );
-    when(
-      () => settingsCubit.stream,
-    ).thenAnswer((_) => const Stream<SettingsState>.empty());
+    when(() => settingsCubit.stream)
+        .thenAnswer((_) => const Stream<SettingsState>.empty());
 
     await tester.pumpWidget(
       MaterialApp(

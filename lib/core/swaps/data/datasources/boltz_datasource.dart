@@ -19,12 +19,11 @@ import 'package:dio/dio.dart';
 import 'package:bull_sdk/boltz.dart' hide Network, SwapMasterKey;
 import 'package:bull_sdk/boltz.dart' as boltz;
 
-typedef BoltzWebSocketFactory =
-    BoltzWebSocket Function(
-      String boltzUrl, {
-      void Function()? onDone,
-      void Function(Object error)? onError,
-    });
+typedef BoltzWebSocketFactory = BoltzWebSocket Function(
+  String boltzUrl, {
+  void Function()? onDone,
+  void Function(Object error)? onError,
+});
 
 BoltzWebSocket _createBoltzWebSocket(
   String boltzUrl, {

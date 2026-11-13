@@ -210,9 +210,8 @@ void main() {
   test(
     'rejects a missing consolidation address index before building',
     () async {
-      when(
-        () => lwkWallet.utxos(),
-      ).thenAnswer((_) async => [coin('first'), coin('second')]);
+      when(() => lwkWallet.utxos())
+          .thenAnswer((_) async => [coin('first'), coin('second')]);
       when(() => lwkWallet.addressLastUnused()).thenAnswer(
         (_) async => const lwk.Address(standard: '', confidential: ''),
       );

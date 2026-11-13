@@ -1,4 +1,5 @@
 import 'package:primitives/primitives.dart';
+
 import 'dart:async';
 
 import 'package:bb_mobile/core/electrum/domain/value_objects/electrum_sync_result.dart';
@@ -113,15 +114,12 @@ WalletBloc _makeBloc({
   getWallets ??= _MockGetWalletsUsecase();
   syncCoordinator ??= _MockSyncCoordinator();
   final checkWalletSyncing = _MockCheckWalletSyncingUsecase();
-  when(
-    () => watchStarted.execute(),
-  ).thenAnswer((_) => const Stream<Wallet>.empty());
-  when(
-    () => watchFinished.execute(),
-  ).thenAnswer((_) => const Stream<Wallet>.empty());
-  when(
-    () => watchElectrum.execute(),
-  ).thenAnswer((_) => const Stream<ElectrumSyncResult>.empty());
+  when(() => watchStarted.execute())
+      .thenAnswer((_) => const Stream<Wallet>.empty());
+  when(() => watchFinished.execute())
+      .thenAnswer((_) => const Stream<Wallet>.empty());
+  when(() => watchElectrum.execute())
+      .thenAnswer((_) => const Stream<ElectrumSyncResult>.empty());
   when(() => watchSp.execute()).thenAnswer((_) => spUpdates);
   // Default: not scanning. Tests that need the scan-gate override this.
   when(() => checkScanning!.execute()).thenReturn(false);
@@ -129,13 +127,11 @@ WalletBloc _makeBloc({
   // Stubs so a dispatched `WalletStarted` doesn't throw. Existing tests never
   // dispatch it, so these are harmless; SP-stream tests rely on them.
   if (useDefaultGetWallets) {
-    when(
-      () => getWallets!.execute(sync: any(named: 'sync')),
-    ).thenAnswer((_) async => const Ok(<Wallet>[]));
+    when(() => getWallets!.execute(sync: any(named: 'sync')))
+        .thenAnswer((_) async => const Ok(<Wallet>[]));
   }
-  when(
-    () => checkWalletSyncing.execute(walletId: any(named: 'walletId')),
-  ).thenReturn(const Ok(false));
+  when(() => checkWalletSyncing.execute(walletId: any(named: 'walletId')))
+      .thenReturn(const Ok(false));
   when(() => checkWalletSyncing.execute()).thenReturn(const Ok(false));
   final checkSpFeatureGate = _MockCheckSpFeatureGate();
   when(() => checkSpFeatureGate.execute()).thenAnswer((_) async => gateEnabled);
@@ -233,9 +229,8 @@ void main() {
 
       // Not set up: setup check false, refresh returns null (gated/revoked).
       when(() => checkSetup.execute()).thenAnswer((_) async => Ok(false));
-      when(
-        () => refreshSp.execute(),
-      ).thenAnswer((_) async => const Ok<SpWallet?, SpFailure>(null));
+      when(() => refreshSp.execute())
+          .thenAnswer((_) async => const Ok<SpWallet?, SpFailure>(null));
 
       final bloc = _makeBloc(refreshSp: refreshSp, checkSetup: checkSetup);
 
@@ -284,9 +279,8 @@ void main() {
       final checkSetup = _MockCheckSpWalletSetupForWallet();
 
       when(() => checkSetup.execute()).thenAnswer((_) async => Ok(true));
-      when(
-        () => refreshSp.execute(),
-      ).thenAnswer((_) async => Ok(_spWallet(5000)));
+      when(() => refreshSp.execute())
+          .thenAnswer((_) async => Ok(_spWallet(5000)));
 
       final bloc = _makeBloc(
         refreshSp: refreshSp,
@@ -372,9 +366,8 @@ void main() {
 
       final refreshSp = _MockRefreshSpWalletForWallet();
       final checkSetup = _MockCheckSpWalletSetupForWallet();
-      when(
-        () => checkSetup.execute(),
-      ).thenAnswer((_) async => const Err(SpUnexpected('setup check boom')));
+      when(() => checkSetup.execute())
+          .thenAnswer((_) async => const Err(SpUnexpected('setup check boom')));
 
       final bloc = _makeBloc(refreshSp: refreshSp, checkSetup: checkSetup);
 
@@ -494,13 +487,11 @@ void main() {
         final getWallets = _MockGetWalletsUsecase();
         final walletsLoaded = Completer<Result<List<Wallet>, WalletFailure>>();
 
-        when(
-          () => getWallets.execute(sync: any(named: 'sync')),
-        ).thenAnswer((_) => walletsLoaded.future);
+        when(() => getWallets.execute(sync: any(named: 'sync')))
+            .thenAnswer((_) => walletsLoaded.future);
         when(() => checkSetup.execute()).thenAnswer((_) async => Ok(true));
-        when(
-          () => refreshSp.execute(),
-        ).thenAnswer((_) async => Ok(_spWallet(0)));
+        when(() => refreshSp.execute())
+            .thenAnswer((_) async => Ok(_spWallet(0)));
 
         final controller = StreamController<SpUpdate>.broadcast();
         addTearDown(controller.close);

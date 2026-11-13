@@ -63,9 +63,8 @@ void main() {
 
   group('DeleteSecretUsecase', () {
     test('deletes when no wallet uses the secret', () async {
-      when(
-        () => walletRepository.getWallets(),
-      ).thenAnswer((_) async => Ok<List<Wallet>, WalletFailure>([]));
+      when(() => walletRepository.getWallets())
+          .thenAnswer((_) async => Ok<List<Wallet>, WalletFailure>([]));
 
       expect(await usecase.execute(id), isA<Ok<void, AllSeedViewFailure>>());
       expect(storedSecrets(), isEmpty);

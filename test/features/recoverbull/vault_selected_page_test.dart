@@ -124,9 +124,8 @@ void main() {
         );
         await tester.pumpAndSettle();
         final selectedContext = tester.element(find.byType(VaultSelectedPage));
-        final decrypt = AppLocalizations.of(
-          selectedContext,
-        ).recoverbullDecryptVault;
+        final decrypt = AppLocalizations.of(selectedContext)
+            .recoverbullDecryptVault;
 
         await tester.tap(find.text(decrypt));
         await tester.pumpAndSettle();

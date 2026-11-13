@@ -56,9 +56,8 @@ void main() {
     testnetUsers = _MockUserRepository();
     apiKeys = _MockApiKeyRepository();
     settings = _MockSettingsRepository();
-    when(
-      settings.fetch,
-    ).thenAnswer((_) async => _settings(Environment.mainnet));
+    when(settings.fetch)
+        .thenAnswer((_) async => _settings(Environment.mainnet));
   });
 
   // SettingsRepository is shared core and still throws. These use-cases
@@ -113,9 +112,8 @@ void main() {
 
     test('ClearExchangeSessionUsecase deletes both keys and clears the '
         'cookies', () async {
-      when(
-        () => apiKeys.deleteApiKey(isTestnet: any(named: 'isTestnet')),
-      ).thenAnswer((_) async => const Ok(null));
+      when(() => apiKeys.deleteApiKey(isTestnet: any(named: 'isTestnet')))
+          .thenAnswer((_) async => const Ok(null));
       var cleared = false;
 
       final failure = _failureOf(
@@ -213,9 +211,8 @@ void main() {
 
     // A sanitized failure is no good if it came from the wrong network.
     test('testnet settings route to the testnet repository', () async {
-      when(
-        settings.fetch,
-      ).thenAnswer((_) async => _settings(Environment.testnet));
+      when(settings.fetch)
+          .thenAnswer((_) async => _settings(Environment.testnet));
       when(testnetUsers.getUserSummary).thenAnswer(
         (_) async => const Err(ExchangeUserSummaryUnavailableFailure()),
       );
@@ -248,9 +245,8 @@ void main() {
     );
 
     test('a repository failure is lifted into the feature family', () async {
-      when(
-        mainnetUsers.getUserSummary,
-      ).thenAnswer((_) async => const Ok(summary));
+      when(mainnetUsers.getUserSummary)
+          .thenAnswer((_) async => const Ok(summary));
       when(
         () => mainnetUsers.saveUserPreference(
           language: any(named: 'language'),
@@ -272,9 +268,8 @@ void main() {
     // leaves out must be carried over from a fresh summary.
     test('fields the caller leaves out are filled from a fresh '
         'summary', () async {
-      when(
-        mainnetUsers.getUserSummary,
-      ).thenAnswer((_) async => const Ok(summary));
+      when(mainnetUsers.getUserSummary)
+          .thenAnswer((_) async => const Ok(summary));
       when(
         () => mainnetUsers.saveUserPreference(
           language: any(named: 'language'),
@@ -338,9 +333,8 @@ void main() {
     });
 
     test('a successful load is forwarded', () async {
-      when(
-        mainnetUsers.listAnnouncements,
-      ).thenAnswer((_) async => const Ok(<Announcement>[]));
+      when(mainnetUsers.listAnnouncements)
+          .thenAnswer((_) async => const Ok(<Announcement>[]));
 
       expect(
         await build().execute(),
@@ -376,9 +370,8 @@ void main() {
     // The cookie manager is a platform call with no repository beneath it, so
     // this use-case is legitimately its boundary.
     test('a throwing cookie clear is caught and sanitized', () async {
-      when(
-        () => apiKeys.deleteApiKey(isTestnet: any(named: 'isTestnet')),
-      ).thenAnswer((_) async => const Ok(null));
+      when(() => apiKeys.deleteApiKey(isTestnet: any(named: 'isTestnet')))
+          .thenAnswer((_) async => const Ok(null));
 
       final result = await build(
         () async => throw Exception('PlatformException: bbk_live_7f3a9c2e'),
@@ -390,9 +383,8 @@ void main() {
     });
 
     test('both succeeding is Ok', () async {
-      when(
-        () => apiKeys.deleteApiKey(isTestnet: any(named: 'isTestnet')),
-      ).thenAnswer((_) async => const Ok(null));
+      when(() => apiKeys.deleteApiKey(isTestnet: any(named: 'isTestnet')))
+          .thenAnswer((_) async => const Ok(null));
 
       expect(
         await build(() async {}).execute(),

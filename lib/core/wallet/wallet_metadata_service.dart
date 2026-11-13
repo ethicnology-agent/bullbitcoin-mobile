@@ -52,9 +52,8 @@ class WalletMetadataService {
     String account,
   })
   decodeOrigin({required String origin}) {
-    final match = RegExp(
-      r'\[([a-fA-F0-9]+)/(\d+h)/(\d+h)/(\d+h)\]',
-    ).firstMatch(origin);
+    final match = RegExp(r'\[([a-fA-F0-9]+)/(\d+h)/(\d+h)/(\d+h)\]')
+        .firstMatch(origin);
 
     if (match == null) throw 'Invalid origin format: $origin';
 

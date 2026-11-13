@@ -9,12 +9,10 @@ void main() {
   group('Security audit #2599 iOS backup exposure', () {
     test('sensitive files use Documents and backup exclusion is configured', () {
       final initialization = File('lib/init.dart').readAsStringSync();
-      final bdk = File(
-        'lib/core/wallet/data/datasources/bdk_facade.dart',
-      ).readAsStringSync();
-      final lwk = File(
-        'lib/core/wallet/data/datasources/lwk_facade.dart',
-      ).readAsStringSync();
+      final bdk = File('lib/core/wallet/data/datasources/bdk_facade.dart')
+          .readAsStringSync();
+      final lwk = File('lib/core/wallet/data/datasources/lwk_facade.dart')
+          .readAsStringSync();
 
       expect(initialization, contains('getApplicationDocumentsDirectory'));
       // The main database is opened by LocalData at the path the shell builds.
@@ -73,9 +71,8 @@ void main() {
     });
 
     test('the background handler opens no database', () {
-      final source = File(
-        'lib/core/background_tasks/handler.dart',
-      ).readAsStringSync();
+      final source = File('lib/core/background_tasks/handler.dart')
+          .readAsStringSync();
       for (final opener in [
         'SqliteDatabase',
         'payjoin',

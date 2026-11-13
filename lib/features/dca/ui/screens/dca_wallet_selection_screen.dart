@@ -133,14 +133,13 @@ class _DcaWalletSelectionScreenState extends State<DcaWalletSelectionScreen> {
                         onPressed: _useDefaultLightningAddress
                             ? null
                             : () {
-                                Clipboard.getData(Clipboard.kTextPlain).then((
-                                  value,
-                                ) {
-                                  if (value?.text != null) {
-                                    _lightningAddressController.text =
-                                        value!.text!;
-                                  }
-                                });
+                                Clipboard.getData(Clipboard.kTextPlain)
+                                    .then((value) {
+                                      if (value?.text != null) {
+                                        _lightningAddressController.text =
+                                            value!.text!;
+                                      }
+                                    });
                               },
                       ),
                     ),

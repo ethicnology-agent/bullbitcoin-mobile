@@ -527,9 +527,8 @@ void main() {
       tester,
     ) async {
       final bloc = _MutableBloc(
-        failed(
-          1,
-        ).copyWith(keyServerStatus: KeyServerStatus.unknown, failure: null),
+        failed(1)
+            .copyWith(keyServerStatus: KeyServerStatus.unknown, failure: null),
       );
       addTearDown(bloc.close);
       await pumpMutablePage(tester, bloc);

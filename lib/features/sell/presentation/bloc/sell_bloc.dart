@@ -1266,8 +1266,7 @@ class SellBloc extends Bloc<SellEvent, SellState>
         }
         if (latestOrder is! SellOrder && latestOrder is! FiatPaymentOrder) {
           log.severe(
-            error:
-                'Expected a sell payin order but received a different order type',
+            error: 'Expected a sell payin order but received a different order type',
             trace: StackTrace.current,
           );
           return;

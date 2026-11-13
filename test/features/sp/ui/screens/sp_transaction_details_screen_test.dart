@@ -43,9 +43,8 @@ void main() {
 
   setUp(() {
     final harness = SpCubitHarness();
-    when(
-      () => harness.watchUsecase.execute(),
-    ).thenAnswer((_) => const Stream.empty());
+    when(() => harness.watchUsecase.execute())
+        .thenAnswer((_) => const Stream.empty());
 
     cubit = harness.build();
   });

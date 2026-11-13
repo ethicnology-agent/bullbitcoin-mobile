@@ -63,9 +63,8 @@ void main() {
     when(() => cubit.state).thenReturn(state);
     when(() => cubit.stream).thenAnswer((_) => const Stream.empty());
     var available = false;
-    when(
-      () => cubit.canBroadcastPayjoinOriginalTx(),
-    ).thenAnswer((_) async => Ok(available));
+    when(() => cubit.canBroadcastPayjoinOriginalTx())
+        .thenAnswer((_) async => Ok(available));
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.themeData(AppThemeType.light),

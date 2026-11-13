@@ -11,8 +11,7 @@ class ComingSoonBottomSheet extends StatelessWidget {
 
   const ComingSoonBottomSheet({
     super.key,
-    this.description =
-        'This feature is currently under development and will be available soon.',
+    this.description = 'This feature is currently under development and will be available soon.',
     this.icon,
     this.onDismissed,
   });
@@ -26,9 +25,7 @@ class ComingSoonBottomSheet extends StatelessWidget {
     return BullBottomSheet.show(
       context: context,
       child: ComingSoonBottomSheet(
-        description:
-            description ??
-            'This feature is currently under development and will be available soon.',
+        description: description ?? 'This feature is currently under development and will be available soon.',
         icon: icon,
         onDismissed: onDismissed,
       ),

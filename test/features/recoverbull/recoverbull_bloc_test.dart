@@ -87,9 +87,8 @@ void main() {
     createVault = _MockCreateVault();
     storeKey = _MockStoreKey();
     checkConnection = _MockCheckConnection();
-    when(
-      () => checkConnection.execute(),
-    ).thenAnswer((_) async => const Ok(true));
+    when(() => checkConnection.execute())
+        .thenAnswer((_) async => const Ok(true));
     fetchKey = _MockFetchKey();
     restore = _MockRestore();
     connectDrive = _MockConnectDrive();
@@ -104,9 +103,8 @@ void main() {
     fetchLatestDrive = _MockFetchLatestDrive();
     updateLatest = _MockUpdateLatest();
     watchTor = _MockWatchTorConnection();
-    when(
-      () => watchTor.execute(),
-    ).thenAnswer((_) => const Stream<TorConnectionState>.empty());
+    when(() => watchTor.execute())
+        .thenAnswer((_) => const Stream<TorConnectionState>.empty());
   });
 
   // No event is auto-dispatched, so unstubbed mocks stay untouched unless a
@@ -181,27 +179,22 @@ void main() {
   });
 
   group('OnVaultProviderSelection (secureVault) guard', () {
-    test(
-      'no password set -> PasswordNotSetFailure, creation never started',
-      () async {
-        final bloc = buildBloc(flow: RecoverBullFlow.secureVault);
+    test('no password set -> PasswordNotSetFailure, creation never started', () async {
+      final bloc = buildBloc(flow: RecoverBullFlow.secureVault);
 
-        bloc.add(
-          const OnVaultProviderSelection(
-            provider: VaultProvider.customLocation,
-          ),
-        );
-        await pumpEventQueue();
+      bloc.add(
+        const OnVaultProviderSelection(provider: VaultProvider.customLocation),
+      );
+      await pumpEventQueue();
 
-        // The pre-fix code fell through to `state.vaultPassword!`, which threw and
-        // surfaced as a generic RecoverBullUnexpectedFailure. The guard must keep
-        // the intended typed failure and never reach vault creation.
-        expect(bloc.state.failure, isA<PasswordNotSetFailure>());
-        verifyNever(() => createVault.execute());
+      // The pre-fix code fell through to `state.vaultPassword!`, which threw and
+      // surfaced as a generic RecoverBullUnexpectedFailure. The guard must keep
+      // the intended typed failure and never reach vault creation.
+      expect(bloc.state.failure, isA<PasswordNotSetFailure>());
+      verifyNever(() => createVault.execute());
 
-        await bloc.close();
-      },
-    );
+      await bloc.close();
+    });
   });
 
   group('OnVaultCreation store-key failure mapping', () {
@@ -213,12 +206,10 @@ void main() {
         when(() => vault.toFile()).thenReturn('{}');
         when(() => vault.filename).thenReturn('vault.json');
 
-        when(
-          () => createVault.execute(),
-        ).thenAnswer((_) async => Ok((vault: vault, vaultKey: 'deadbeef')));
-        when(
-          () => checkConnection.execute(),
-        ).thenAnswer((_) async => const Ok(true));
+        when(() => createVault.execute())
+            .thenAnswer((_) async => Ok((vault: vault, vaultKey: 'deadbeef')));
+        when(() => checkConnection.execute())
+            .thenAnswer((_) async => const Ok(true));
         when(
           () => saveFile.execute(
             content: any(named: 'content'),
@@ -290,15 +281,12 @@ void main() {
     'maps external failure while storing without announcing creation',
     () async {
       final vault = _MockEncryptedVault();
-      when(
-        () => createVault.execute(),
-      ).thenAnswer((_) async => Ok((vault: vault, vaultKey: 'key')));
-      when(
-        () => connectDrive.execute(),
-      ).thenAnswer((_) async => const Ok(null));
-      when(
-        () => saveDrive.execute(vault),
-      ).thenAnswer((_) async => const Ok(null));
+      when(() => createVault.execute())
+          .thenAnswer((_) async => Ok((vault: vault, vaultKey: 'key')));
+      when(() => connectDrive.execute())
+          .thenAnswer((_) async => const Ok(null));
+      when(() => saveDrive.execute(vault))
+          .thenAnswer((_) async => const Ok(null));
       when(
         () => storeKey.execute(password: 'pw', vault: vault, vaultKey: 'key'),
       ).thenAnswer(
@@ -328,9 +316,8 @@ void main() {
       'a fetched key stays out of state until its vault is verified',
       () async {
         final vault = _MockEncryptedVault();
-        when(
-          () => fetchKey.execute(vault: vault, password: 'pw'),
-        ).thenAnswer((_) async => const Ok('unverified-key'));
+        when(() => fetchKey.execute(vault: vault, password: 'pw'))
+            .thenAnswer((_) async => const Ok('unverified-key'));
         when(
           () => updateLatest.execute(vault: vault, vaultKey: 'unverified-key'),
         ).thenAnswer(
@@ -357,49 +344,44 @@ void main() {
       },
     );
 
-    test(
-      'a failed inspection never marks the vault as verified or starts recovery',
-      () async {
-        final vault = _MockEncryptedVault();
-        when(
-          () => updateLatest.execute(vault: vault, vaultKey: 'invalid-key'),
-        ).thenAnswer(
-          (_) async => const Err(core.RecoverBullUnexpectedCoreFailure()),
-        );
-        final bloc = buildBloc(
-          flow: RecoverBullFlow.recoverVault,
-          preSelectedVault: vault,
-        );
-        final states = <RecoverBullState>[];
-        final subscription = bloc.stream.listen(states.add);
+    test('a failed inspection never marks the vault as verified or starts recovery', () async {
+      final vault = _MockEncryptedVault();
+      when(() => updateLatest.execute(vault: vault, vaultKey: 'invalid-key'))
+          .thenAnswer(
+            (_) async => const Err(core.RecoverBullUnexpectedCoreFailure()),
+          );
+      final bloc = buildBloc(
+        flow: RecoverBullFlow.recoverVault,
+        preSelectedVault: vault,
+      );
+      final states = <RecoverBullState>[];
+      final subscription = bloc.stream.listen(states.add);
 
-        bloc.add(const OnVaultDecryption(vaultKey: 'invalid-key'));
-        await pumpEventQueue();
+      bloc.add(const OnVaultDecryption(vaultKey: 'invalid-key'));
+      await pumpEventQueue();
 
-        expect(bloc.state.failure, isA<VaultDecryptionFailure>());
-        expect(
-          states.map((state) => state.isVaultVerified),
-          everyElement(isFalse),
-        );
-        expect(states.map((state) => state.vaultKey), everyElement(isNull));
-        expect(bloc.state.isFlowFinished, isFalse);
-        verifyNever(
-          () => restore.execute(
-            vault: any(named: 'vault'),
-            vaultKey: any(named: 'vaultKey'),
-          ),
-        );
-        verifyZeroInteractions(walletBloc);
-        await subscription.cancel();
-        await bloc.close();
-      },
-    );
+      expect(bloc.state.failure, isA<VaultDecryptionFailure>());
+      expect(
+        states.map((state) => state.isVaultVerified),
+        everyElement(isFalse),
+      );
+      expect(states.map((state) => state.vaultKey), everyElement(isNull));
+      expect(bloc.state.isFlowFinished, isFalse);
+      verifyNever(
+        () => restore.execute(
+          vault: any(named: 'vault'),
+          vaultKey: any(named: 'vaultKey'),
+        ),
+      );
+      verifyZeroInteractions(walletBloc);
+      await subscription.cancel();
+      await bloc.close();
+    });
 
     test('testing a vault verifies it without importing it', () async {
       final vault = _MockEncryptedVault();
-      when(
-        () => updateLatest.execute(vault: vault, vaultKey: 'vault-key'),
-      ).thenAnswer((_) async => const Ok(null));
+      when(() => updateLatest.execute(vault: vault, vaultKey: 'vault-key'))
+          .thenAnswer((_) async => const Ok(null));
       final bloc = buildBloc(
         flow: RecoverBullFlow.testVault,
         preSelectedVault: vault,
@@ -425,14 +407,12 @@ void main() {
       'a failed restore never finishes the flow or starts wallet sync',
       () async {
         final vault = _MockEncryptedVault();
-        when(
-          () => updateLatest.execute(vault: vault, vaultKey: 'vault-key'),
-        ).thenAnswer((_) async => const Ok(null));
-        when(
-          () => restore.execute(vault: vault, vaultKey: 'vault-key'),
-        ).thenAnswer(
-          (_) async => const Err(core.RecoverBullUnexpectedCoreFailure()),
-        );
+        when(() => updateLatest.execute(vault: vault, vaultKey: 'vault-key'))
+            .thenAnswer((_) async => const Ok(null));
+        when(() => restore.execute(vault: vault, vaultKey: 'vault-key'))
+            .thenAnswer(
+              (_) async => const Err(core.RecoverBullUnexpectedCoreFailure()),
+            );
         final bloc = buildBloc(
           flow: RecoverBullFlow.recoverVault,
           preSelectedVault: vault,
@@ -455,9 +435,8 @@ void main() {
     test('drops a second retry while the first one is in flight', () async {
       final pending =
           Completer<Result<RecoverBullTorRoute, core.RecoverBullCoreFailure>>();
-      when(
-        () => ensureRecoverBullTorSession.execute(restartEmbedded: true),
-      ).thenAnswer((_) => pending.future);
+      when(() => ensureRecoverBullTorSession.execute(restartEmbedded: true))
+          .thenAnswer((_) => pending.future);
       final bloc = buildBloc(flow: RecoverBullFlow.recoverVault);
 
       bloc.add(const OnTorInitialization(restart: true));
@@ -465,9 +444,8 @@ void main() {
       bloc.add(const OnTorInitialization(restart: true));
       await pumpEventQueue();
 
-      verify(
-        () => ensureRecoverBullTorSession.execute(restartEmbedded: true),
-      ).called(1);
+      verify(() => ensureRecoverBullTorSession.execute(restartEmbedded: true))
+          .called(1);
 
       pending.complete(const Err(core.KeyServerUnavailableFailure()));
       await pumpEventQueue();
@@ -491,12 +469,10 @@ void main() {
           transport: TorTransport.direct,
         );
         final verified = RecoverBullTorRoute(route, () async {});
-        when(
-          () => ensureRecoverBullTorSession.execute(),
-        ).thenAnswer((_) async => Ok(verified));
-        when(
-          () => checkConnection.execute(route: verified),
-        ).thenAnswer((_) async => const Ok(true));
+        when(() => ensureRecoverBullTorSession.execute())
+            .thenAnswer((_) async => Ok(verified));
+        when(() => checkConnection.execute(route: verified))
+            .thenAnswer((_) async => const Ok(true));
         final bloc = buildBloc(flow: RecoverBullFlow.recoverVault);
         addTearDown(bloc.close);
 
@@ -522,12 +498,10 @@ void main() {
           transport: TorTransport.direct,
         );
         final verified = RecoverBullTorRoute(route, () async {});
-        when(
-          () => ensureRecoverBullTorSession.execute(),
-        ).thenAnswer((_) async => Ok(verified));
-        when(
-          () => checkConnection.execute(route: verified),
-        ).thenAnswer((_) async => const Ok(true));
+        when(() => ensureRecoverBullTorSession.execute())
+            .thenAnswer((_) async => Ok(verified));
+        when(() => checkConnection.execute(route: verified))
+            .thenAnswer((_) async => const Ok(true));
 
         states.add(
           const TorConnecting(
@@ -575,12 +549,10 @@ void main() {
         transport: TorTransport.direct,
       );
       final verified = RecoverBullTorRoute(route, () async {});
-      when(
-        () => ensureRecoverBullTorSession.execute(),
-      ).thenAnswer((_) async => Ok(verified));
-      when(
-        () => checkConnection.execute(route: verified),
-      ).thenAnswer((_) async => const Ok(true));
+      when(() => ensureRecoverBullTorSession.execute())
+          .thenAnswer((_) async => Ok(verified));
+      when(() => checkConnection.execute(route: verified))
+          .thenAnswer((_) async => const Ok(true));
       states.add(TorReady(route));
       await pumpEventQueue();
       states.add(
@@ -632,9 +604,8 @@ void main() {
             restartEmbedded: any(named: 'restartEmbedded'),
           ),
         ).thenAnswer((_) => acquisition.future);
-        when(
-          () => checkConnection.execute(route: recoverBullRoute),
-        ).thenAnswer((_) async => const Ok(true));
+        when(() => checkConnection.execute(route: recoverBullRoute))
+            .thenAnswer((_) async => const Ok(true));
         final bloc = buildBloc(flow: RecoverBullFlow.recoverVault);
 
         bloc.add(const OnTorInitialization());
@@ -645,9 +616,8 @@ void main() {
         await pumpEventQueue();
 
         expect(bloc.state.keyServerStatus, KeyServerStatus.online);
-        verify(
-          () => checkConnection.execute(route: recoverBullRoute),
-        ).called(1);
+        verify(() => checkConnection.execute(route: recoverBullRoute))
+            .called(1);
         verify(
           () => ensureRecoverBullTorSession.execute(
             restartEmbedded: any(named: 'restartEmbedded'),
@@ -662,9 +632,8 @@ void main() {
     test('does not dispatch a server check after the bloc closes', () async {
       final pending =
           Completer<Result<RecoverBullTorRoute, core.RecoverBullCoreFailure>>();
-      when(
-        () => ensureRecoverBullTorSession.execute(),
-      ).thenAnswer((_) => pending.future);
+      when(() => ensureRecoverBullTorSession.execute())
+          .thenAnswer((_) => pending.future);
       final bloc = buildBloc(flow: RecoverBullFlow.recoverVault);
       final route = TorRoute(
         source: TorSource.embedded,
@@ -743,12 +712,10 @@ void main() {
     test('retains the checked route until the flow closes', () async {
       var closed = 0;
       final route = routeAt(41001, () async => closed++);
-      when(
-        () => ensureRecoverBullTorSession.execute(),
-      ).thenAnswer((_) async => Ok(route));
-      when(
-        () => checkConnection.execute(route: route),
-      ).thenAnswer((_) async => const Ok(true));
+      when(() => ensureRecoverBullTorSession.execute())
+          .thenAnswer((_) async => Ok(route));
+      when(() => checkConnection.execute(route: route))
+          .thenAnswer((_) async => const Ok(true));
       final bloc = buildBloc(flow: RecoverBullFlow.recoverVault);
       addTearDown(bloc.close);
 
@@ -772,13 +739,11 @@ void main() {
             >();
         final states = StreamController<TorConnectionState>();
         when(() => watchTor.execute()).thenAnswer((_) => states.stream);
-        when(
-          () => ensureRecoverBullTorSession.execute(),
-        ).thenAnswer((_) => pending.future);
+        when(() => ensureRecoverBullTorSession.execute())
+            .thenAnswer((_) => pending.future);
         final route = routeAt(41001, () async {});
-        when(
-          () => checkConnection.execute(route: route),
-        ).thenAnswer((_) async => const Ok(true));
+        when(() => checkConnection.execute(route: route))
+            .thenAnswer((_) async => const Ok(true));
         final bloc = buildBloc(flow: RecoverBullFlow.recoverVault);
         addTearDown(bloc.close);
 
@@ -803,18 +768,14 @@ void main() {
         var secondClosed = 0;
         final first = routeAt(41001, () async => firstClosed++);
         final second = routeAt(41002, () async => secondClosed++);
-        when(
-          () => ensureRecoverBullTorSession.execute(),
-        ).thenAnswer((_) async => Ok(first));
-        when(
-          () => ensureRecoverBullTorSession.execute(restartEmbedded: true),
-        ).thenAnswer((_) async => Ok(second));
-        when(
-          () => checkConnection.execute(route: first),
-        ).thenAnswer((_) async => const Ok(true));
-        when(
-          () => checkConnection.execute(route: second),
-        ).thenAnswer((_) async => const Ok(true));
+        when(() => ensureRecoverBullTorSession.execute())
+            .thenAnswer((_) async => Ok(first));
+        when(() => ensureRecoverBullTorSession.execute(restartEmbedded: true))
+            .thenAnswer((_) async => Ok(second));
+        when(() => checkConnection.execute(route: first))
+            .thenAnswer((_) async => const Ok(true));
+        when(() => checkConnection.execute(route: second))
+            .thenAnswer((_) async => const Ok(true));
         final bloc = buildBloc(flow: RecoverBullFlow.recoverVault);
         addTearDown(bloc.close);
 
@@ -837,15 +798,12 @@ void main() {
       final first = routeAt(41001, () async => firstClosed++);
       final second = routeAt(41002, () async => secondClosed++);
       var acquisitions = 0;
-      when(
-        () => ensureRecoverBullTorSession.execute(),
-      ).thenAnswer((_) async => Ok(acquisitions++ == 0 ? first : second));
-      when(
-        () => checkConnection.execute(route: first),
-      ).thenAnswer((_) async => const Ok(true));
-      when(
-        () => checkConnection.execute(route: second),
-      ).thenAnswer((_) async => const Ok(true));
+      when(() => ensureRecoverBullTorSession.execute())
+          .thenAnswer((_) async => Ok(acquisitions++ == 0 ? first : second));
+      when(() => checkConnection.execute(route: first))
+          .thenAnswer((_) async => const Ok(true));
+      when(() => checkConnection.execute(route: second))
+          .thenAnswer((_) async => const Ok(true));
       final firstFlow = buildBloc(flow: RecoverBullFlow.recoverVault);
       final secondFlow = buildBloc(flow: RecoverBullFlow.recoverVault);
       addTearDown(firstFlow.close);
@@ -870,17 +828,14 @@ void main() {
       () async {
         final route = routeAt(41001, () async {});
         final vault = _MockEncryptedVault();
-        when(
-          () => ensureRecoverBullTorSession.execute(),
-        ).thenAnswer((_) async => Ok(route));
-        when(
-          () => checkConnection.execute(route: route),
-        ).thenAnswer((_) async => const Ok(true));
-        when(
-          () => fetchKey.execute(vault: vault, password: 'pw', route: route),
-        ).thenAnswer(
-          (_) async => const Err(core.KeyServerUnavailableFailure()),
-        );
+        when(() => ensureRecoverBullTorSession.execute())
+            .thenAnswer((_) async => Ok(route));
+        when(() => checkConnection.execute(route: route))
+            .thenAnswer((_) async => const Ok(true));
+        when(() => fetchKey.execute(vault: vault, password: 'pw', route: route))
+            .thenAnswer(
+              (_) async => const Err(core.KeyServerUnavailableFailure()),
+            );
         final bloc = buildBloc(
           flow: RecoverBullFlow.recoverVault,
           preSelectedVault: vault,
@@ -903,21 +858,16 @@ void main() {
     test('backup preflight and store borrow the checked route', () async {
       final route = routeAt(41001, () async {});
       final vault = _MockEncryptedVault();
-      when(
-        () => ensureRecoverBullTorSession.execute(),
-      ).thenAnswer((_) async => Ok(route));
-      when(
-        () => checkConnection.execute(route: route),
-      ).thenAnswer((_) async => const Ok(true));
-      when(
-        () => createVault.execute(),
-      ).thenAnswer((_) async => Ok((vault: vault, vaultKey: 'key')));
-      when(
-        () => connectDrive.execute(),
-      ).thenAnswer((_) async => const Ok(null));
-      when(
-        () => saveDrive.execute(vault),
-      ).thenAnswer((_) async => const Ok(null));
+      when(() => ensureRecoverBullTorSession.execute())
+          .thenAnswer((_) async => Ok(route));
+      when(() => checkConnection.execute(route: route))
+          .thenAnswer((_) async => const Ok(true));
+      when(() => createVault.execute())
+          .thenAnswer((_) async => Ok((vault: vault, vaultKey: 'key')));
+      when(() => connectDrive.execute())
+          .thenAnswer((_) async => const Ok(null));
+      when(() => saveDrive.execute(vault))
+          .thenAnswer((_) async => const Ok(null));
       when(
         () => storeKey.execute(
           password: 'pw',
@@ -961,15 +911,12 @@ void main() {
         final first = routeAt(41001, () async => firstClosed++);
         final second = routeAt(41002, () async {});
         var acquisitions = 0;
-        when(
-          () => ensureRecoverBullTorSession.execute(),
-        ).thenAnswer((_) async => Ok(acquisitions++ == 0 ? first : second));
-        when(
-          () => checkConnection.execute(route: first),
-        ).thenAnswer((_) async => const Ok(true));
-        when(
-          () => checkConnection.execute(route: second),
-        ).thenAnswer((_) async => const Ok(true));
+        when(() => ensureRecoverBullTorSession.execute())
+            .thenAnswer((_) async => Ok(acquisitions++ == 0 ? first : second));
+        when(() => checkConnection.execute(route: first))
+            .thenAnswer((_) async => const Ok(true));
+        when(() => checkConnection.execute(route: second))
+            .thenAnswer((_) async => const Ok(true));
         final bloc = buildBloc(flow: RecoverBullFlow.recoverVault);
         addTearDown(bloc.close);
         bloc.add(const OnTorInitialization());
@@ -1002,15 +949,12 @@ void main() {
       final route = routeAt(41001, () async => closed++);
       final vault = _MockEncryptedVault();
       final fetching = Completer<Result<String, core.RecoverBullCoreFailure>>();
-      when(
-        () => ensureRecoverBullTorSession.execute(),
-      ).thenAnswer((_) async => Ok(route));
-      when(
-        () => checkConnection.execute(route: route),
-      ).thenAnswer((_) async => const Ok(true));
-      when(
-        () => fetchKey.execute(vault: vault, password: 'pw', route: route),
-      ).thenAnswer((_) => fetching.future);
+      when(() => ensureRecoverBullTorSession.execute())
+          .thenAnswer((_) async => Ok(route));
+      when(() => checkConnection.execute(route: route))
+          .thenAnswer((_) async => const Ok(true));
+      when(() => fetchKey.execute(vault: vault, password: 'pw', route: route))
+          .thenAnswer((_) => fetching.future);
       final bloc = buildBloc(
         flow: RecoverBullFlow.recoverVault,
         preSelectedVault: vault,
@@ -1022,9 +966,8 @@ void main() {
       bloc.add(const OnVaultPasswordSet(password: 'pw'));
       await pumpEventQueue();
       // The status indicator in the app bar lets the user check mid-fetch.
-      when(
-        () => checkConnection.execute(route: route),
-      ).thenAnswer((_) async => const Ok(false));
+      when(() => checkConnection.execute(route: route))
+          .thenAnswer((_) async => const Ok(false));
       bloc.add(const OnServerCheck());
       await pumpEventQueue();
 
@@ -1047,15 +990,12 @@ void main() {
       final route = routeAt(41001, () async => closed++);
       final vault = _MockEncryptedVault();
       final fetching = Completer<Result<String, core.RecoverBullCoreFailure>>();
-      when(
-        () => ensureRecoverBullTorSession.execute(),
-      ).thenAnswer((_) async => Ok(route));
-      when(
-        () => checkConnection.execute(route: route),
-      ).thenAnswer((_) async => const Ok(true));
-      when(
-        () => fetchKey.execute(vault: vault, password: 'pw', route: route),
-      ).thenAnswer((_) => fetching.future);
+      when(() => ensureRecoverBullTorSession.execute())
+          .thenAnswer((_) async => Ok(route));
+      when(() => checkConnection.execute(route: route))
+          .thenAnswer((_) async => const Ok(true));
+      when(() => fetchKey.execute(vault: vault, password: 'pw', route: route))
+          .thenAnswer((_) => fetching.future);
       final bloc = buildBloc(
         flow: RecoverBullFlow.recoverVault,
         preSelectedVault: vault,
@@ -1083,12 +1023,10 @@ void main() {
       when(() => watchTor.execute()).thenAnswer((_) => states.stream);
       var closed = 0;
       final route = routeAt(41001, () async => closed++);
-      when(
-        () => ensureRecoverBullTorSession.execute(),
-      ).thenAnswer((_) async => Ok(route));
-      when(
-        () => checkConnection.execute(route: route),
-      ).thenAnswer((_) async => const Ok(true));
+      when(() => ensureRecoverBullTorSession.execute())
+          .thenAnswer((_) async => Ok(route));
+      when(() => checkConnection.execute(route: route))
+          .thenAnswer((_) async => const Ok(true));
       final bloc = buildBloc(flow: RecoverBullFlow.recoverVault);
       addTearDown(states.close);
       addTearDown(bloc.close);
@@ -1114,18 +1052,14 @@ void main() {
         final pending = Completer<Result<bool, core.RecoverBullCoreFailure>>();
         final first = routeAt(41001, () async {});
         final second = routeAt(41002, () async {});
-        when(
-          () => ensureRecoverBullTorSession.execute(),
-        ).thenAnswer((_) async => Ok(first));
-        when(
-          () => ensureRecoverBullTorSession.execute(restartEmbedded: true),
-        ).thenAnswer((_) async => Ok(second));
-        when(
-          () => checkConnection.execute(route: first),
-        ).thenAnswer((_) => pending.future);
-        when(
-          () => checkConnection.execute(route: second),
-        ).thenAnswer((_) async => const Ok(true));
+        when(() => ensureRecoverBullTorSession.execute())
+            .thenAnswer((_) async => Ok(first));
+        when(() => ensureRecoverBullTorSession.execute(restartEmbedded: true))
+            .thenAnswer((_) async => Ok(second));
+        when(() => checkConnection.execute(route: first))
+            .thenAnswer((_) => pending.future);
+        when(() => checkConnection.execute(route: second))
+            .thenAnswer((_) async => const Ok(true));
         final bloc = buildBloc(flow: RecoverBullFlow.recoverVault);
         addTearDown(bloc.close);
 
@@ -1151,14 +1085,12 @@ void main() {
             >();
         final states = StreamController<TorConnectionState>();
         when(() => watchTor.execute()).thenAnswer((_) => states.stream);
-        when(
-          () => ensureRecoverBullTorSession.execute(),
-        ).thenAnswer((_) => pending.future);
+        when(() => ensureRecoverBullTorSession.execute())
+            .thenAnswer((_) => pending.future);
         var closed = 0;
         final route = routeAt(41001, () async => closed++);
-        when(
-          () => checkConnection.execute(route: route),
-        ).thenAnswer((_) async => const Ok(true));
+        when(() => checkConnection.execute(route: route))
+            .thenAnswer((_) async => const Ok(true));
         final bloc = buildBloc(flow: RecoverBullFlow.recoverVault);
         addTearDown(bloc.close);
         addTearDown(states.close);
@@ -1187,14 +1119,12 @@ void main() {
             >();
         final states = StreamController<TorConnectionState>();
         when(() => watchTor.execute()).thenAnswer((_) => states.stream);
-        when(
-          () => ensureRecoverBullTorSession.execute(),
-        ).thenAnswer((_) => pending.future);
+        when(() => ensureRecoverBullTorSession.execute())
+            .thenAnswer((_) => pending.future);
         var closed = 0;
         final route = routeAt(41001, () async => closed++);
-        when(
-          () => checkConnection.execute(route: route),
-        ).thenAnswer((_) async => const Ok(true));
+        when(() => checkConnection.execute(route: route))
+            .thenAnswer((_) async => const Ok(true));
         final bloc = buildBloc(flow: RecoverBullFlow.recoverVault);
         addTearDown(bloc.close);
         addTearDown(states.close);
@@ -1235,9 +1165,8 @@ void main() {
           acquisitions++;
           return acquisitions == 1 ? pending.future : Future.value(Ok(second));
         });
-        when(
-          () => checkConnection.execute(route: second),
-        ).thenAnswer((_) async => const Ok(true));
+        when(() => checkConnection.execute(route: second))
+            .thenAnswer((_) async => const Ok(true));
         final bloc = buildBloc(flow: RecoverBullFlow.recoverVault);
         addTearDown(states.close);
         addTearDown(bloc.close);
@@ -1283,15 +1212,12 @@ void main() {
           final vault = _MockEncryptedVault();
           when(() => vault.toFile()).thenReturn('vault');
           when(() => vault.filename).thenReturn('backup.json');
-          when(
-            () => ensureRecoverBullTorSession.execute(),
-          ).thenAnswer((_) async => Ok(route));
-          when(
-            () => checkConnection.execute(route: route),
-          ).thenAnswer((_) async => const Ok(true));
-          when(
-            () => createVault.execute(),
-          ).thenAnswer((_) async => Ok((vault: vault, vaultKey: 'key')));
+          when(() => ensureRecoverBullTorSession.execute())
+              .thenAnswer((_) async => Ok(route));
+          when(() => checkConnection.execute(route: route))
+              .thenAnswer((_) async => const Ok(true));
+          when(() => createVault.execute())
+              .thenAnswer((_) async => Ok((vault: vault, vaultKey: 'key')));
           when(
             () => saveFile.execute(content: 'vault', filename: 'backup.json'),
           ).thenAnswer((_) => picker.future);
@@ -1312,12 +1238,10 @@ void main() {
           bloc.add(const OnTorInitialization());
           await pumpEventQueue();
           if (pendingPhase == 'preflight') {
-            when(
-              () => checkConnection.execute(),
-            ).thenAnswer((_) => preflight.future);
-            when(
-              () => checkConnection.execute(route: route),
-            ).thenAnswer((_) => preflight.future);
+            when(() => checkConnection.execute())
+                .thenAnswer((_) => preflight.future);
+            when(() => checkConnection.execute(route: route))
+                .thenAnswer((_) => preflight.future);
           }
           bloc.add(
             const OnVaultCreation(
@@ -1359,9 +1283,8 @@ void main() {
             Completer<
               Result<RecoverBullTorRoute, core.RecoverBullCoreFailure>
             >();
-        when(
-          () => ensureRecoverBullTorSession.execute(),
-        ).thenAnswer((_) => pending.future);
+        when(() => ensureRecoverBullTorSession.execute())
+            .thenAnswer((_) => pending.future);
         final bloc = buildBloc(flow: RecoverBullFlow.recoverVault);
         addTearDown(bloc.close);
         bloc.add(const OnTorInitialization());
@@ -1384,15 +1307,12 @@ void main() {
       when(() => vault.toFile()).thenReturn('{}');
       when(() => vault.filename).thenReturn('vault.json');
       final saving = Completer<Result<Null, core.RecoverBullCoreFailure>>();
-      when(
-        () => ensureRecoverBullTorSession.execute(),
-      ).thenAnswer((_) async => Ok(route));
-      when(
-        () => checkConnection.execute(route: route),
-      ).thenAnswer((_) async => const Ok(true));
-      when(
-        () => createVault.execute(),
-      ).thenAnswer((_) async => Ok((vault: vault, vaultKey: 'key')));
+      when(() => ensureRecoverBullTorSession.execute())
+          .thenAnswer((_) async => Ok(route));
+      when(() => checkConnection.execute(route: route))
+          .thenAnswer((_) async => const Ok(true));
+      when(() => createVault.execute())
+          .thenAnswer((_) async => Ok((vault: vault, vaultKey: 'key')));
       when(
         () => saveFile.execute(
           content: any(named: 'content'),
@@ -1435,12 +1355,10 @@ void main() {
       () async {
         final pending = Completer<Result<bool, core.RecoverBullCoreFailure>>();
         final route = routeAt(41001, () async {});
-        when(
-          () => ensureRecoverBullTorSession.execute(),
-        ).thenAnswer((_) async => Ok(route));
-        when(
-          () => checkConnection.execute(route: route),
-        ).thenAnswer((_) => pending.future);
+        when(() => ensureRecoverBullTorSession.execute())
+            .thenAnswer((_) async => Ok(route));
+        when(() => checkConnection.execute(route: route))
+            .thenAnswer((_) => pending.future);
         final bloc = buildBloc(flow: RecoverBullFlow.recoverVault);
         addTearDown(bloc.close);
 
@@ -1462,9 +1380,8 @@ void main() {
       final first = routeAt(41001, () async => firstClosed++);
       final second = routeAt(41002, () async {});
       var acquisitions = 0;
-      when(
-        () => ensureRecoverBullTorSession.execute(),
-      ).thenAnswer((_) async => Ok(acquisitions++ == 0 ? first : second));
+      when(() => ensureRecoverBullTorSession.execute())
+          .thenAnswer((_) async => Ok(acquisitions++ == 0 ? first : second));
       when(() => checkConnection.execute(route: first)).thenAnswer(
         (_) async => const Err(
           core.KeyServerUnavailableFailure.because(
@@ -1472,9 +1389,8 @@ void main() {
           ),
         ),
       );
-      when(
-        () => checkConnection.execute(route: second),
-      ).thenAnswer((_) async => const Ok(true));
+      when(() => checkConnection.execute(route: second))
+          .thenAnswer((_) async => const Ok(true));
       final bloc = buildBloc(flow: RecoverBullFlow.recoverVault);
       addTearDown(bloc.close);
 
@@ -1495,9 +1411,8 @@ void main() {
     test('New route waits out a session acquisition in progress', () async {
       final acquisition =
           Completer<Result<RecoverBullTorRoute, core.RecoverBullCoreFailure>>();
-      when(
-        () => ensureRecoverBullTorSession.execute(),
-      ).thenAnswer((_) => acquisition.future);
+      when(() => ensureRecoverBullTorSession.execute())
+          .thenAnswer((_) => acquisition.future);
       final bloc = buildBloc(flow: RecoverBullFlow.recoverVault);
       addTearDown(bloc.close);
 
@@ -1551,9 +1466,8 @@ void main() {
     test('Retry reuses the session and counts each failed attempt', () async {
       var closed = 0;
       final route = routeAt(41001, () async => closed++);
-      when(
-        () => ensureRecoverBullTorSession.execute(),
-      ).thenAnswer((_) async => Ok(route));
+      when(() => ensureRecoverBullTorSession.execute())
+          .thenAnswer((_) async => Ok(route));
       when(() => checkConnection.execute(route: route)).thenAnswer(
         (_) async => const Err(
           core.KeyServerUnavailableFailure.because(
@@ -1595,15 +1509,13 @@ void main() {
         final first = routeAt(41001, () async => firstClosed++);
         final second = routeAt(41002, () async {});
         var acquisitions = 0;
-        when(
-          () => ensureRecoverBullTorSession.execute(),
-        ).thenAnswer((_) async => Ok(acquisitions++ == 0 ? first : second));
+        when(() => ensureRecoverBullTorSession.execute())
+            .thenAnswer((_) async => Ok(acquisitions++ == 0 ? first : second));
         when(() => checkConnection.execute(route: first)).thenAnswer(
           (_) async => const Err(core.KeyServerUnavailableFailure()),
         );
-        when(
-          () => checkConnection.execute(route: second),
-        ).thenAnswer((_) async => const Ok(true));
+        when(() => checkConnection.execute(route: second))
+            .thenAnswer((_) async => const Ok(true));
         final bloc = buildBloc(flow: RecoverBullFlow.recoverVault);
         addTearDown(bloc.close);
 

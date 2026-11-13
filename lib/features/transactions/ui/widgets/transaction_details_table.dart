@@ -187,18 +187,16 @@ class TransactionDetailsTable extends StatelessWidget {
               label: context.loc.transactionDetailLabelAmountReceived,
               displayValue: bitcoinUnit == BitcoinUnit.sats
                   ? FormatAmount.sats(amountReceived).toUpperCase()
-                  : FormatAmount.btc(
-                      ConvertAmount.satsToBtc(amountReceived),
-                    ).toUpperCase(),
+                  : FormatAmount.btc(ConvertAmount.satsToBtc(amountReceived))
+                        .toUpperCase(),
             ),
           if (transaction?.isOutgoing == true && transaction?.isSwap != true)
             BullDetailsTableItem(
               label: context.loc.transactionDetailLabelTransactionFee,
               displayValue: bitcoinUnit == BitcoinUnit.sats
                   ? FormatAmount.sats(txFee ?? 0).toUpperCase()
-                  : FormatAmount.btc(
-                      ConvertAmount.satsToBtc(txFee ?? 0),
-                    ).toUpperCase(),
+                  : FormatAmount.btc(ConvertAmount.satsToBtc(txFee ?? 0))
+                        .toUpperCase(),
             ),
           BullDetailsTableItem(
             label: context.loc.transactionDetailLabelStatus,
@@ -207,9 +205,8 @@ class TransactionDetailsTable extends StatelessWidget {
           if (walletTransaction.confirmationTime != null)
             BullDetailsTableItem(
               label: context.loc.transactionDetailLabelConfirmationTime,
-              displayValue: DateFormat(
-                'MMM d, y, h:mm a',
-              ).format(walletTransaction.confirmationTime!),
+              displayValue: DateFormat('MMM d, y, h:mm a')
+                  .format(walletTransaction.confirmationTime!),
             ),
         ],
         if (orderSwap != null) ...[
@@ -326,16 +323,14 @@ class TransactionDetailsTable extends StatelessWidget {
                 ),
                 BullDetailsTableItem(
                   label: context.loc.transactionDetailLabelCreatedAt,
-                  displayValue: DateFormat(
-                    'MMM d, y, h:mm a',
-                  ).format(order.createdAt.toLocal()),
+                  displayValue: DateFormat('MMM d, y, h:mm a')
+                      .format(order.createdAt.toLocal()),
                 ),
                 if (order.completedAt != null)
                   BullDetailsTableItem(
                     label: context.loc.transactionDetailLabelCompletedAt,
-                    displayValue: DateFormat(
-                      'MMM d, y, h:mm a',
-                    ).format(order.completedAt!.toLocal()),
+                    displayValue: DateFormat('MMM d, y, h:mm a')
+                        .format(order.completedAt!.toLocal()),
                   ),
               ];
             } else if (order is SellOrder) {
@@ -392,16 +387,14 @@ class TransactionDetailsTable extends StatelessWidget {
                 ),
                 BullDetailsTableItem(
                   label: context.loc.transactionDetailLabelCreatedAt,
-                  displayValue: DateFormat(
-                    'MMM d, y, h:mm a',
-                  ).format(order.createdAt.toLocal()),
+                  displayValue: DateFormat('MMM d, y, h:mm a')
+                      .format(order.createdAt.toLocal()),
                 ),
                 if (order.completedAt != null)
                   BullDetailsTableItem(
                     label: context.loc.transactionDetailLabelCompletedAt,
-                    displayValue: DateFormat(
-                      'MMM d, y, h:mm a',
-                    ).format(order.completedAt!.toLocal()),
+                    displayValue: DateFormat('MMM d, y, h:mm a')
+                        .format(order.completedAt!.toLocal()),
                   ),
               ];
             } else if (order is FiatPaymentOrder) {
@@ -477,16 +470,14 @@ class TransactionDetailsTable extends StatelessWidget {
                 ),
                 BullDetailsTableItem(
                   label: context.loc.transactionDetailLabelCreatedAt,
-                  displayValue: DateFormat(
-                    'MMM d, y, h:mm a',
-                  ).format(order.createdAt.toLocal()),
+                  displayValue: DateFormat('MMM d, y, h:mm a')
+                      .format(order.createdAt.toLocal()),
                 ),
                 if (order.completedAt != null)
                   BullDetailsTableItem(
                     label: context.loc.transactionDetailLabelCompletedAt,
-                    displayValue: DateFormat(
-                      'MMM d, y, h:mm a',
-                    ).format(order.completedAt!.toLocal()),
+                    displayValue: DateFormat('MMM d, y, h:mm a')
+                        .format(order.completedAt!.toLocal()),
                   ),
               ];
             } else if (order is FundingOrder) {
@@ -532,16 +523,14 @@ class TransactionDetailsTable extends StatelessWidget {
                 ),
                 BullDetailsTableItem(
                   label: context.loc.transactionDetailLabelCreatedAt,
-                  displayValue: DateFormat(
-                    'MMM d, y, h:mm a',
-                  ).format(order.createdAt.toLocal()),
+                  displayValue: DateFormat('MMM d, y, h:mm a')
+                      .format(order.createdAt.toLocal()),
                 ),
                 if (order.completedAt != null)
                   BullDetailsTableItem(
                     label: context.loc.transactionDetailLabelCompletedAt,
-                    displayValue: DateFormat(
-                      'MMM d, y, h:mm a',
-                    ).format(order.completedAt!.toLocal()),
+                    displayValue: DateFormat('MMM d, y, h:mm a')
+                        .format(order.completedAt!.toLocal()),
                   ),
               ];
             } else if (order is WithdrawOrder) {
@@ -594,16 +583,14 @@ class TransactionDetailsTable extends StatelessWidget {
                 ),
                 BullDetailsTableItem(
                   label: context.loc.transactionDetailLabelCreatedAt,
-                  displayValue: DateFormat(
-                    'MMM d, y, h:mm a',
-                  ).format(order.createdAt.toLocal()),
+                  displayValue: DateFormat('MMM d, y, h:mm a')
+                      .format(order.createdAt.toLocal()),
                 ),
                 if (order.completedAt != null)
                   BullDetailsTableItem(
                     label: context.loc.transactionDetailLabelCompletedAt,
-                    displayValue: DateFormat(
-                      'MMM d, y, h:mm a',
-                    ).format(order.completedAt!.toLocal()),
+                    displayValue: DateFormat('MMM d, y, h:mm a')
+                        .format(order.completedAt!.toLocal()),
                   ),
               ];
             } else if (order is RewardOrder) {
@@ -671,16 +658,14 @@ class TransactionDetailsTable extends StatelessWidget {
                 ),
                 BullDetailsTableItem(
                   label: context.loc.transactionDetailLabelCreatedAt,
-                  displayValue: DateFormat(
-                    'MMM d, y, h:mm a',
-                  ).format(order.createdAt.toLocal()),
+                  displayValue: DateFormat('MMM d, y, h:mm a')
+                      .format(order.createdAt.toLocal()),
                 ),
                 if (order.completedAt != null)
                   BullDetailsTableItem(
                     label: context.loc.transactionDetailLabelCompletedAt,
-                    displayValue: DateFormat(
-                      'MMM d, y, h:mm a',
-                    ).format(order.completedAt!.toLocal()),
+                    displayValue: DateFormat('MMM d, y, h:mm a')
+                        .format(order.completedAt!.toLocal()),
                   ),
               ];
             } else if (order is RefundOrder) {
@@ -748,16 +733,14 @@ class TransactionDetailsTable extends StatelessWidget {
                 ),
                 BullDetailsTableItem(
                   label: context.loc.transactionDetailLabelCreatedAt,
-                  displayValue: DateFormat(
-                    'MMM d, y, h:mm a',
-                  ).format(order.createdAt.toLocal()),
+                  displayValue: DateFormat('MMM d, y, h:mm a')
+                      .format(order.createdAt.toLocal()),
                 ),
                 if (order.completedAt != null)
                   BullDetailsTableItem(
                     label: context.loc.transactionDetailLabelCompletedAt,
-                    displayValue: DateFormat(
-                      'MMM d, y, h:mm a',
-                    ).format(order.completedAt!.toLocal()),
+                    displayValue: DateFormat('MMM d, y, h:mm a')
+                        .format(order.completedAt!.toLocal()),
                   ),
               ];
             } else if (order is BalanceAdjustmentOrder) {
@@ -810,16 +793,14 @@ class TransactionDetailsTable extends StatelessWidget {
                 ),
                 BullDetailsTableItem(
                   label: context.loc.transactionDetailLabelCreatedAt,
-                  displayValue: DateFormat(
-                    'MMM d, y, h:mm a',
-                  ).format(order.createdAt.toLocal()),
+                  displayValue: DateFormat('MMM d, y, h:mm a')
+                      .format(order.createdAt.toLocal()),
                 ),
                 if (order.completedAt != null)
                   BullDetailsTableItem(
                     label: context.loc.transactionDetailLabelCompletedAt,
-                    displayValue: DateFormat(
-                      'MMM d, y, h:mm a',
-                    ).format(order.completedAt!.toLocal()),
+                    displayValue: DateFormat('MMM d, y, h:mm a')
+                        .format(order.completedAt!.toLocal()),
                   ),
               ];
             } else {
@@ -892,18 +873,16 @@ class TransactionDetailsTable extends StatelessWidget {
                 label: context.loc.transactionLabelSendAmount,
                 displayValue: bitcoinUnit == BitcoinUnit.sats
                     ? FormatAmount.sats(amountSent).toUpperCase()
-                    : FormatAmount.btc(
-                        ConvertAmount.satsToBtc(amountSent),
-                      ).toUpperCase(),
+                    : FormatAmount.btc(ConvertAmount.satsToBtc(amountSent))
+                          .toUpperCase(),
               ),
             if (amountReceived > 0)
               BullDetailsTableItem(
                 label: context.loc.transactionLabelReceiveAmount,
                 displayValue: bitcoinUnit == BitcoinUnit.sats
                     ? FormatAmount.sats(amountReceived).toUpperCase()
-                    : FormatAmount.btc(
-                        ConvertAmount.satsToBtc(amountReceived),
-                      ).toUpperCase(),
+                    : FormatAmount.btc(ConvertAmount.satsToBtc(amountReceived))
+                          .toUpperCase(),
               ),
             if (recoveredBoltzFee > 0)
               BullDetailsTableItem(
@@ -929,9 +908,8 @@ class TransactionDetailsTable extends StatelessWidget {
               BullDetailsTableItem(
                 label: context.loc.transactionLabelSendAmount,
                 displayValue: bitcoinUnit == BitcoinUnit.sats
-                    ? FormatAmount.sats(
-                        (swap as ChainSwap).paymentAmount,
-                      ).toUpperCase()
+                    ? FormatAmount.sats((swap as ChainSwap).paymentAmount)
+                          .toUpperCase()
                     : FormatAmount.btc(
                         ConvertAmount.satsToBtc(
                           (swap as ChainSwap).paymentAmount,
@@ -960,9 +938,8 @@ class TransactionDetailsTable extends StatelessWidget {
               BullDetailsTableItem(
                 label: context.loc.transactionLabelSendAmount,
                 displayValue: bitcoinUnit == BitcoinUnit.sats
-                    ? FormatAmount.sats(
-                        (swap as LnSendSwap).paymentAmount,
-                      ).toUpperCase()
+                    ? FormatAmount.sats((swap as LnSendSwap).paymentAmount)
+                          .toUpperCase()
                     : FormatAmount.btc(
                         ConvertAmount.satsToBtc(
                           (swap as LnSendSwap).paymentAmount,
@@ -1068,16 +1045,14 @@ class TransactionDetailsTable extends StatelessWidget {
             ),
           BullDetailsTableItem(
             label: context.loc.transactionDetailLabelCreatedAt,
-            displayValue: DateFormat(
-              'MMM d, y, h:mm a',
-            ).format(swap.creationTime),
+            displayValue: DateFormat('MMM d, y, h:mm a')
+                .format(swap.creationTime),
           ),
           if (swap.completionTime != null)
             BullDetailsTableItem(
               label: context.loc.transactionDetailLabelCompletedAt,
-              displayValue: DateFormat(
-                'MMM d, y, h:mm a',
-              ).format(swap.completionTime!),
+              displayValue: DateFormat('MMM d, y, h:mm a')
+                  .format(swap.completionTime!),
             ),
         ],
         if (payjoin != null) ...[
@@ -1103,17 +1078,15 @@ class TransactionDetailsTable extends StatelessWidget {
           ),
           BullDetailsTableItem(
             label: context.loc.transactionDetailLabelPayjoinCreationTime,
-            displayValue: DateFormat(
-              'MMM d, y, h:mm a',
-            ).format(payjoin.createdAt),
+            displayValue: DateFormat('MMM d, y, h:mm a')
+                .format(payjoin.createdAt),
           ),
           if (transaction.payjoinFeeContributionSat != null)
             BullDetailsTableItem(
               label: context.loc.transactionDetailLabelPayjoinFeeContribution,
               displayValue: bitcoinUnit == BitcoinUnit.sats
-                  ? FormatAmount.sats(
-                      transaction.payjoinFeeContributionSat!,
-                    ).toUpperCase()
+                  ? FormatAmount.sats(transaction.payjoinFeeContributionSat!)
+                        .toUpperCase()
                   : FormatAmount.btc(
                       ConvertAmount.satsToBtc(
                         transaction.payjoinFeeContributionSat!,

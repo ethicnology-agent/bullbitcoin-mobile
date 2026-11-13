@@ -19,6 +19,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
+
 import '../../../settings/fake_webview_platform.dart';
 
 class _Settings extends Mock implements GetExchangeWebSettingsUsecase {}
@@ -121,17 +122,16 @@ void main() {
           param2: (isTestnet: true, isOpen: () => true),
         ),
       );
-      when(() => cubit.completeAuthentication(any())).thenAnswer((
-        invocation,
-      ) async {
-        final operation =
-            invocation.positionalArguments.first
-                as CompleteExchangeAuthenticationUsecase;
-        return switch (await operation.execute()) {
-          Err(:final failure) => failure,
-          Ok() => null,
-        };
-      });
+      when(() => cubit.completeAuthentication(any()))
+          .thenAnswer((invocation) async {
+            final operation =
+                invocation.positionalArguments.first
+                    as CompleteExchangeAuthenticationUsecase;
+            return switch (await operation.execute()) {
+              Err(:final failure) => failure,
+              Ok() => null,
+            };
+          });
       const channel = MethodChannel('webview_cookie_manager');
       tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
         call,

@@ -153,9 +153,8 @@ void main() {
 
     test('refuses when the frozen store cannot be read', () async {
       final failing = _MockWalletUtxoRepository();
-      when(
-        failing.getAllFrozenOutpoints,
-      ).thenThrow(StateError('store unavailable'));
+      when(failing.getAllFrozenOutpoints)
+          .thenThrow(StateError('store unavailable'));
 
       await expectLater(
         usecase(walletUtxoRepository: failing).execute(psbt, isPsbt: true),

@@ -3,7 +3,9 @@ import 'package:bb_mobile/core/themes/app_theme.dart';
 import 'package:bb_mobile/core/utils/build_context_x.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import 'dart:async';
+
 import 'package:bull_ui/bull_ui.dart' show BullShapesX, BullSnackBar;
 
 class Bip85DerivationWidget extends StatefulWidget {

@@ -54,12 +54,10 @@ void main() {
   setUp(() {
     getAvailability = _MockGetAvailability();
     final getSummary = _MockGetUserSummary();
-    when(
-      () => getSummary.execute(),
-    ).thenAnswer((_) async => const Ok(_summary));
-    when(
-      () => getAvailability.execute(),
-    ).thenAnswer((_) async => const Err(FundExchangeNetworkFailure()));
+    when(() => getSummary.execute())
+        .thenAnswer((_) async => const Ok(_summary));
+    when(() => getAvailability.execute())
+        .thenAnswer((_) async => const Err(FundExchangeNetworkFailure()));
     bloc = FundExchangeBloc(
       getFundExchangeUserSummaryUsecase: getSummary,
       getFundingDetailsUsecase: _MockGetFundingDetails(),
@@ -105,9 +103,8 @@ void main() {
   );
 
   test('confirmed ineligibility does not show an error', () async {
-    when(
-      () => getAvailability.execute(),
-    ).thenAnswer((_) async => const Ok(false));
+    when(() => getAvailability.execute())
+        .thenAnswer((_) async => const Ok(false));
     bloc.add(const FundExchangeEvent.started());
     await pumpEventQueue();
 
@@ -131,9 +128,8 @@ void main() {
       );
       expect(bloc.state.isLoadingConfidentialSepaAvailability, isFalse);
 
-      when(
-        () => getAvailability.execute(),
-      ).thenAnswer((_) async => const Ok(false));
+      when(() => getAvailability.execute())
+          .thenAnswer((_) async => const Ok(false));
       bloc.add(const FundExchangeEvent.confidentialSepaAvailabilityRetried());
       await pumpEventQueue();
 

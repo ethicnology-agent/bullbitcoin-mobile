@@ -151,15 +151,13 @@ void main() {
     test('never carries a logMessage: a broken input rule is not an incident '
         'to log, and there is no raw reason to leak', () {
       expect(
-        mapNoteViolationToLabelFailure(
-          const NoteTooLong(maxLength: 50),
-        ).logMessage,
+        mapNoteViolationToLabelFailure(const NoteTooLong(maxLength: 50))
+            .logMessage,
         isNull,
       );
       expect(
-        mapNoteViolationToLabelFailure(
-          const NoteForbiddenCharacter('/'),
-        ).logMessage,
+        mapNoteViolationToLabelFailure(const NoteForbiddenCharacter('/'))
+            .logMessage,
         isNull,
       );
     });

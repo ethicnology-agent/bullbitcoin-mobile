@@ -96,9 +96,8 @@ void main() {
       TorTransport.direct,
       () async {},
     );
-    when(
-      () => embeddedTor.ensureReady(),
-    ).thenAnswer((_) async => TorReady(route));
+    when(() => embeddedTor.ensureReady())
+        .thenAnswer((_) async => TorReady(route));
     when(() => sessions.open()).thenAnswer((_) async => session);
 
     final result = await usecase.execute();
@@ -113,9 +112,8 @@ void main() {
       endpoint: TorProxyEndpoint(host: '127.0.0.1', port: 9050),
       evidence: TorReadinessEvidence.externalSocksHandshake,
     );
-    when(
-      () => embeddedTor.ensureReady(),
-    ).thenAnswer((_) async => TorReady(route));
+    when(() => embeddedTor.ensureReady())
+        .thenAnswer((_) async => TorReady(route));
 
     final result = await usecase.execute();
 
@@ -155,9 +153,8 @@ void main() {
   });
 
   test('fails closed for an invalid external proxy port', () async {
-    when(
-      () => settingsRepository.fetch(),
-    ).thenAnswer((_) async => _settings(useTorProxy: true, torProxyPort: 0));
+    when(() => settingsRepository.fetch())
+        .thenAnswer((_) async => _settings(useTorProxy: true, torProxyPort: 0));
 
     final result = await usecase.execute();
 
@@ -187,9 +184,8 @@ void main() {
   );
 
   test('rechecks external proxy instead of restarting embedded Tor', () async {
-    when(
-      () => settingsRepository.fetch(),
-    ).thenAnswer((_) async => _settings(useTorProxy: true));
+    when(() => settingsRepository.fetch())
+        .thenAnswer((_) async => _settings(useTorProxy: true));
 
     final result = await usecase.execute(restartEmbedded: true);
 
@@ -199,9 +195,8 @@ void main() {
   });
 
   test('maps settings fetch exceptions to a failure result', () async {
-    when(
-      () => settingsRepository.fetch(),
-    ).thenThrow(Exception('settings down'));
+    when(() => settingsRepository.fetch())
+        .thenThrow(Exception('settings down'));
 
     final result = await usecase.execute();
 

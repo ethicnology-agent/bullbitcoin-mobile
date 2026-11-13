@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:bb_mobile/core/exchange/domain/entity/order.dart';
 import 'package:bb_mobile/core/exchange/domain/entity/user_summary.dart';
 import 'package:bb_mobile/core/settings/domain/settings_entity.dart';
@@ -131,15 +132,13 @@ void main() {
             return;
           }
           expect(find.byType(SellPayoutMethodScreenV2), findsOneWidget);
-          when(
-            () => sell.state,
-          ).thenReturn(SellPreparingPaymentState(input: input));
+          when(() => sell.state)
+              .thenReturn(SellPreparingPaymentState(input: input));
           appRouter.pop();
           await popped;
           await tester.pumpAndSettle();
-          verify(
-            () => sell.add(const SellEvent.paymentPreparationAbandoned()),
-          ).called(1);
+          verify(() => sell.add(const SellEvent.paymentPreparationAbandoned()))
+              .called(1);
         },
       );
     }
@@ -395,9 +394,8 @@ void main() {
     expect(find.text(loc.recipientsTypeConfidentialSepa), findsNothing);
     expect(find.textContaining(loc.oopsSomethingWentWrong), findsOneWidget);
     expect(find.textContaining(loc.recipientsErrorNetwork), findsOneWidget);
-    when(
-      load.execute,
-    ).thenAnswer((_) async => const Ok(ConfidentialSepaAvailability.ready));
+    when(load.execute)
+        .thenAnswer((_) async => const Ok(ConfidentialSepaAvailability.ready));
     await tester.tap(find.widgetWithText(BullButton, loc.retry));
     await tester.pumpAndSettle();
     expect(find.text(loc.recipientsTypeConfidentialSepa), findsOneWidget);

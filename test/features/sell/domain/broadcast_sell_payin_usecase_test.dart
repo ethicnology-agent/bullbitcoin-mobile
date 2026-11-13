@@ -29,9 +29,8 @@ void main() {
   });
 
   test('returns the bitcoin txid', () async {
-    when(
-      () => bitcoin.execute(any(), isPsbt: any(named: 'isPsbt')),
-    ).thenAnswer((_) async => 'txid-1');
+    when(() => bitcoin.execute(any(), isPsbt: any(named: 'isPsbt')))
+        .thenAnswer((_) async => 'txid-1');
 
     final result = await usecase.bitcoin('signed', isPsbt: true);
 
@@ -39,9 +38,8 @@ void main() {
   });
 
   test('a rejected bitcoin broadcast is sanitized, never raw', () async {
-    when(
-      () => bitcoin.execute(any(), isPsbt: any(named: 'isPsbt')),
-    ).thenThrow(Exception(_rawReason));
+    when(() => bitcoin.execute(any(), isPsbt: any(named: 'isPsbt')))
+        .thenThrow(Exception(_rawReason));
 
     final result = await usecase.bitcoin('signed', isPsbt: true);
 

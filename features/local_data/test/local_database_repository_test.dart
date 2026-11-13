@@ -173,23 +173,28 @@ void main() {
     expect(storage.entries[mainKey], 'not a key');
   });
 
-  test('a database its key does not open is unreadable, and untouched', () async {
-    seedPlaintext(paths.main);
-    await unlocked(LocalDatabase.main);
-    final bytes = File(paths.main).readAsBytesSync();
-    // Another key under the same name: what a key restored from elsewhere would look like.
-    storage.entries.remove(mainKey);
-    final keys = Secrets(
-      scratchDirectory: () async => directory.path,
-    ).databaseKeys(module: 'bb_mobile');
-    expect(
-      await keys.getOrCreate(name: 'bullbitcoin_sqlite'),
-      isA<Ok<DatabaseKey, SecretFailure>>(),
-    );
+  test(
+    'a database its key does not open is unreadable, and untouched',
+    () async {
+      seedPlaintext(paths.main);
+      await unlocked(LocalDatabase.main);
+      final bytes = File(paths.main).readAsBytesSync();
+      // Another key under the same name: what a key restored from elsewhere would look like.
+      storage.entries.remove(mainKey);
+      final keys = Secrets(scratchDirectory: () async => directory.path)
+          .databaseKeys(module: 'bb_mobile');
+      expect(
+        await keys.getOrCreate(name: 'bullbitcoin_sqlite'),
+        isA<Ok<DatabaseKey, SecretFailure>>(),
+      );
 
-    expect(await failed(LocalDatabase.main), isA<LocalDataUnreadableFailure>());
-    expect(File(paths.main).readAsBytesSync(), bytes);
-  });
+      expect(
+        await failed(LocalDatabase.main),
+        isA<LocalDataUnreadableFailure>(),
+      );
+      expect(File(paths.main).readAsBytesSync(), bytes);
+    },
+  );
 
   test(
     'files in an undecidable state are left alone, and no key is created',
@@ -204,27 +209,24 @@ void main() {
     },
   );
 
-  test(
-    'an unreadable Payjoin database names Payjoin, and the main one still opens',
-    () async {
-      seedPlaintext(paths.main);
-      seedPlaintext(paths.payjoin);
-      final main = await unlocked(LocalDatabase.main);
-      await unlocked(LocalDatabase.payjoin);
-      storage.entries.remove(payjoinKey);
+  test('an unreadable Payjoin database names Payjoin, and the main one still opens', () async {
+    seedPlaintext(paths.main);
+    seedPlaintext(paths.payjoin);
+    final main = await unlocked(LocalDatabase.main);
+    await unlocked(LocalDatabase.payjoin);
+    storage.entries.remove(payjoinKey);
 
-      final failure = await UnlockLocalDatabasesUsecase(repository).execute();
-      expect(
-        (failure as Err<UnlockedDatabases, LocalDataFailure>).failure,
-        isA<LocalDataKeyMissingFailure>().having(
-          (f) => f.database,
-          'database',
-          LocalDatabase.payjoin,
-        ),
-      );
-      expect(readCanary(paths.main, main.key), canary);
-    },
-  );
+    final failure = await UnlockLocalDatabasesUsecase(repository).execute();
+    expect(
+      (failure as Err<UnlockedDatabases, LocalDataFailure>).failure,
+      isA<LocalDataKeyMissingFailure>().having(
+        (f) => f.database,
+        'database',
+        LocalDatabase.payjoin,
+      ),
+    );
+    expect(readCanary(paths.main, main.key), canary);
+  });
 
   group('a corrupt database', () {
     void corrupt(String path) {

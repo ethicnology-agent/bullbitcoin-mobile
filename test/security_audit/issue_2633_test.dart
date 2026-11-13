@@ -25,9 +25,8 @@ void main() {
       expect(importXpub, contains('_readWallets()'));
       expect(source, contains('WalletAlreadyExistsException'));
       expect(
-        File(
-          'lib/core/wallet/data/datasources/wallet_metadata_datasource.dart',
-        ).readAsStringSync(),
+        File('lib/core/wallet/data/datasources/wallet_metadata_datasource.dart')
+            .readAsStringSync(),
         contains('insertOnConflictUpdate'),
       );
     });

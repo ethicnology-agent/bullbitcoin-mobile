@@ -37,9 +37,9 @@ class VirtualIbanOnboardingScreen extends StatelessWidget {
     return Navigator.of(context).push<RecipientType>(
       MaterialPageRoute(
         builder: (onboardingContext) => VirtualIbanOnboardingScreen(
-          onActivated: () => Navigator.of(
-            onboardingContext,
-          ).pop(RecipientType.confidentialSepaEur),
+          onActivated: () =>
+              Navigator.of(onboardingContext)
+                  .pop(RecipientType.confidentialSepaEur),
           onUseRegularSepa: () =>
               Navigator.of(onboardingContext).pop(RecipientType.sepaEur),
         ),

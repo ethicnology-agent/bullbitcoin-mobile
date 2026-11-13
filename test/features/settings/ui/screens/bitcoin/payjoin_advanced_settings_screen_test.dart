@@ -29,15 +29,12 @@ void main() {
   setUp(() {
     settingsCubit = _MockSettingsCubit();
     when(() => settingsCubit.stream).thenAnswer((_) => const Stream.empty());
-    when(
-      () => settingsCubit.state,
-    ).thenReturn(SettingsState(payjoinPolicy: PayjoinPolicy.defaults()));
-    when(
-      () => settingsCubit.setPayjoinMinAmount(any()),
-    ).thenAnswer((_) async {});
-    when(
-      () => settingsCubit.setPayjoinExpireAfterSec(any()),
-    ).thenAnswer((_) async {});
+    when(() => settingsCubit.state)
+        .thenReturn(SettingsState(payjoinPolicy: PayjoinPolicy.defaults()));
+    when(() => settingsCubit.setPayjoinMinAmount(any()))
+        .thenAnswer((_) async {});
+    when(() => settingsCubit.setPayjoinExpireAfterSec(any()))
+        .thenAnswer((_) async {});
   });
 
   testWidgets('shows the stored expiry in minutes with its units', (

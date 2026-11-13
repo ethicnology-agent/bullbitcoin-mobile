@@ -71,9 +71,7 @@ Future<void> main({bool isInitialized = false}) async {
     test(
       'Restore encrypted vault',
       timeout: const Timeout(Duration(minutes: 2)),
-      skip: runLiveKeyServerTest
-          ? false
-          : 'calls the production key server: runs on PRs to main or a manually dispatched CI run',
+      skip: runLiveKeyServerTest ? false : 'calls the production key server: runs on PRs to main or a manually dispatched CI run',
       () async {
         debugPrint('''
 

@@ -38,9 +38,8 @@ Future<SecureFileUploadCubit> _pump(
 
   final uploadUsecase = _MockUploadDocument();
   if (upload != null) {
-    when(
-      () => uploadUsecase.execute(userId: any(named: 'userId')),
-    ).thenAnswer((_) async => upload);
+    when(() => uploadUsecase.execute(userId: any(named: 'userId')))
+        .thenAnswer((_) async => upload);
   }
 
   final cubit = SecureFileUploadCubit(

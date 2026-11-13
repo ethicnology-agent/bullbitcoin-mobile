@@ -107,9 +107,8 @@ void main() {
 
   testWidgets('confirms and applies deactivation', (tester) async {
     var statusChanged = false;
-    when(
-      () => setAutoBuy.execute(enabled: false),
-    ).thenAnswer((_) async => const Ok(null));
+    when(() => setAutoBuy.execute(enabled: false))
+        .thenAnswer((_) async => const Ok(null));
 
     await tester.pumpWidget(
       app(

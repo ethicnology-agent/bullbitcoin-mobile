@@ -17,10 +17,8 @@ class BullPriceCard extends StatelessWidget {
     final colors = context.bull;
     return BullText(
       text,
-      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-        fontSize: 43,
-        fontWeight: FontWeight.w500,
-      ),
+      style: Theme.of(context).textTheme.headlineMedium
+          ?.copyWith(fontSize: 43, fontWeight: FontWeight.w500),
       color: colors.onPrimary,
     );
   }

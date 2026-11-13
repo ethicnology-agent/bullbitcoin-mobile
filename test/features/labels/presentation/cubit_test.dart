@@ -38,9 +38,9 @@ void main() {
     filePicker: picker,
   );
 
-  void pickReturns(FilePickerResult? result) => when(
-    () => picker.pickFiles(type: any(named: 'type')),
-  ).thenAnswer((_) async => result);
+  void pickReturns(FilePickerResult? result) =>
+      when(() => picker.pickFiles(type: any(named: 'type')))
+          .thenAnswer((_) async => result);
 
   FilePickerResult picked({String? path = _path}) => FilePickerResult([
     PlatformFile(name: 'labels.jsonl', path: path, size: 10),
@@ -83,9 +83,8 @@ void main() {
     });
 
     test('a picker that throws is reported, not swallowed', () async {
-      when(
-        () => picker.pickFiles(type: any(named: 'type')),
-      ).thenThrow(PlatformException(code: 'Unsupported file extension'));
+      when(() => picker.pickFiles(type: any(named: 'type')))
+          .thenThrow(PlatformException(code: 'Unsupported file extension'));
       final cubit = buildCubit();
       addTearDown(cubit.close);
 
@@ -167,9 +166,8 @@ void main() {
     test('a failed cleanup does not mask the import result', () async {
       pickReturns(picked());
       importReturns(const Ok(2));
-      when(
-        () => picker.clearTemporaryFiles(),
-      ).thenThrow(PlatformException(code: 'clear'));
+      when(() => picker.clearTemporaryFiles())
+          .thenThrow(PlatformException(code: 'clear'));
       final cubit = buildCubit();
       addTearDown(cubit.close);
 
@@ -183,9 +181,8 @@ void main() {
       // no copy to clear there either.
       pickReturns(picked());
       importReturns(const Ok(2));
-      when(
-        () => picker.clearTemporaryFiles(),
-      ).thenThrow(UnimplementedError('clearTemporaryFiles'));
+      when(() => picker.clearTemporaryFiles())
+          .thenThrow(UnimplementedError('clearTemporaryFiles'));
       final cubit = buildCubit();
       addTearDown(cubit.close);
 
@@ -209,9 +206,8 @@ void main() {
     test(
       'forwards the use-case failure without reaching the file picker',
       () async {
-        when(
-          () => export.call(any()),
-        ).thenAnswer((_) async => const Err(LabelsExportFailure()));
+        when(() => export.call(any()))
+            .thenAnswer((_) async => const Err(LabelsExportFailure()));
         final cubit = buildCubit();
         addTearDown(cubit.close);
 

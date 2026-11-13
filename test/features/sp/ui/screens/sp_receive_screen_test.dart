@@ -14,6 +14,7 @@ import 'package:mocktail/mocktail.dart';
 
 import '../../sp_cubit_harness.dart';
 import '../../sp_test_streams.dart';
+
 import 'package:bb_mobile/generated/l10n/localization.dart';
 import 'package:bb_mobile/features/sp/domain/entities/sp_wallet_data.dart';
 
@@ -54,9 +55,8 @@ void main() {
         spWalletData(spAddress: 'sp1qtestaddress'),
       ),
     );
-    when(
-      () => harness.watchUsecase.execute(),
-    ).thenAnswer((_) => openSpNotificationStream());
+    when(() => harness.watchUsecase.execute())
+        .thenAnswer((_) => openSpNotificationStream());
 
     cubit = harness.build();
   });

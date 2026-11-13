@@ -12,9 +12,8 @@ void main() {
     tester,
   ) async {
     final localization = AppLocalizationsEn();
-    final item = buildSettingsItems(
-      localization: localization,
-    ).byId(SettingsItemId.importWallet);
+    final item = buildSettingsItems(localization: localization)
+        .byId(SettingsItemId.importWallet);
     final router = GoRouter(
       routes: [
         GoRoute(

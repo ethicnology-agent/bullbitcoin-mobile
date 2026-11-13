@@ -161,9 +161,8 @@ void main() {
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
     expect(find.text(l10n.torSettingsProxyAttemptPort(9150)), findsOneWidget);
     await tester.tap(find.text('Retry'));
-    verify(
-      () => cubit.updateTorSettings(useTorProxy: true, torProxyPort: 9150),
-    ).called(1);
+    verify(() => cubit.updateTorSettings(useTorProxy: true, torProxyPort: 9150))
+        .called(1);
   });
 
   testWidgets('opens Orbot information without checking installed apps', (

@@ -68,9 +68,8 @@ class DcaFrequencyRadioList extends StatelessWidget {
           const Gap(4),
           Text(
             errorText!,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.error,
-            ),
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: Theme.of(context).colorScheme.error),
           ),
         ],
       ],

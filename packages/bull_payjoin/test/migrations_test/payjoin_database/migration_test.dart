@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:drift_dev/api/migrations_native.dart';
 import 'package:bull_payjoin/src/data/payjoin_database.dart';
 import 'package:test/test.dart';
+
 import 'generated/schema.dart';
 
 import 'generated/schema_v1.dart' as v1;

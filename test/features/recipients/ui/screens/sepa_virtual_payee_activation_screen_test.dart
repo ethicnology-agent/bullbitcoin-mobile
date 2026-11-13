@@ -27,9 +27,8 @@ void main() {
   Future<AppLocalizations> pumpView(WidgetTester tester) async {
     events = StreamController<_Event>();
     final usecase = _MockWatchSepaVirtualPayeeActivationUsecase();
-    when(
-      () => usecase.execute(recipientId: any(named: 'recipientId')),
-    ).thenAnswer((_) => events.stream);
+    when(() => usecase.execute(recipientId: any(named: 'recipientId')))
+        .thenAnswer((_) => events.stream);
     cubit = SepaVirtualPayeeActivationCubit(
       watchSepaVirtualPayeeActivationUsecase: usecase,
       recipientId: 'r-1',

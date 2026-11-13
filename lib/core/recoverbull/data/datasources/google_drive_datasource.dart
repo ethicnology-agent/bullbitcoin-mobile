@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:bb_mobile/core/recoverbull/data/models/drive_file_metadata_model.dart';
 import 'package:bb_mobile/core/recoverbull/domain/entity/encrypted_vault.dart';
 import 'package:bull_logger/bull_logger.dart';
@@ -59,12 +60,10 @@ class GoogleDriveAppDatasource {
 
   Future<List<int>> fetchFileContent(String fileId) async {
     _checkConnection();
-    final media =
-        await _driveApi!.files.get(
-              fileId,
-              downloadOptions: drive.DownloadOptions.fullMedia,
-            )
-            as drive.Media;
+    final media = await _driveApi!.files.get(
+      fileId,
+      downloadOptions: drive.DownloadOptions.fullMedia,
+    ) as drive.Media;
 
     final bytes = await media.stream.fold<List<int>>(
       <int>[],

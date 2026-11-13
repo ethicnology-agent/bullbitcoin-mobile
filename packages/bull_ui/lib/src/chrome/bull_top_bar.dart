@@ -69,9 +69,8 @@ class BullTopBar extends StatelessWidget {
                   titleWidget ??
                   Text(
                     title,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.headlineMedium?.copyWith(color: colors.text),
+                    style: Theme.of(context).textTheme.headlineMedium
+                        ?.copyWith(color: colors.text),
                   ),
             ),
           ),

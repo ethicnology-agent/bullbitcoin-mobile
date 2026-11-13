@@ -110,39 +110,35 @@ void main() {
     String? proposalPsbt,
     String? transactionId,
     bool isTrade = false,
-  }) =>
-      PayjoinModel.receiver(
-            id: id,
-            address: 'tb1qreceiver',
-            isTestnet: true,
-            receiver: '[]',
-            walletId: 'wallet-1',
-            pjUri: 'bitcoin:tb1qreceiver?pj=https://payjo.in/$id',
-            maxFeeRateSatPerVb: BigInt.from(10000),
-            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-            expireAfterSec: 3600,
-            originalTxBytes: originalTransaction,
-            originalTxId: originalTransactionId,
-            amountSat: 50000,
-            proposalPsbt: proposalPsbt,
-            txId: transactionId,
-            isTrade: isTrade,
-          )
-          as PayjoinReceiverModel;
+  }) => PayjoinModel.receiver(
+    id: id,
+    address: 'tb1qreceiver',
+    isTestnet: true,
+    receiver: '[]',
+    walletId: 'wallet-1',
+    pjUri: 'bitcoin:tb1qreceiver?pj=https://payjo.in/$id',
+    maxFeeRateSatPerVb: BigInt.from(10000),
+    createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+    expireAfterSec: 3600,
+    originalTxBytes: originalTransaction,
+    originalTxId: originalTransactionId,
+    amountSat: 50000,
+    proposalPsbt: proposalPsbt,
+    txId: transactionId,
+    isTrade: isTrade,
+  ) as PayjoinReceiverModel;
 
-  PayjoinSenderModel sender() =>
-      PayjoinModel.sender(
-            uri: 'bitcoin:tb1qsender?pj=https://payjo.in',
-            isTestnet: true,
-            sender: '[]',
-            walletId: 'wallet-1',
-            originalPsbt: 'cHNidP8=',
-            originalTxId: 'original-tx',
-            amountSat: 50000,
-            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-            expireAfterSec: 3600,
-          )
-          as PayjoinSenderModel;
+  PayjoinSenderModel sender() => PayjoinModel.sender(
+    uri: 'bitcoin:tb1qsender?pj=https://payjo.in',
+    isTestnet: true,
+    sender: '[]',
+    walletId: 'wallet-1',
+    originalPsbt: 'cHNidP8=',
+    originalTxId: 'original-tx',
+    amountSat: 50000,
+    createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+    expireAfterSec: 3600,
+  ) as PayjoinSenderModel;
 
   // Single-input, single-output unsigned PSBT. Real enough for BitcoinTx to
   // extract the spent outpoint, which is what the freeze reads.
@@ -157,21 +153,19 @@ void main() {
     String uri = 'bitcoin:tb1qsender?pj=https://payjo.in',
     String? proposalPsbt,
     String? transactionId,
-  }) =>
-      PayjoinModel.sender(
-            uri: uri,
-            isTestnet: true,
-            sender: '[]',
-            walletId: 'wallet-1',
-            originalPsbt: oneInputPsbt,
-            originalTxId: 'original-tx',
-            amountSat: 50000,
-            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000 - 7200,
-            expireAfterSec: 3600,
-            proposalPsbt: proposalPsbt,
-            txId: transactionId,
-          )
-          as PayjoinSenderModel;
+  }) => PayjoinModel.sender(
+    uri: uri,
+    isTestnet: true,
+    sender: '[]',
+    walletId: 'wallet-1',
+    originalPsbt: oneInputPsbt,
+    originalTxId: 'original-tx',
+    amountSat: 50000,
+    createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000 - 7200,
+    expireAfterSec: 3600,
+    proposalPsbt: proposalPsbt,
+    txId: transactionId,
+  ) as PayjoinSenderModel;
 
   setUp(() async {
     database = PayjoinDatabase.forTesting(NativeDatabase.memory());
@@ -202,9 +196,8 @@ void main() {
     when(() => pdk.expiredPayjoins).thenAnswer((_) => const Stream.empty());
     when(() => pdk.dispose()).thenAnswer((_) async {});
     when(() => pdk.stopPolling(any())).thenReturn(null);
-    when(
-      () => transactions.watchWallet(any()),
-    ).thenAnswer((_) => const Stream.empty());
+    when(() => transactions.watchWallet(any()))
+        .thenAnswer((_) => const Stream.empty());
     when(
       () => transactions.isTransactionVisible(
         walletId: any(named: 'walletId'),
@@ -1448,9 +1441,8 @@ void main() {
 
       final walletEvents = StreamController<void>.broadcast();
       addTearDown(walletEvents.close);
-      when(
-        () => transactions.watchWallet(any()),
-      ).thenAnswer((_) => walletEvents.stream);
+      when(() => transactions.watchWallet(any()))
+          .thenAnswer((_) => walletEvents.stream);
       when(
         () => transactions.isTransactionVisible(
           walletId: any(named: 'walletId'),
@@ -1518,9 +1510,8 @@ void main() {
       });
       final walletEvents = StreamController<void>.broadcast();
       addTearDown(walletEvents.close);
-      when(
-        () => transactions.watchWallet(any()),
-      ).thenAnswer((_) => walletEvents.stream);
+      when(() => transactions.watchWallet(any()))
+          .thenAnswer((_) => walletEvents.stream);
       when(
         () => transactions.isTransactionVisible(
           walletId: any(named: 'walletId'),
@@ -1554,9 +1545,8 @@ void main() {
 
         final walletEvents = StreamController<void>.broadcast();
         addTearDown(walletEvents.close);
-        when(
-          () => transactions.watchWallet(any()),
-        ).thenAnswer((_) => walletEvents.stream);
+        when(() => transactions.watchWallet(any()))
+            .thenAnswer((_) => walletEvents.stream);
         when(
           () => transactions.isTransactionVisible(
             walletId: any(named: 'walletId'),
@@ -1589,9 +1579,8 @@ void main() {
 
       final walletEvents = StreamController<void>.broadcast();
       addTearDown(walletEvents.close);
-      when(
-        () => transactions.watchWallet(any()),
-      ).thenAnswer((_) => walletEvents.stream);
+      when(() => transactions.watchWallet(any()))
+          .thenAnswer((_) => walletEvents.stream);
       await engine.resumePayjoinsOnStartup();
 
       final retried = sender().copyWith(originalTxId: 'retried-tx');
@@ -1664,9 +1653,8 @@ void main() {
       await local.storeSender(stranded.copyWith(isExpired: true, txId: null));
       walletEvents = StreamController<void>.broadcast();
       addTearDown(walletEvents.close);
-      when(
-        () => transactions.watchWallet(any()),
-      ).thenAnswer((_) => walletEvents.stream);
+      when(() => transactions.watchWallet(any()))
+          .thenAnswer((_) => walletEvents.stream);
       await engine.resumePayjoinsOnStartup();
 
       final retried = sender().copyWith(originalTxId: 'retried-tx');
@@ -1933,9 +1921,8 @@ void main() {
       });
       final walletEvents = StreamController<void>.broadcast();
       addTearDown(walletEvents.close);
-      when(
-        () => transactions.watchWallet(any()),
-      ).thenAnswer((_) => walletEvents.stream);
+      when(() => transactions.watchWallet(any()))
+          .thenAnswer((_) => walletEvents.stream);
 
       await engine.createPayjoinSender(
         walletId: first.walletId,

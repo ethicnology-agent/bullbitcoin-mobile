@@ -50,9 +50,8 @@ void main() {
     events = StreamController.broadcast();
     final watch = _MockWatchVirtualIban();
     final ownerName = _MockGetAccountOwnerName();
-    when(
-      () => watch.execute(createIfAbsent: any(named: 'createIfAbsent')),
-    ).thenAnswer((_) => events.stream);
+    when(() => watch.execute(createIfAbsent: any(named: 'createIfAbsent')))
+        .thenAnswer((_) => events.stream);
     when(() => ownerName.execute()).thenAnswer(
       (_) async => const Ok(
         AccountOwnerName(firstName: 'Satoshi', lastName: 'Nakamoto'),
@@ -155,9 +154,8 @@ void main() {
     await tester.tap(find.widgetWithText(BullButton, loc.recipientsContinue));
     await tester.pumpAndSettle();
 
-    verify(
-      () => bloc.add(const RecipientsEvent.virtualIbanActivated()),
-    ).called(1);
+    verify(() => bloc.add(const RecipientsEvent.virtualIbanActivated()))
+        .called(1);
     verify(
       () => bloc.add(
         const RecipientsEvent.sepaTypeChanged(
@@ -203,9 +201,8 @@ void main() {
     await tester.pump();
     await chooseConfidentialSepa(tester, loc);
 
-    Navigator.of(
-      tester.element(find.byType(VirtualIbanOnboardingScreen)),
-    ).pop();
+    Navigator.of(tester.element(find.byType(VirtualIbanOnboardingScreen)))
+        .pop();
     await tester.pumpAndSettle();
 
     expect(
@@ -214,9 +211,8 @@ void main() {
     );
     expect(tester.widget<BBButton>(find.byType(BBButton)).disabled, isFalse);
     await tester.tap(find.text(loc.recipientsContinue));
-    verify(
-      () => bloc.add(const RecipientsEvent.selected(_recipient)),
-    ).called(1);
+    verify(() => bloc.add(const RecipientsEvent.selected(_recipient)))
+        .called(1);
     verifyNever(() => bloc.add(const RecipientsEvent.virtualIbanActivated()));
     verifyNever(
       () => bloc.add(

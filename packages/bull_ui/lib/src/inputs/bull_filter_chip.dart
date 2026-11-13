@@ -42,10 +42,8 @@ class BullFilterChip extends StatelessWidget {
         children: [
           Text(
             label,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: colors.primary,
-            ),
+            style: Theme.of(context).textTheme.labelLarge
+                ?.copyWith(fontWeight: FontWeight.w600, color: colors.primary),
           ),
           if (onSelected == null) ...[
             const SizedBox(width: 4),

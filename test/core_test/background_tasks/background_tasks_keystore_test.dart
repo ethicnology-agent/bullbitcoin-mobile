@@ -23,9 +23,8 @@ void main() {
     });
 
     test('the handler reaches no secret-mutating use case', () {
-      final source = File(
-        'lib/core/background_tasks/handler.dart',
-      ).readAsStringSync();
+      final source = File('lib/core/background_tasks/handler.dart')
+          .readAsStringSync();
 
       expect(source, isNot(contains('package:secrets')));
       for (final mutating in [

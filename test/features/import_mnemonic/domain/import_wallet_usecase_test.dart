@@ -52,9 +52,8 @@ void main() {
   setUpAll(() async {
     // `Secret` is final and cannot be mocked, so mocktail's fallback for `any(named: 'secret')` is a real one, made here and used for nothing else.
     FakeSecureStoragePlatform().install();
-    final fallback = await Secrets(
-      scratchDirectory: () async => '/tmp',
-    ).import(words: words);
+    final fallback = await Secrets(scratchDirectory: () async => '/tmp')
+        .import(words: words);
     registerFallbackValue((fallback as Ok<Secret, SecretFailure>).value);
     registerFallbackValue(Network.bitcoinMainnet);
     registerFallbackValue(ScriptType.bip84);
@@ -79,9 +78,8 @@ void main() {
       ),
     ).thenAnswer((_) async => const Ok(null));
     // No wallet references any seed unless a test says so.
-    when(
-      () => walletRepository.getWallets(),
-    ).thenAnswer((_) async => Ok<List<Wallet>, WalletFailure>([]));
+    when(() => walletRepository.getWallets())
+        .thenAnswer((_) async => Ok<List<Wallet>, WalletFailure>([]));
     when(() => settingsRepository.fetch()).thenAnswer((_) async => settings);
   });
 
@@ -214,21 +212,18 @@ void main() {
       );
     });
 
-    test(
-      'a secret this import created is removed when the wallet cannot be built (#2634)',
-      () async {
-        stubCreateWallet(() async => throw Exception('wallet creation failed'));
+    test('a secret this import created is removed when the wallet cannot be built (#2634)', () async {
+      stubCreateWallet(() async => throw Exception('wallet creation failed'));
 
-        final result = await usecase.execute(mnemonicWords: words);
+      final result = await usecase.execute(mnemonicWords: words);
 
-        expect((result as Err).failure, isA<ImportMnemonicUnexpectedFailure>());
-        expect(
-          storage.entries.keys.where((k) => k.startsWith('seed_')),
-          isEmpty,
-          reason: 'the import that created it owns the cleanup',
-        );
-      },
-    );
+      expect((result as Err).failure, isA<ImportMnemonicUnexpectedFailure>());
+      expect(
+        storage.entries.keys.where((k) => k.startsWith('seed_')),
+        isEmpty,
+        reason: 'the import that created it owns the cleanup',
+      );
+    });
 
     test(
       'strict import rejects a duplicate missed by preflight without cleanup',
@@ -267,39 +262,35 @@ void main() {
       },
     );
 
-    test(
-      'concurrent imports create one wallet and preserve its secret',
-      () async {
-        final wallet = _MockWallet();
-        var creations = 0;
-        stubCreateWallet(() async {
-          creations++;
-          // From now on, the wallet store holds a wallet signing with that seed.
-          when(() => wallet.signsLocally).thenReturn(true);
-          when(() => wallet.masterFingerprint).thenReturn('73c5da0a');
-          when(
-            () => walletRepository.getWallets(),
-          ).thenAnswer((_) async => Ok<List<Wallet>, WalletFailure>([wallet]));
-          return wallet;
-        });
+    test('concurrent imports create one wallet and preserve its secret', () async {
+      final wallet = _MockWallet();
+      var creations = 0;
+      stubCreateWallet(() async {
+        creations++;
+        // From now on, the wallet store holds a wallet signing with that seed.
+        when(() => wallet.signsLocally).thenReturn(true);
+        when(() => wallet.masterFingerprint).thenReturn('73c5da0a');
+        when(() => walletRepository.getWallets())
+            .thenAnswer((_) async => Ok<List<Wallet>, WalletFailure>([wallet]));
+        return wallet;
+      });
 
-        final results = await Future.wait([
-          usecase.execute(mnemonicWords: words),
-          usecase.execute(mnemonicWords: words),
-        ]);
+      final results = await Future.wait([
+        usecase.execute(mnemonicWords: words),
+        usecase.execute(mnemonicWords: words),
+      ]);
 
-        expect((results.first as Ok).value, wallet);
-        expect(
-          (results.last as Err).failure,
-          isA<ImportMnemonicDuplicateFailure>(),
-        );
-        expect(creations, 1);
-        expect(
-          storage.entries.keys.where((k) => k.startsWith('seed_')),
-          hasLength(1),
-        );
-      },
-    );
+      expect((results.first as Ok).value, wallet);
+      expect(
+        (results.last as Err).failure,
+        isA<ImportMnemonicDuplicateFailure>(),
+      );
+      expect(creations, 1);
+      expect(
+        storage.entries.keys.where((k) => k.startsWith('seed_')),
+        hasLength(1),
+      );
+    });
 
     test(
       'cleanup retains a newly stored secret referenced by a wallet',
@@ -332,9 +323,8 @@ void main() {
       'cleanup retains the new secret when wallet references cannot be read',
       () async {
         stubCreateWallet(() async => throw Exception('wallet creation failed'));
-        when(
-          () => walletRepository.getWallets(),
-        ).thenThrow(Exception('wallet lookup failed'));
+        when(() => walletRepository.getWallets())
+            .thenThrow(Exception('wallet lookup failed'));
 
         final result = await usecase.execute(mnemonicWords: words);
 

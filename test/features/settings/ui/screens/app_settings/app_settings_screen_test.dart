@@ -63,14 +63,12 @@ void main() {
   }
 
   testWidgets('a failed silent payments revoke is surfaced', (tester) async {
-    when(
-      () => settingsCubit.stream,
-    ).thenAnswer((_) => Stream.value(_settingsState(revokeSpFailed: true)));
+    when(() => settingsCubit.stream)
+        .thenAnswer((_) => Stream.value(_settingsState(revokeSpFailed: true)));
 
     await pumpScreen(tester);
-    when(
-      () => settingsCubit.state,
-    ).thenReturn(_settingsState(revokeSpFailed: true));
+    when(() => settingsCubit.state)
+        .thenReturn(_settingsState(revokeSpFailed: true));
     await tester.pump();
     await tester.pump();
 
@@ -81,9 +79,8 @@ void main() {
   });
 
   testWidgets('a clean dev mode toggle says nothing', (tester) async {
-    when(
-      () => settingsCubit.stream,
-    ).thenAnswer((_) => Stream.value(_settingsState()));
+    when(() => settingsCubit.stream)
+        .thenAnswer((_) => Stream.value(_settingsState()));
 
     await pumpScreen(tester);
     await tester.pump();

@@ -69,9 +69,8 @@ void main() {
 
   test('confirms the order before saving Interac defaults', () async {
     final order = _MockWithdrawOrder();
-    when(
-      () => mainnetRepository.confirmWithdrawOrder('order-1'),
-    ).thenAnswer((_) async => order);
+    when(() => mainnetRepository.confirmWithdrawOrder('order-1'))
+        .thenAnswer((_) async => order);
     when(
       () => recipientsFacade.updateInteracSecurityDetails(
         recipientId: any(named: 'recipientId'),
@@ -101,9 +100,8 @@ void main() {
 
   test('clears saved Interac defaults when save is not selected', () async {
     final order = _MockWithdrawOrder();
-    when(
-      () => mainnetRepository.confirmWithdrawOrder('order-1'),
-    ).thenAnswer((_) async => order);
+    when(() => mainnetRepository.confirmWithdrawOrder('order-1'))
+        .thenAnswer((_) async => order);
     when(
       () => recipientsFacade.updateInteracSecurityDetails(
         recipientId: any(named: 'recipientId'),
@@ -134,9 +132,8 @@ void main() {
     'does not fail a confirmed order when updating defaults fails',
     () async {
       final order = _MockWithdrawOrder();
-      when(
-        () => mainnetRepository.confirmWithdrawOrder('order-1'),
-      ).thenAnswer((_) async => order);
+      when(() => mainnetRepository.confirmWithdrawOrder('order-1'))
+          .thenAnswer((_) async => order);
       when(
         () => recipientsFacade.updateInteracSecurityDetails(
           recipientId: any(named: 'recipientId'),
@@ -162,9 +159,8 @@ void main() {
 
   test('does not update recipients for non-Interac withdrawals', () async {
     final order = _MockWithdrawOrder();
-    when(
-      () => mainnetRepository.confirmWithdrawOrder('order-1'),
-    ).thenAnswer((_) async => order);
+    when(() => mainnetRepository.confirmWithdrawOrder('order-1'))
+        .thenAnswer((_) async => order);
 
     final result = await usecase.execute(orderId: 'order-1');
 
@@ -181,9 +177,8 @@ void main() {
         currencyCode: 'CAD',
       ),
     );
-    when(
-      () => testnetRepository.confirmWithdrawOrder('order-1'),
-    ).thenAnswer((_) async => order);
+    when(() => testnetRepository.confirmWithdrawOrder('order-1'))
+        .thenAnswer((_) async => order);
 
     final result = await usecase.execute(orderId: 'order-1');
 
@@ -192,9 +187,8 @@ void main() {
   });
 
   test('sanitizes unexpected confirmation failures', () async {
-    when(
-      () => mainnetRepository.confirmWithdrawOrder('order-1'),
-    ).thenThrow(Exception('Montreal'));
+    when(() => mainnetRepository.confirmWithdrawOrder('order-1'))
+        .thenThrow(Exception('Montreal'));
 
     final result = await usecase.execute(orderId: 'order-1');
 

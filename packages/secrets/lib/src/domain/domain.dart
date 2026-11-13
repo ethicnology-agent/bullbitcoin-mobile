@@ -8,6 +8,7 @@ library;
 
 // Shared with the database owners, which cannot depend on this package.
 export 'package:primitives/primitives.dart' show DatabaseKey;
+
 export 'encrypted_vault.dart' show EncryptedVault, VaultKey;
 export 'failures.dart';
 export 'revealed_mnemonic.dart' show RevealedMnemonic, RevealReason;

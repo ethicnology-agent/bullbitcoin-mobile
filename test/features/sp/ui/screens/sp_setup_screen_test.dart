@@ -301,9 +301,8 @@ void main() {
 
     void seed(SpSetupState state) {
       when(() => cubit.state).thenReturn(state);
-      when(
-        () => cubit.stream,
-      ).thenAnswer((_) => const Stream<SpSetupState>.empty());
+      when(() => cubit.stream)
+          .thenAnswer((_) => const Stream<SpSetupState>.empty());
     }
 
     setUp(() {
@@ -366,9 +365,8 @@ void main() {
       expect(field, findsOneWidget);
       await tester.enterText(field, 'tcp://typed.electrum:50001');
 
-      verify(
-        () => cubit.setElectrumUrl('tcp://typed.electrum:50001'),
-      ).called(1);
+      verify(() => cubit.setElectrumUrl('tcp://typed.electrum:50001'))
+          .called(1);
     });
 
     testWidgets('selecting a network calls cubit.setNetwork', (tester) async {

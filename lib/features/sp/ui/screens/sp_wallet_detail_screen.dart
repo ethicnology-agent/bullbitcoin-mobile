@@ -73,9 +73,8 @@ class SpWalletDetailScreen extends StatelessWidget {
                 signer: SignerEntity.local,
                 balanceText: CurrencyText(
                   state.totalBalance.value.toInt(),
-                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                    color: context.appColors.onPrimary,
-                  ),
+                  style: Theme.of(context).textTheme.displaySmall
+                      ?.copyWith(color: context.appColors.onPrimary),
                   showFiat: false,
                 ),
                 eyeToggle: const EyeToggle(),

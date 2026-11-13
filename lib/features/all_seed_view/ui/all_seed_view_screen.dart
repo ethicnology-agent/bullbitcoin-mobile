@@ -489,9 +489,8 @@ class _AllSeedViewScreenState extends State<AllSeedViewScreen>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         BullText(
-                          AllSeedViewFetchFailure(
-                            failure.logMessage,
-                          ).toTranslated(context),
+                          AllSeedViewFetchFailure(failure.logMessage)
+                              .toTranslated(context),
                           style: context.font.bodyMedium,
                           color: context.appColors.error,
                         ),

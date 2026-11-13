@@ -104,9 +104,8 @@ class DcaConfirmationScreen extends StatelessWidget {
             if (confirmationState.failure case final failure?) ...[
               Text(
                 failure.toTranslated(context),
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: context.appColors.error),
+                style: Theme.of(context).textTheme.bodySmall
+                    ?.copyWith(color: context.appColors.error),
               ),
               const Gap(16),
             ],

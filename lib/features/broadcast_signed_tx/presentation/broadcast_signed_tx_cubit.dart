@@ -219,9 +219,9 @@ class BroadcastSignedTxCubit extends Cubit<BroadcastSignedTxState> {
 
   String? _tryFinalize(String psbtBase64) {
     try {
-      return PsbtBuilder.fromPsbt(
-        Psbt.fromBase64(psbtBase64),
-      ).finalizeAll().toHex();
+      return PsbtBuilder.fromPsbt(Psbt.fromBase64(psbtBase64))
+          .finalizeAll()
+          .toHex();
     } on Exception {
       return null;
     }

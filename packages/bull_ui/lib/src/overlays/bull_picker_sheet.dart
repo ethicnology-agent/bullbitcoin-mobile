@@ -47,9 +47,8 @@ class BullPickerSheet<T> extends StatelessWidget {
               const Spacer(),
               Text(
                 title,
-                style: Theme.of(
-                  context,
-                ).textTheme.headlineMedium?.copyWith(color: colors.onSurface),
+                style: Theme.of(context).textTheme.headlineMedium
+                    ?.copyWith(color: colors.onSurface),
               ),
               const Spacer(),
               IconButton(

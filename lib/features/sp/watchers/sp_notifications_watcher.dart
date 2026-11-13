@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:bb_mobile/core/utils/result.dart';
 
 import 'package:bull_logger/bull_logger.dart';

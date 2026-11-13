@@ -136,15 +136,14 @@ void main() {
         serverStatuses: {server.url: ElectrumServerStatus.online},
         settings: unknownResponse.settings,
       );
-      when(
-        () => load.execute(any(), onUpdate: any(named: 'onUpdate')),
-      ).thenAnswer((invocation) async {
-        final onUpdate =
-            invocation.namedArguments[#onUpdate]
-                as void Function(LoadElectrumServerDataResponse)?;
-        onUpdate?.call(unknownResponse);
-        return Ok(onlineResponse);
-      });
+      when(() => load.execute(any(), onUpdate: any(named: 'onUpdate')))
+          .thenAnswer((invocation) async {
+            final onUpdate =
+                invocation.namedArguments[#onUpdate]
+                    as void Function(LoadElectrumServerDataResponse)?;
+            onUpdate?.call(unknownResponse);
+            return Ok(onlineResponse);
+          });
       final bloc = ElectrumSettingsBloc(
         loadElectrumServerDataUsecase: load,
         addCustomServerUsecase: _MockAddCustomServerUsecase(),
@@ -208,18 +207,16 @@ void main() {
           Result<LoadElectrumServerDataResponse, core.ElectrumFailure>
         >();
     late void Function(LoadElectrumServerDataResponse) onUpdate;
-    when(
-      () => load.execute(any(), onUpdate: any(named: 'onUpdate')),
-    ).thenAnswer((invocation) {
-      onUpdate =
-          invocation.namedArguments[#onUpdate]
-              as void Function(LoadElectrumServerDataResponse);
-      onUpdate(oldResponse);
-      return loadResult.future;
-    });
-    when(
-      () => delete.execute(any()),
-    ).thenAnswer((_) async => const Ok<void, core.ElectrumFailure>(null));
+    when(() => load.execute(any(), onUpdate: any(named: 'onUpdate')))
+        .thenAnswer((invocation) {
+          onUpdate =
+              invocation.namedArguments[#onUpdate]
+                  as void Function(LoadElectrumServerDataResponse);
+          onUpdate(oldResponse);
+          return loadResult.future;
+        });
+    when(() => delete.execute(any()))
+        .thenAnswer((_) async => const Ok<void, core.ElectrumFailure>(null));
     when(() => settingsRepository.fetch()).thenAnswer(
       (_) async => const SettingsEntity(
         environment: Environment.mainnet,

@@ -53,9 +53,8 @@ void main() {
   });
 
   test('maps the maximum-active API code to its own failure', () async {
-    when(
-      () => mainnet.listActive(),
-    ).thenThrow(const LimitOrdersApiException(code: 'ERR_ORDTRG_LOMAX429'));
+    when(() => mainnet.listActive())
+        .thenThrow(const LimitOrdersApiException(code: 'ERR_ORDTRG_LOMAX429'));
 
     expect(
       failureOf(await repository.listActive()),
@@ -64,9 +63,8 @@ void main() {
   });
 
   test('maps the not-found API code to its own failure', () async {
-    when(
-      () => mainnet.get(any()),
-    ).thenThrow(const LimitOrdersApiException(code: 'ERR_ORDTRG_LO404'));
+    when(() => mainnet.get(any()))
+        .thenThrow(const LimitOrdersApiException(code: 'ERR_ORDTRG_LO404'));
 
     final result = await repository.get('lo-1');
 
@@ -77,9 +75,8 @@ void main() {
   });
 
   test('maps an unknown API code to the operation fallback', () async {
-    when(
-      () => mainnet.listActive(),
-    ).thenThrow(const LimitOrdersApiException(code: 'ERR_SOMETHING_NEW'));
+    when(() => mainnet.listActive())
+        .thenThrow(const LimitOrdersApiException(code: 'ERR_SOMETHING_NEW'));
 
     expect(
       failureOf(await repository.listActive()),

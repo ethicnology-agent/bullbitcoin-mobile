@@ -148,19 +148,16 @@ class RecoverBullBloc extends Bloc<RecoverBullEvent, RecoverBullState> {
     // local readiness latched until Tor reports an actual blockage or a
     // terminal state. A diagnostic means this is not a benign refresh.
     final next = event.state;
-    if (state.torConnection case tor.TorReady(
-      :final route,
-    ) when route.source == tor.TorSource.external) {
+    if (state.torConnection case tor.TorReady(:final route)
+        when route.source == tor.TorSource.external) {
       return;
     }
-    if (state.torConnection case tor.TorConnecting(
-      :final source,
-    ) when source == tor.TorSource.external) {
+    if (state.torConnection case tor.TorConnecting(:final source)
+        when source == tor.TorSource.external) {
       return;
     }
-    if (state.torConnection case tor.TorUnavailable(
-      :final source,
-    ) when source == tor.TorSource.external) {
+    if (state.torConnection case tor.TorUnavailable(:final source)
+        when source == tor.TorSource.external) {
       return;
     }
     if (state.torConnection is tor.TorReady &&
@@ -168,9 +165,8 @@ class RecoverBullBloc extends Bloc<RecoverBullEvent, RecoverBullState> {
         next.diagnostic == null) {
       return;
     }
-    if (next case tor.TorUnavailable(
-      :final source,
-    ) when _pendingRoutePreparation != null) {
+    if (next case tor.TorUnavailable(:final source)
+        when _pendingRoutePreparation != null) {
       _pendingRouteFailureSource = source;
     }
     // Only a terminal state retires the route. A diagnostic on Connecting is best-effort and often a directory refresh over a live SOCKS route, which the connecting page already rides out with a grace period.

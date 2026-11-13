@@ -660,8 +660,7 @@ m.Widget bullCopyFieldUseCase(m.BuildContext context) {
       child: BullCopyField(
         text: context.knobs.string(
           label: 'text',
-          initialValue:
-              '4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b',
+          initialValue: '4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b',
         ),
         copiedMessage: 'Copied to clipboard',
         maxLines: 1,

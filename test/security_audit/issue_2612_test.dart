@@ -36,9 +36,8 @@ void main() {
 
   group('Security audit #2612 startup background tasks', () {
     test('disabled background tasks are not registered natively', () {
-      final appDelegate = File(
-        'ios/Runner/AppDelegate.swift',
-      ).readAsStringSync();
+      final appDelegate = File('ios/Runner/AppDelegate.swift')
+          .readAsStringSync();
       expect(
         appDelegate,
         isNot(contains('WorkmanagerPlugin.registerPeriodicTask')),

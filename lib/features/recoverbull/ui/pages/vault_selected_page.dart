@@ -61,9 +61,8 @@ class VaultSelectedPage extends StatelessWidget {
                   BullText(vault.id, style: context.font.headlineMedium),
                   const Gap(16),
                   BullText(
-                    DateFormat(
-                      "yyyy-MMM-dd, HH:mm:ss",
-                    ).format(vault.createdAt.toLocal()),
+                    DateFormat("yyyy-MMM-dd, HH:mm:ss")
+                        .format(vault.createdAt.toLocal()),
                     style: context.font.headlineMedium,
                   ),
                 ],

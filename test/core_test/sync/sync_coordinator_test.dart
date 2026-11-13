@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:bb_mobile/core/utils/result.dart';
 import 'package:bb_mobile/core/wallet/domain/wallet_failure.dart';
 
@@ -150,12 +151,10 @@ void main() {
   test('automatic re-sync within the throttle window is skipped; '
       'a user sync bypasses it', () async {
     // No gating: each kind completes immediately so _lastSuccessAt is set.
-    when(
-      () => getWallets.execute(onlyBitcoin: true),
-    ).thenAnswer((_) async => Ok(<Wallet>[]));
-    when(
-      () => getWallets.execute(onlyLiquid: true),
-    ).thenAnswer((_) async => Ok(<Wallet>[]));
+    when(() => getWallets.execute(onlyBitcoin: true))
+        .thenAnswer((_) async => Ok(<Wallet>[]));
+    when(() => getWallets.execute(onlyLiquid: true))
+        .thenAnswer((_) async => Ok(<Wallet>[]));
     await coordinator.sync(trigger: SyncTrigger.automatic);
     // Immediately again (well within the 2s window); every kind is throttled.
     await coordinator.sync(trigger: SyncTrigger.automatic);
@@ -183,9 +182,8 @@ void main() {
           WalletStorageFailure('SqliteException(11): disk image is malformed'),
         ),
       );
-      when(
-        () => getWallets.execute(onlyLiquid: true),
-      ).thenAnswer((_) async => Ok(<Wallet>[]));
+      when(() => getWallets.execute(onlyLiquid: true))
+          .thenAnswer((_) async => Ok(<Wallet>[]));
 
       await expectLater(
         coordinator.sync(trigger: SyncTrigger.automatic),
@@ -237,12 +235,10 @@ void main() {
   });
 
   test('does not sync swaps while the app is paused', () async {
-    when(
-      () => getWallets.execute(onlyBitcoin: true),
-    ).thenAnswer((_) async => Ok(<Wallet>[]));
-    when(
-      () => getWallets.execute(onlyLiquid: true),
-    ).thenAnswer((_) async => Ok(<Wallet>[]));
+    when(() => getWallets.execute(onlyBitcoin: true))
+        .thenAnswer((_) async => Ok(<Wallet>[]));
+    when(() => getWallets.execute(onlyLiquid: true))
+        .thenAnswer((_) async => Ok(<Wallet>[]));
     TestWidgetsFlutterBinding.instance.handleAppLifecycleStateChanged(
       AppLifecycleState.paused,
     );
@@ -258,12 +254,10 @@ void main() {
 
   group('SyncKind.sp', () {
     test('sync() invokes the registered syncSp once', () async {
-      when(
-        () => getWallets.execute(onlyBitcoin: true),
-      ).thenAnswer((_) async => Ok(<Wallet>[]));
-      when(
-        () => getWallets.execute(onlyLiquid: true),
-      ).thenAnswer((_) async => Ok(<Wallet>[]));
+      when(() => getWallets.execute(onlyBitcoin: true))
+          .thenAnswer((_) async => Ok(<Wallet>[]));
+      when(() => getWallets.execute(onlyLiquid: true))
+          .thenAnswer((_) async => Ok(<Wallet>[]));
       when(syncSwaps.call).thenAnswer((_) async {});
       var spCalls = 0;
       spCallback = () async => spCalls++;
@@ -275,12 +269,10 @@ void main() {
 
     test('a syncSp throw does not sink bitcoin/liquid and '
         'surfaces as the sp failure', () async {
-      when(
-        () => getWallets.execute(onlyBitcoin: true),
-      ).thenAnswer((_) async => Ok(<Wallet>[]));
-      when(
-        () => getWallets.execute(onlyLiquid: true),
-      ).thenAnswer((_) async => Ok(<Wallet>[]));
+      when(() => getWallets.execute(onlyBitcoin: true))
+          .thenAnswer((_) async => Ok(<Wallet>[]));
+      when(() => getWallets.execute(onlyLiquid: true))
+          .thenAnswer((_) async => Ok(<Wallet>[]));
       when(syncSwaps.call).thenAnswer((_) async {});
       spCallback = () async => throw Exception('sp boom');
 
@@ -302,12 +294,10 @@ void main() {
 
     test('sp is throttled like the others: an automatic re-sync within the '
         'window is skipped; a user sync bypasses it', () async {
-      when(
-        () => getWallets.execute(onlyBitcoin: true),
-      ).thenAnswer((_) async => Ok(<Wallet>[]));
-      when(
-        () => getWallets.execute(onlyLiquid: true),
-      ).thenAnswer((_) async => Ok(<Wallet>[]));
+      when(() => getWallets.execute(onlyBitcoin: true))
+          .thenAnswer((_) async => Ok(<Wallet>[]));
+      when(() => getWallets.execute(onlyLiquid: true))
+          .thenAnswer((_) async => Ok(<Wallet>[]));
       when(syncSwaps.call).thenAnswer((_) async {});
       var spCalls = 0;
       spCallback = () async => spCalls++;
@@ -321,12 +311,10 @@ void main() {
     });
 
     test('a user sync leaves sp out unless asked for it', () async {
-      when(
-        () => getWallets.execute(onlyBitcoin: true),
-      ).thenAnswer((_) async => Ok(<Wallet>[]));
-      when(
-        () => getWallets.execute(onlyLiquid: true),
-      ).thenAnswer((_) async => Ok(<Wallet>[]));
+      when(() => getWallets.execute(onlyBitcoin: true))
+          .thenAnswer((_) async => Ok(<Wallet>[]));
+      when(() => getWallets.execute(onlyLiquid: true))
+          .thenAnswer((_) async => Ok(<Wallet>[]));
       var spCalls = 0;
       spCallback = () async => spCalls++;
 
@@ -352,12 +340,10 @@ void main() {
     });
 
     void walletsRead(WalletFailure failure) {
-      when(
-        () => getWallets.execute(onlyBitcoin: true),
-      ).thenAnswer((_) async => Err<List<Wallet>, WalletFailure>(failure));
-      when(
-        () => getWallets.execute(onlyLiquid: true),
-      ).thenAnswer((_) async => Err<List<Wallet>, WalletFailure>(failure));
+      when(() => getWallets.execute(onlyBitcoin: true))
+          .thenAnswer((_) async => Err<List<Wallet>, WalletFailure>(failure));
+      when(() => getWallets.execute(onlyLiquid: true))
+          .thenAnswer((_) async => Err<List<Wallet>, WalletFailure>(failure));
     }
 
     test('no wallet yet still fails the sync but is not reported', () async {

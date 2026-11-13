@@ -78,8 +78,7 @@ class CheckForExistingDefaultWalletsUsecase {
     if (!hasBitcoin || !hasLiquid) {
       final missing = !hasBitcoin ? 'bitcoin' : 'liquid';
       log.severe(
-        message:
-            'CheckForExistingDefaultWalletsUsecase: partial default set at cold start',
+        message: 'CheckForExistingDefaultWalletsUsecase: partial default set at cold start',
         error: StateError('missing $missing default wallet'),
         trace: StackTrace.current,
       );

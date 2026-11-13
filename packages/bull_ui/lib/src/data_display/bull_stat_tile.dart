@@ -53,10 +53,8 @@ class BullStatTile extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             sub!,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              fontSize: 11,
-              color: colors.textMuted,
-            ),
+            style: Theme.of(context).textTheme.labelSmall
+                ?.copyWith(fontSize: 11, color: colors.textMuted),
           ),
         ],
       ],

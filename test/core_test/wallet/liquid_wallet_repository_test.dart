@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:bb_mobile/core/wallet/domain/insufficient_funds_exception.dart';
 import 'package:bb_mobile/core/wallet/domain/consolidation_required_exception.dart';
 import 'package:bb_mobile/core/fees/domain/fees_entity.dart';
@@ -146,8 +147,9 @@ void main() {
   ]) {
     test('rejects an unavailable selection $selection', () async {
       expect(
-        (await build(selected: selection) as Err<String, WalletFailure>)
-            .failure,
+        (await build(
+          selected: selection,
+        ) as Err<String, WalletFailure>).failure,
         isA<WalletSelectedInputsUnavailableFailure>(),
       );
       verifyNever(
@@ -168,8 +170,9 @@ void main() {
       (_) async => [(walletId: walletId, txId: first.txId, vout: first.vout)],
     );
     expect(
-      (await build(selected: {first, second}) as Err<String, WalletFailure>)
-          .failure,
+      (await build(
+        selected: {first, second},
+      ) as Err<String, WalletFailure>).failure,
       isA<WalletSelectedInputsUnavailableFailure>(),
     );
   });

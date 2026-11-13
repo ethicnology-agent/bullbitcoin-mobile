@@ -27,9 +27,8 @@ void main() {
     final settingsCubit = _MockSettingsCubit();
     final order = _MockBuyOrder();
     when(() => buyBloc.state).thenReturn(BuyState(buyOrder: order));
-    when(
-      () => buyBloc.stream,
-    ).thenAnswer((_) => const Stream<BuyState>.empty());
+    when(() => buyBloc.stream)
+        .thenAnswer((_) => const Stream<BuyState>.empty());
     when(() => settingsCubit.state).thenReturn(
       const SettingsState(
         storedSettings: SettingsEntity(
@@ -39,9 +38,8 @@ void main() {
         ),
       ),
     );
-    when(
-      () => settingsCubit.stream,
-    ).thenAnswer((_) => const Stream<SettingsState>.empty());
+    when(() => settingsCubit.stream)
+        .thenAnswer((_) => const Stream<SettingsState>.empty());
     when(() => order.orderId).thenReturn('order-42');
     when(() => order.payoutAmount).thenReturn(0.001);
     when(() => order.payinAmount).thenReturn(100.0);
@@ -103,9 +101,8 @@ void main() {
       final settingsCubit = _MockSettingsCubit();
       order = _MockBuyOrder();
       when(() => buyBloc.state).thenReturn(BuyState(buyOrder: order));
-      when(
-        () => buyBloc.stream,
-      ).thenAnswer((_) => const Stream<BuyState>.empty());
+      when(() => buyBloc.stream)
+          .thenAnswer((_) => const Stream<BuyState>.empty());
       when(() => settingsCubit.state).thenReturn(
         const SettingsState(
           storedSettings: SettingsEntity(
@@ -115,9 +112,8 @@ void main() {
           ),
         ),
       );
-      when(
-        () => settingsCubit.stream,
-      ).thenAnswer((_) => const Stream<SettingsState>.empty());
+      when(() => settingsCubit.stream)
+          .thenAnswer((_) => const Stream<SettingsState>.empty());
       when(() => order.orderId).thenReturn('order-42');
       when(() => order.payoutAmount).thenReturn(0.0001);
       when(() => order.payinAmount).thenReturn(10.0);
@@ -125,9 +121,8 @@ void main() {
       when(() => order.bitcoinAddress).thenReturn(null);
       when(() => order.transactionId).thenReturn(null);
       when(() => order.scheduledPayoutTime).thenReturn(null);
-      when(
-        () => order.payjoinOutcome,
-      ).thenReturn(OrderPayjoinOutcome.inProgress);
+      when(() => order.payjoinOutcome)
+          .thenReturn(OrderPayjoinOutcome.inProgress);
       when(() => order.createdAt).thenReturn(DateTime.now().subtract(age));
 
       await tester.pumpWidget(

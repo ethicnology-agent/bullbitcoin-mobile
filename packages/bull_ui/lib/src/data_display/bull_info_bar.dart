@@ -67,9 +67,8 @@ class BullInfoBar extends StatelessWidget {
                       Expanded(
                         child: Text(
                           message,
-                          style: Theme.of(
-                            context,
-                          ).textTheme.bodySmall?.copyWith(color: colors.text),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: colors.text),
                         ),
                       ),
                     ],

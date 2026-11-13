@@ -133,9 +133,8 @@ class _Message extends StatelessWidget {
         child: Text(
           text,
           textAlign: TextAlign.center,
-          style: Theme.of(
-            context,
-          ).textTheme.bodyLarge?.copyWith(color: context.appColors.textMuted),
+          style: Theme.of(context).textTheme.bodyLarge
+              ?.copyWith(color: context.appColors.textMuted),
         ),
       ),
     );

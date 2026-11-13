@@ -39,9 +39,8 @@ void main() {
   });
 
   test('succeeds on an answer and closes the route it acquired', () async {
-    when(
-      () => checkConnection.execute(route: route),
-    ).thenAnswer((_) async => const Ok(true));
+    when(() => checkConnection.execute(route: route))
+        .thenAnswer((_) async => const Ok(true));
 
     expect(await usecase.execute(), isA<Ok<void, RecoverBullCoreFailure>>());
     verify(() => checkConnection.execute(route: route)).called(1);
@@ -89,17 +88,15 @@ void main() {
       () async => throw Exception('close failed'),
     );
     when(() => ensureSession.execute()).thenAnswer((_) async => Ok(route));
-    when(
-      () => checkConnection.execute(route: route),
-    ).thenAnswer((_) async => const Ok(true));
+    when(() => checkConnection.execute(route: route))
+        .thenAnswer((_) async => const Ok(true));
 
     expect(await usecase.execute(), isA<Ok<void, RecoverBullCoreFailure>>());
   });
 
   test('borrows a supplied route without reacquiring or closing it', () async {
-    when(
-      () => checkConnection.execute(route: route),
-    ).thenAnswer((_) async => const Ok(true));
+    when(() => checkConnection.execute(route: route))
+        .thenAnswer((_) async => const Ok(true));
 
     final result = await usecase.execute(route: route);
 

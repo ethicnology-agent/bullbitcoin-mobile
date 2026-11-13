@@ -56,8 +56,7 @@ class DeleteSecretUsecase {
       );
       return const Err(AllSeedViewDeleteFailure('could not verify wallets'));
     }
-    return (await _secrets.trash(
-      id,
-    )).mapErr((f) => AllSeedViewDeleteFailure(f.logMessage));
+    return (await _secrets.trash(id))
+        .mapErr((f) => AllSeedViewDeleteFailure(f.logMessage));
   }
 }

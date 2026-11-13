@@ -1,4 +1,5 @@
 import 'package:bb_mobile/features/send/presentation/send_wallet_view.dart';
+
 import 'dart:async';
 
 import 'package:bb_mobile/core/entities/signer_entity.dart';
@@ -123,9 +124,8 @@ void main() {
     when(() => cubit.isSpMode).thenReturn(false);
     when(() => cubit.state).thenReturn(state);
     when(() => cubit.stream).thenAnswer((_) => const Stream.empty());
-    when(
-      () => cubit.amountChanged(amount: null, isMax: true),
-    ).thenAnswer((_) async {});
+    when(() => cubit.amountChanged(amount: null, isMax: true))
+        .thenAnswer((_) async {});
 
     await tester.pumpWidget(
       MaterialApp(
@@ -247,9 +247,8 @@ void main() {
     when(() => cubit.isSpMode).thenReturn(false);
     when(() => cubit.state).thenReturn(state);
     when(() => cubit.stream).thenAnswer((_) => const Stream.empty());
-    when(
-      () => cubit.amountChanged(amount: '999000', isMax: false),
-    ).thenAnswer((_) async {});
+    when(() => cubit.amountChanged(amount: '999000', isMax: false))
+        .thenAnswer((_) async {});
 
     await tester.pumpWidget(
       MaterialApp(

@@ -38,9 +38,8 @@ void main() {
   group('SaveTransactionNoteUsecase', () {
     test('returns the stored label on success', () async {
       final stored = Label.tx(id: 1, transactionId: 'tx-1', label: 'coffee');
-      when(
-        () => labels.store(any()),
-      ).thenAnswer((_) async => Ok<Label, LabelFailure>(stored));
+      when(() => labels.store(any()))
+          .thenAnswer((_) async => Ok<Label, LabelFailure>(stored));
 
       final result = await SaveTransactionNoteUsecase(labels).execute(
         transactionId: 'tx-1',
@@ -100,9 +99,8 @@ void main() {
 
   group('DeleteTransactionNoteUsecase', () {
     test('returns Ok when the note is trashed', () async {
-      when(
-        () => labels.trash(1),
-      ).thenAnswer((_) async => const Ok<Null, LabelFailure>(null));
+      when(() => labels.trash(1))
+          .thenAnswer((_) async => const Ok<Null, LabelFailure>(null));
 
       expect(
         await DeleteTransactionNoteUsecase(labels).execute(1),
@@ -128,9 +126,8 @@ void main() {
 
   group('GetTransactionNoteSuggestionsUsecase', () {
     test('returns the distinct labels', () async {
-      when(
-        () => labels.fetchDistinctLabels(),
-      ).thenAnswer((_) async => {'coffee', 'rent'});
+      when(() => labels.fetchDistinctLabels())
+          .thenAnswer((_) async => {'coffee', 'rent'});
 
       expect(await GetTransactionNoteSuggestionsUsecase(labels).execute(), {
         'coffee',
@@ -139,9 +136,8 @@ void main() {
     });
 
     test('degrades to no suggestions rather than failing the screen', () async {
-      when(
-        () => labels.fetchDistinctLabels(),
-      ).thenThrow(StateError('database is locked'));
+      when(() => labels.fetchDistinctLabels())
+          .thenThrow(StateError('database is locked'));
 
       expect(
         await GetTransactionNoteSuggestionsUsecase(labels).execute(),

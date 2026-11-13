@@ -43,9 +43,8 @@ Future<BuyBloc> _pumpAccelerateScreen(
       ),
     ),
   );
-  when(
-    () => settingsCubit.stream,
-  ).thenAnswer((_) => const Stream<SettingsState>.empty());
+  when(() => settingsCubit.stream)
+      .thenAnswer((_) => const Stream<SettingsState>.empty());
 
   await tester.pumpWidget(
     MaterialApp(
@@ -161,9 +160,8 @@ void main() {
       await tester.tap(find.text(confirmExpress));
       await tester.pump();
 
-      verify(
-        () => buyBloc.add(const BuyEvent.accelerateTransactionConfirmed()),
-      ).called(1);
+      verify(() => buyBloc.add(const BuyEvent.accelerateTransactionConfirmed()))
+          .called(1);
     });
   });
 }

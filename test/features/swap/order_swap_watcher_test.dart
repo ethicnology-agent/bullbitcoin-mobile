@@ -15,9 +15,8 @@ void main() {
   test('deduplicates overlapping refresh requests', () async {
     final coordinator = _MockSyncCoordinator();
     final completion = Completer<void>();
-    when(
-      () => coordinator.sync(only: {SyncKind.swaps}),
-    ).thenAnswer((_) => completion.future);
+    when(() => coordinator.sync(only: {SyncKind.swaps}))
+        .thenAnswer((_) => completion.future);
     final watcher = OrderSwapWatcher(coordinator);
 
     final first = watcher.refresh();
@@ -62,9 +61,8 @@ void main() {
     when(() => coordinator.sync(only: {SyncKind.swaps})).thenAnswer((_) async {
       calls++;
     });
-    when(
-      () => coordinator.lastSwapSyncOutcome,
-    ).thenReturn(const SyncOutcome.idle());
+    when(() => coordinator.lastSwapSyncOutcome)
+        .thenReturn(const SyncOutcome.idle());
     final watcher = OrderSwapWatcher(coordinator);
 
     fakeAsync((async) {
@@ -90,9 +88,8 @@ void main() {
       calls++;
       updateRequired = true;
     });
-    when(
-      () => coordinator.lastSwapSyncOutcome,
-    ).thenReturn(const SyncOutcome.active());
+    when(() => coordinator.lastSwapSyncOutcome)
+        .thenReturn(const SyncOutcome.active());
     final watcher = OrderSwapWatcher(
       coordinator,
       isAppUpdateRequired: () => updateRequired,

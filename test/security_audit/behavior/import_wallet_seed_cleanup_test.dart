@@ -59,9 +59,8 @@ void main() {
 
   setUpAll(() async {
     FakeSecureStoragePlatform().install();
-    final fallback = await Secrets(
-      scratchDirectory: () async => '/tmp',
-    ).import(words: words);
+    final fallback = await Secrets(scratchDirectory: () async => '/tmp')
+        .import(words: words);
     registerFallbackValue((fallback as Ok<Secret, SecretFailure>).value);
     registerFallbackValue(Network.bitcoinMainnet);
     registerFallbackValue(ScriptType.bip84);
@@ -86,9 +85,8 @@ void main() {
       ),
     ).thenAnswer((_) async => const Ok(null));
     // No wallet references any seed unless a test says so.
-    when(
-      () => walletRepository.getWallets(),
-    ).thenAnswer((_) async => Ok<List<Wallet>, WalletFailure>([]));
+    when(() => walletRepository.getWallets())
+        .thenAnswer((_) async => Ok<List<Wallet>, WalletFailure>([]));
   });
 
   void failCreateWalletWith(Object error) {
@@ -205,9 +203,8 @@ void main() {
           await secrets.import(words: words),
           isA<Ok<Secret, SecretFailure>>(),
         );
-        when(
-          () => settingsRepository.fetch(),
-        ).thenThrow(Exception('settings unavailable'));
+        when(() => settingsRepository.fetch())
+            .thenThrow(Exception('settings unavailable'));
 
         final result = await usecase.execute(mnemonicWords: words);
 
@@ -242,9 +239,8 @@ void main() {
         // The race Codex reproduced (2026-09-16): another import of the same
         // words finished first and built its wallet on this seed. This
         // import created the entry, but it is not an orphan any more.
-        when(
-          () => settingsRepository.fetch(),
-        ).thenAnswer((_) async => settings);
+        when(() => settingsRepository.fetch())
+            .thenAnswer((_) async => settings);
         when(() => walletRepository.getWallets()).thenAnswer(
           (_) async => Ok<List<Wallet>, WalletFailure>([
             Wallet(

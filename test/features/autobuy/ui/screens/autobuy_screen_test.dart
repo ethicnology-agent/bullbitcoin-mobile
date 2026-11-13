@@ -29,9 +29,8 @@ void main() {
     final cubit = AutoBuyCubit(setAutoBuy, getStatus);
     addTearDown(cubit.close);
 
-    when(
-      () => getStatus.execute(),
-    ).thenAnswer((_) async => const Err(AutoBuyAccountUnavailableFailure()));
+    when(() => getStatus.execute())
+        .thenAnswer((_) async => const Err(AutoBuyAccountUnavailableFailure()));
     await cubit.loadStatus();
 
     await tester.pumpWidget(

@@ -45,9 +45,8 @@ void main() {
 
   test('reachable server over the embedded route -> true', () async {
     when(() => ensureSession.execute()).thenAnswer((_) async => Ok(session));
-    when(
-      () => repository.checkConnection(any()),
-    ).thenAnswer((_) async => const Ok(null));
+    when(() => repository.checkConnection(any()))
+        .thenAnswer((_) async => const Ok(null));
 
     expect(await usecase.execute(), isA<Ok<bool, RecoverBullCoreFailure>>());
     verify(() => repository.checkConnection(endpoint)).called(1);
@@ -86,9 +85,8 @@ void main() {
   // caller got an exception instead of `false`, aborting its retry loop.
   test('throwing server check -> false, never rethrown', () async {
     when(() => ensureSession.execute()).thenAnswer((_) async => Ok(session));
-    when(
-      () => repository.checkConnection(any()),
-    ).thenThrow(Exception('key server unreachable'));
+    when(() => repository.checkConnection(any()))
+        .thenThrow(Exception('key server unreachable'));
 
     expect(await usecase.execute(), isA<Err<bool, RecoverBullCoreFailure>>());
     expect(sessionClosed, isTrue);
@@ -96,9 +94,8 @@ void main() {
 
   test('server that rejects asynchronously -> false', () async {
     when(() => ensureSession.execute()).thenAnswer((_) async => Ok(session));
-    when(
-      () => repository.checkConnection(any()),
-    ).thenAnswer((_) async => throw Exception('timeout'));
+    when(() => repository.checkConnection(any()))
+        .thenAnswer((_) async => throw Exception('timeout'));
 
     expect(await usecase.execute(), isA<Err<bool, RecoverBullCoreFailure>>());
     expect(sessionClosed, isTrue);
@@ -126,9 +123,8 @@ void main() {
   });
 
   test('provided route is used without acquiring or closing it', () async {
-    when(
-      () => repository.checkConnection(endpoint),
-    ).thenAnswer((_) async => const Ok(null));
+    when(() => repository.checkConnection(endpoint))
+        .thenAnswer((_) async => const Ok(null));
 
     final result = await usecase.execute(route: session);
 
@@ -138,9 +134,8 @@ void main() {
   });
 
   test('provided route remains open when the repository fails', () async {
-    when(
-      () => repository.checkConnection(endpoint),
-    ).thenThrow(Exception('server unavailable'));
+    when(() => repository.checkConnection(endpoint))
+        .thenThrow(Exception('server unavailable'));
 
     final result = await usecase.execute(route: session);
 
@@ -155,9 +150,8 @@ void main() {
       () async => throw Exception('close failed'),
     );
     when(() => ensureSession.execute()).thenAnswer((_) async => Ok(session));
-    when(
-      () => repository.checkConnection(endpoint),
-    ).thenAnswer((_) async => const Ok(null));
+    when(() => repository.checkConnection(endpoint))
+        .thenAnswer((_) async => const Ok(null));
 
     expect(await usecase.execute(), isA<Ok<bool, RecoverBullCoreFailure>>());
   });

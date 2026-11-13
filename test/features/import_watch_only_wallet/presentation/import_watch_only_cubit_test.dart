@@ -29,9 +29,8 @@ class _MockDescriptor extends Mock implements satoshifier.Descriptor {}
 void main() {
   test('rejects a watch-only wallet from the inactive environment', () async {
     final descriptor = _MockDescriptor();
-    when(
-      () => descriptor.network,
-    ).thenReturn(satoshifier.Network.bitcoinMainnet);
+    when(() => descriptor.network)
+        .thenReturn(satoshifier.Network.bitcoinMainnet);
     final watchOnlyDescriptor = _MockWatchOnlyDescriptor();
     when(() => watchOnlyDescriptor.descriptor).thenReturn(descriptor);
     final wallet = WatchOnlyDescriptorEntity(

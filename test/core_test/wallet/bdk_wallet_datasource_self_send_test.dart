@@ -138,14 +138,12 @@ void main() {
       networkKind: bdk.NetworkKind.test,
     );
 
-    walletModel =
-        WalletModel.publicBdk(
-              id: 'bdk-self-send-test',
-              externalDescriptor: external.toString(),
-              internalDescriptor: internal.toString(),
-              isTestnet: true,
-            )
-            as PublicBdkWalletModel;
+    walletModel = WalletModel.publicBdk(
+      id: 'bdk-self-send-test',
+      externalDescriptor: external.toString(),
+      internalDescriptor: internal.toString(),
+      isTestnet: true,
+    ) as PublicBdkWalletModel;
 
     final wallet = await BdkFacade.createWallet(walletModel);
 

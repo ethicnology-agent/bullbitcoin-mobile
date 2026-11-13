@@ -47,9 +47,8 @@ class BullScreenPrivacyGate extends StatelessWidget {
                   BullText(
                     unavailableMessage,
                     textAlign: .center,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyLarge?.copyWith(color: context.bull.error),
+                    style: Theme.of(context).textTheme.bodyLarge
+                        ?.copyWith(color: context.bull.error),
                   ),
                   const Gap(BullSpacing.md),
                   BullButton.small(

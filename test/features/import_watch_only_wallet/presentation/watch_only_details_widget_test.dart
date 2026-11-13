@@ -36,9 +36,8 @@ Future<_MockImportWatchOnlyCubit> _pumpDetails(
     signerDevice: SignerDeviceEntity.seedsigner,
   );
   final cubit = _MockImportWatchOnlyCubit();
-  when(
-    () => cubit.state,
-  ).thenReturn(ImportWatchOnlyState(watchOnlyWallet: wallet));
+  when(() => cubit.state)
+      .thenReturn(ImportWatchOnlyState(watchOnlyWallet: wallet));
   when(() => cubit.stream).thenAnswer((_) => const Stream.empty());
   when(() => cubit.import()).thenAnswer((_) async {});
 

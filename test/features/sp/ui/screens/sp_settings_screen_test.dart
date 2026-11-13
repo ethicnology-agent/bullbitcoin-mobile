@@ -83,9 +83,8 @@ void main() {
   setUp(() {
     spCubit = _MockSpCubit();
     settingsCubit = _MockSpSettingsCubit();
-    when(
-      () => spCubit.state,
-    ).thenReturn(const SpState(network: BitcoinNetwork.mainnet));
+    when(() => spCubit.state)
+        .thenReturn(const SpState(network: BitcoinNetwork.mainnet));
     when(() => spCubit.stream).thenAnswer((_) => const Stream.empty());
     when(() => spCubit.load()).thenAnswer((_) async {});
     when(() => spCubit.reloadAfterBackendChange()).thenAnswer((_) async {});
@@ -103,9 +102,8 @@ void main() {
         ),
       ),
     );
-    when(
-      () => settingsCubit.stream,
-    ).thenAnswer((_) => const Stream<SpSettingsState>.empty());
+    when(() => settingsCubit.stream)
+        .thenAnswer((_) => const Stream<SpSettingsState>.empty());
     when(() => settingsCubit.initFromNetwork(any())).thenAnswer((_) async {});
     when(() => settingsCubit.setNetwork(any())).thenAnswer((_) async {});
     when(() => settingsCubit.setBlindbitUrl(any())).thenReturn(null);

@@ -121,9 +121,8 @@ class _BullDetailsTableItemState extends State<BullDetailsTableItem> {
                 flex: 2,
                 child: Text(
                   widget.label,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: colors.onSurface),
+                  style: Theme.of(context).textTheme.bodyMedium
+                      ?.copyWith(color: colors.onSurface),
                 ),
               ),
 

@@ -20,9 +20,8 @@ void main() {
   ) async {
     final bloc = _MockTransferBloc();
     when(() => bloc.state).thenReturn(const TransferState());
-    when(
-      () => bloc.stream,
-    ).thenAnswer((_) => StreamController<TransferState>.broadcast().stream);
+    when(() => bloc.stream)
+        .thenAnswer((_) => StreamController<TransferState>.broadcast().stream);
 
     // The real flow reaches this page with a `go`, which leaves the stack as
     // [/swap, /swap/in-progress] — the wallet home is gone from under it, so

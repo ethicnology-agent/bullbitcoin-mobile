@@ -31,9 +31,8 @@ void main() {
 
   test('loads wallet order swaps through the public facade', () async {
     final order = _orderSwap();
-    when(
-      () => swapFacade.getOrders(walletId: 'wallet-1'),
-    ).thenAnswer((_) async => Ok([order]));
+    when(() => swapFacade.getOrders(walletId: 'wallet-1'))
+        .thenAnswer((_) async => Ok([order]));
 
     final result = await usecase.execute(walletId: 'wallet-1');
 
@@ -42,11 +41,10 @@ void main() {
   });
 
   test('maps swap failures into the transaction family', () async {
-    when(
-      () => swapFacade.getOrders(walletId: any(named: 'walletId')),
-    ).thenAnswer(
-      (_) async => const Err(SwapStorageFailure('database unavailable')),
-    );
+    when(() => swapFacade.getOrders(walletId: any(named: 'walletId')))
+        .thenAnswer(
+          (_) async => const Err(SwapStorageFailure('database unavailable')),
+        );
 
     final failure = _failureOf(await usecase.execute(walletId: 'wallet-1'));
 

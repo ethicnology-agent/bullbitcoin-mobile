@@ -43,9 +43,8 @@ void main() {
         AccountOwnerName(firstName: 'Satoshi', lastName: 'Nakamoto'),
       ),
     );
-    when(
-      () => watch.execute(createIfAbsent: any(named: 'createIfAbsent')),
-    ).thenAnswer((_) => events.stream);
+    when(() => watch.execute(createIfAbsent: any(named: 'createIfAbsent')))
+        .thenAnswer((_) => events.stream);
     cubit = VirtualIbanOnboardingCubit(
       watchVirtualIbanUsecase: watch,
       getAccountOwnerNameUsecase: ownerName,

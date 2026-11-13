@@ -45,9 +45,9 @@ void main() {
     return wallet;
   }
 
-  void walletsAre(List<Wallet> list) => when(
-    () => wallets.getWallets(),
-  ).thenAnswer((_) async => Ok<List<Wallet>, WalletFailure>(list));
+  void walletsAre(List<Wallet> list) =>
+      when(() => wallets.getWallets())
+          .thenAnswer((_) async => Ok<List<Wallet>, WalletFailure>(list));
 
   setUp(() {
     storage = FakeSecureStoragePlatform()..install();
@@ -83,22 +83,19 @@ void main() {
       },
     );
 
-    test(
-      'a stored mnemonic no wallet signs with is not a duplicate: the import reuses it',
-      () async {
-        expect(
-          await secrets.import(words: words),
-          isA<Ok<Secret, SecretFailure>>(),
-        );
-        // A watch-only wallet with the same origin holds no seed.
-        walletsAre([signingWallet(fingerprint, signsLocally: false)]);
+    test('a stored mnemonic no wallet signs with is not a duplicate: the import reuses it', () async {
+      expect(
+        await secrets.import(words: words),
+        isA<Ok<Secret, SecretFailure>>(),
+      );
+      // A watch-only wallet with the same origin holds no seed.
+      walletsAre([signingWallet(fingerprint, signsLocally: false)]);
 
-        expect(
-          await usecase.execute(mnemonicWords: words),
-          isA<Ok<void, ImportMnemonicFailure>>(),
-        );
-      },
-    );
+      expect(
+        await usecase.execute(mnemonicWords: words),
+        isA<Ok<void, ImportMnemonicFailure>>(),
+      );
+    });
 
     test(
       'when the wallets cannot be listed, a stored mnemonic is a duplicate',
@@ -133,21 +130,24 @@ void main() {
       expect(result, isA<Ok<void, ImportMnemonicFailure>>());
     });
 
-    test('a keystore error is unexpected, and carries no stored text', () async {
-      const sentinel = 'SYNTHETIC_KEYSTORE_SENTINEL';
-      expect(
-        await secrets.import(words: words),
-        isA<Ok<Secret, SecretFailure>>(),
-      );
-      // contains now reads and compares the stored seed, so every retry must fail.
-      storage.scripted.addAll(List.filled(5, Exception(sentinel)));
+    test(
+      'a keystore error is unexpected, and carries no stored text',
+      () async {
+        const sentinel = 'SYNTHETIC_KEYSTORE_SENTINEL';
+        expect(
+          await secrets.import(words: words),
+          isA<Ok<Secret, SecretFailure>>(),
+        );
+        // contains now reads and compares the stored seed, so every retry must fail.
+        storage.scripted.addAll(List.filled(5, Exception(sentinel)));
 
-      final result = await usecase.execute(mnemonicWords: words);
+        final result = await usecase.execute(mnemonicWords: words);
 
-      final failure = (result as Err).failure;
-      expect(failure, isA<ImportMnemonicUnexpectedFailure>());
-      // The package reports a foreign exception by type; the message it wrote never reaches this layer, so neither does anything the keystore held.
-      expect(failure.logMessage, isNot(contains(sentinel)));
-    });
+        final failure = (result as Err).failure;
+        expect(failure, isA<ImportMnemonicUnexpectedFailure>());
+        // The package reports a foreign exception by type; the message it wrote never reaches this layer, so neither does anything the keystore held.
+        expect(failure.logMessage, isNot(contains(sentinel)));
+      },
+    );
   });
 }

@@ -81,16 +81,14 @@ class _BullSegmentedState extends State<BullSegmented> {
               item: Text(
                 item,
                 style: item == selectedSegment
-                    ? Theme.of(
-                        context,
-                      ).textTheme.labelLarge?.copyWith(color: colors.primary)
+                    ? Theme.of(context).textTheme.labelLarge
+                          ?.copyWith(color: colors.primary)
                     : widget.disabledItems.contains(item)
                     ? Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: colors.outline.withValues(alpha: 0.5),
                       )
-                    : Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: colors.secondary,
-                      ),
+                    : Theme.of(context).textTheme.labelMedium
+                          ?.copyWith(color: colors.secondary),
               ),
           },
         ),

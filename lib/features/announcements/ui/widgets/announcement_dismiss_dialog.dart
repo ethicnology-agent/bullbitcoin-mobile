@@ -51,9 +51,9 @@ class _AnnouncementDismissDialogBody extends StatelessWidget {
             Expanded(
               child: BullButton.small(
                 label: context.loc.announcementDismissConfirmRead,
-                onPressed: () => Navigator.of(
-                  dialogContext,
-                ).pop(AnnouncementDismissChoice.read),
+                onPressed: () =>
+                    Navigator.of(dialogContext)
+                        .pop(AnnouncementDismissChoice.read),
                 bgColor: colors.surface,
                 textColor: colors.text,
                 outlined: true,
@@ -64,9 +64,9 @@ class _AnnouncementDismissDialogBody extends StatelessWidget {
             Expanded(
               child: BullButton.small(
                 label: context.loc.announcementDismissConfirmAction,
-                onPressed: () => Navigator.of(
-                  dialogContext,
-                ).pop(AnnouncementDismissChoice.dismiss),
+                onPressed: () =>
+                    Navigator.of(dialogContext)
+                        .pop(AnnouncementDismissChoice.dismiss),
                 bgColor: colors.error,
                 textColor: colors.onError,
               ),

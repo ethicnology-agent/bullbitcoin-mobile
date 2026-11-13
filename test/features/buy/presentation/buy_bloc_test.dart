@@ -115,9 +115,8 @@ void main() {
       );
       when(() => cancel.execute(any())).thenAnswer((_) async => const Ok(null));
       when(refreshCall).thenAnswer((_) async => Ok(order));
-      when(
-        () => labels.execute(order: any(named: 'order')),
-      ).thenAnswer((_) async => const Ok(null));
+      when(() => labels.execute(order: any(named: 'order')))
+          .thenAnswer((_) async => const Ok(null));
       bloc = build();
       bloc.seed(BuyState(buyOrder: order));
     });
@@ -169,9 +168,8 @@ void main() {
     });
 
     test('a failed refresh has a deferred successor', () {
-      when(
-        refreshCall,
-      ).thenAnswer((_) async => const Err(BuyUnexpectedFailure('offline')));
+      when(refreshCall)
+          .thenAnswer((_) async => const Err(BuyUnexpectedFailure('offline')));
       return inFakeTime((time) {
         bloc.add(const BuyEvent.refreshOrder());
         time.flushMicrotasks();
@@ -280,9 +278,8 @@ void main() {
           ),
         ),
       );
-      when(
-        () => confirm.execute(orderId: 'quote-order'),
-      ).thenAnswer((_) async => Ok(order));
+      when(() => confirm.execute(orderId: 'quote-order'))
+          .thenAnswer((_) async => Ok(order));
       when(readCall).thenAnswer((_) async => Ok(order));
       return inFakeTime((time) {
         bloc.add(const BuyEvent.confirmOrder());
@@ -326,12 +323,10 @@ void main() {
           ),
         ),
       );
-      when(
-        () => confirm.execute(orderId: 'quote-order'),
-      ).thenAnswer((_) async => Ok(order));
-      when(
-        readCall,
-      ).thenAnswer((_) async => const Err(BuyUnexpectedFailure('offline')));
+      when(() => confirm.execute(orderId: 'quote-order'))
+          .thenAnswer((_) async => Ok(order));
+      when(readCall)
+          .thenAnswer((_) async => const Err(BuyUnexpectedFailure('offline')));
       return inFakeTime((time) {
         bloc.add(const BuyEvent.confirmOrder());
         time.flushMicrotasks();
@@ -348,9 +343,8 @@ void main() {
 
     test('a failed read of an order not on screen schedules no refresh', () {
       // The accelerate route builds a fresh bloc and reads the order by id.
-      when(
-        refreshCall,
-      ).thenAnswer((_) async => const Err(BuyUnexpectedFailure('offline')));
+      when(refreshCall)
+          .thenAnswer((_) async => const Err(BuyUnexpectedFailure('offline')));
       return inFakeTime((time) {
         bloc.seed(const BuyState());
         bloc.add(const BuyEvent.refreshOrder(orderId: 'quote-order'));
@@ -384,9 +378,8 @@ void main() {
     setUp(() {
       load = _MockLoadBuyContextUsecase();
       final cancel = _MockCancelAbandonedBuyPayjoinUsecase();
-      when(
-        () => cancel.execute(any()),
-      ).thenAnswer((_) async => const Ok<void, BuyFailure>(null));
+      when(() => cancel.execute(any()))
+          .thenAnswer((_) async => const Ok<void, BuyFailure>(null));
       bloc = _SeedableBuyBloc(
         loadBuyContextUsecase: load,
         confirmBuyOrderUsecase: _MockConfirmBuyOrderUsecase(),
@@ -405,9 +398,8 @@ void main() {
     test('a currency whose price does not come says so', () async {
       bloc.seed(const BuyState(currencyInput: 'USD', exchangeRate: 70000));
       // The datasource reports an unreachable pricer as a zero rate.
-      when(
-        () => load.satsToCurrency(currencyCode: 'CAD'),
-      ).thenAnswer((_) async => const Ok<double, BuyFailure>(0));
+      when(() => load.satsToCurrency(currencyCode: 'CAD'))
+          .thenAnswer((_) async => const Ok<double, BuyFailure>(0));
 
       bloc.add(const BuyEvent.currencyInputChanged('CAD'));
       await pumpEventQueue();
@@ -451,12 +443,10 @@ void main() {
       create = _MockCreateBuyOrderUsecase();
       cancel = _MockCancelAbandonedBuyPayjoinUsecase();
       load = _MockLoadBuyContextUsecase();
-      when(
-        () => cancel.execute(any()),
-      ).thenAnswer((_) async => const Ok<void, BuyFailure>(null));
-      when(
-        () => load.satsToCurrency(currencyCode: 'CAD'),
-      ).thenAnswer((_) async => const Ok<double, BuyFailure>(100000));
+      when(() => cancel.execute(any()))
+          .thenAnswer((_) async => const Ok<void, BuyFailure>(null));
+      when(() => load.satsToCurrency(currencyCode: 'CAD'))
+          .thenAnswer((_) async => const Ok<double, BuyFailure>(100000));
       bloc = _SeedableBuyBloc(
         loadBuyContextUsecase: load,
         confirmBuyOrderUsecase: _MockConfirmBuyOrderUsecase(),
@@ -556,9 +546,8 @@ void main() {
         final first = Completer<Result<BuyOrder, BuyFailure>>();
         final second = Completer<Result<BuyOrder, BuyFailure>>();
         var calls = 0;
-        when(
-          createCall,
-        ).thenAnswer((_) => ++calls == 1 ? first.future : second.future);
+        when(createCall)
+            .thenAnswer((_) => ++calls == 1 ? first.future : second.future);
         bloc.add(const BuyEvent.createOrder());
         await untilCalled(createCall);
         final abandoned = bloc.stream.firstWhere((s) => !s.isCreatingOrder);
@@ -602,9 +591,8 @@ void main() {
     () async {
       final cancelAbandonedPayjoin = _MockCancelAbandonedBuyPayjoinUsecase();
       final order = _MockBuyOrder();
-      when(
-        () => cancelAbandonedPayjoin.execute(order),
-      ).thenAnswer((_) async => const Ok<void, BuyFailure>(null));
+      when(() => cancelAbandonedPayjoin.execute(order))
+          .thenAnswer((_) async => const Ok<void, BuyFailure>(null));
       final bloc = _SeedableBuyBloc(
         loadBuyContextUsecase: _MockLoadBuyContextUsecase(),
         confirmBuyOrderUsecase: _MockConfirmBuyOrderUsecase(),

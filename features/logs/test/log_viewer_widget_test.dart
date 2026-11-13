@@ -399,9 +399,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 120));
     expect(cubit.state.visibleEntries, [info]);
 
-    Navigator.of(
-      tester.element(find.byKey(const ValueKey('logs-search'))),
-    ).pop();
+    Navigator.of(tester.element(find.byKey(const ValueKey('logs-search'))))
+        .pop();
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('logs-share')));
     await tester.pumpAndSettle();

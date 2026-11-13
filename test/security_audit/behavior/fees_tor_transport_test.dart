@@ -90,17 +90,15 @@ void main() {
       enableSsl: false,
     );
 
-    when(
-      () => globalSettings.fetch(),
-    ).thenAnswer((_) async => _torSettings(socks.port));
+    when(() => globalSettings.fetch())
+        .thenAnswer((_) async => _torSettings(socks.port));
     when(() => mempoolSettings.fetchByNetwork(network)).thenAnswer(
       (_) async => Ok(
         MempoolSettings.existing(network: network, useForFeeEstimation: true),
       ),
     );
-    when(
-      () => mempoolServers.fetchCustomServer(network),
-    ).thenAnswer((_) async => Ok(server));
+    when(() => mempoolServers.fetchCustomServer(network))
+        .thenAnswer((_) async => Ok(server));
 
     locator.registerSingleton<SettingsRepository>(globalSettings);
     locator.registerSingleton<MempoolSettingsRepository>(mempoolSettings);

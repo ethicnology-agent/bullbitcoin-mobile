@@ -423,9 +423,8 @@ final class _PayjoinRoles implements _PayjoinRuntimeContract {
       if (current == null) {
         return const Err(PayjoinSessionNotFoundFailure('Session not found'));
       }
-      return (await _engine.tryBroadcastOriginalTransaction(
-        current,
-      )).map(_toSession);
+      return (await _engine.tryBroadcastOriginalTransaction(current))
+          .map(_toSession);
     } catch (_) {
       return const Err(PayjoinBroadcastFailure('Broadcast failed'));
     }

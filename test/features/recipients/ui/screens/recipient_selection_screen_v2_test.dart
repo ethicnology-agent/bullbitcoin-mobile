@@ -12,8 +12,10 @@ import 'package:mocktail/mocktail.dart';
 class _MockRecipientsBloc extends MockBloc<RecipientsEvent, RecipientsState>
     implements RecipientsBloc {}
 
-typedef _SelectionHook =
-    Future<void>? Function(RecipientViewModel, {required bool isNew});
+typedef _SelectionHook = Future<void>? Function(
+  RecipientViewModel, {
+  required bool isNew,
+});
 
 void main() {
   setUpAll(() => registerFallbackValue(const RecipientsEvent.started()));

@@ -44,9 +44,8 @@ void main() {
         (_) async => Ok<PayjoinReceiverSession, PayjoinFailure>(session),
       );
 
-      final result = await ReceiveWithPayjoinUsecase(
-        receiver,
-      ).execute(walletId: 'wallet-1', address: 'bc1qaddress');
+      final result = await ReceiveWithPayjoinUsecase(receiver)
+          .execute(walletId: 'wallet-1', address: 'bc1qaddress');
 
       expect(result, isA<Ok<PayjoinReceiverSession, ReceiveFailure>>());
     });
@@ -60,9 +59,8 @@ void main() {
         ),
       );
 
-      final result = await ReceiveWithPayjoinUsecase(
-        receiver,
-      ).execute(walletId: 'wallet-1', address: 'bc1qaddress');
+      final result = await ReceiveWithPayjoinUsecase(receiver)
+          .execute(walletId: 'wallet-1', address: 'bc1qaddress');
 
       switch (result) {
         case Ok():
@@ -85,9 +83,8 @@ void main() {
         ),
       );
 
-      final result = await BroadcastOriginalTransactionUsecase(
-        sender,
-      ).execute('session-1');
+      final result = await BroadcastOriginalTransactionUsecase(sender)
+          .execute('session-1');
 
       switch (result) {
         case Ok():
@@ -106,9 +103,8 @@ void main() {
           PayjoinUnavailableFailure('Could not verify competing transactions'),
         ),
       );
-      final result = await BroadcastOriginalTransactionUsecase(
-        sender,
-      ).execute('session-1');
+      final result = await BroadcastOriginalTransactionUsecase(sender)
+          .execute('session-1');
       expect(
         (result as Err<PayjoinSession, ReceiveFailure>).failure,
         isA<ReceiveBroadcastOriginalTxVerificationFailure>(),
@@ -123,9 +119,8 @@ void main() {
         ),
       );
 
-      final result = await BroadcastOriginalTransactionUsecase(
-        sender,
-      ).execute('session-1');
+      final result = await BroadcastOriginalTransactionUsecase(sender)
+          .execute('session-1');
 
       switch (result) {
         case Ok():
@@ -150,9 +145,8 @@ void main() {
           ),
         );
 
-        final updates = WatchPayjoinUsecase(
-          sessions,
-        ).execute(ids: ['session-1']);
+        final updates = WatchPayjoinUsecase(sessions)
+            .execute(ids: ['session-1']);
 
         // Yielded, not thrown: an error on this stream would cancel the
         // subscription and freeze the payjoin state on the receive screen.
@@ -177,9 +171,9 @@ void main() {
         ]),
       );
 
-      final updates = await WatchPayjoinUsecase(
-        sessions,
-      ).execute(ids: [session.id]).toList();
+      final updates = await WatchPayjoinUsecase(sessions)
+          .execute(ids: [session.id])
+          .toList();
 
       expect(updates, hasLength(2));
       expect(updates.last, isA<Ok<PayjoinSession, ReceiveFailure>>());

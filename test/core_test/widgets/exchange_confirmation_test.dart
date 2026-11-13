@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:bb_mobile/core/exchange/domain/entity/order.dart';
 import 'package:bb_mobile/core/exchange/domain/entity/user_summary.dart';
 import 'package:bb_mobile/core/settings/domain/settings_entity.dart';
@@ -141,9 +142,8 @@ void main() {
         when(() => sellOrder.exchangeRateCurrency).thenReturn('CAD');
         when(() => payOrder.exchangeRateAmount).thenReturn(50000);
         when(() => payOrder.exchangeRateCurrency).thenReturn('CAD');
-        when(
-          () => sellOrder.payoutMethod,
-        ).thenReturn(OrderPaymentMethod.cadBalance);
+        when(() => sellOrder.payoutMethod)
+            .thenReturn(OrderPaymentMethod.cadBalance);
         when(() => sellOrder.bitcoinAddress).thenReturn(address);
         when(() => sellOrder.liquidAddress).thenReturn(null);
         when(() => sellOrder.payjoinBip21).thenReturn(null);

@@ -39,9 +39,8 @@ void main() {
     int? selectedDataPointIndex,
   }) async {
     final watchCurrencyChanges = _MockWatchCurrencyChangesUsecase();
-    when(
-      () => watchCurrencyChanges.execute(),
-    ).thenAnswer((_) => const Stream<String>.empty());
+    when(() => watchCurrencyChanges.execute())
+        .thenAnswer((_) => const Stream<String>.empty());
 
     final bitcoinPriceBloc = BitcoinPriceBloc(
       getSettingsUsecase: _MockGetSettingsUsecase(),

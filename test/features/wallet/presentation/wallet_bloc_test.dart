@@ -5,7 +5,9 @@ import 'package:bb_mobile/core/utils/result.dart';
 import 'package:bb_mobile/core/entities/signer_entity.dart';
 import 'package:bb_mobile/core/wallet/domain/entities/wallet.dart';
 import 'package:bb_mobile/core/wallet/domain/wallet_failure.dart';
+
 import 'dart:async';
+
 import 'package:bb_mobile/core/electrum/domain/value_objects/electrum_sync_result.dart';
 import 'package:bb_mobile/core/wallet/domain/usecases/check_backup_needed_usecase.dart';
 import 'package:bb_mobile/core/wallet/domain/usecases/check_wallet_syncing_usecase.dart';
@@ -187,24 +189,21 @@ void main() {
     },
   );
 
-  test(
-    'a failed wallet load is reported, not shown as an empty wallet',
-    () async {
-      // Before #1895 this state was invisible: WalletStatus.failure was never
-      // read by the UI, so a failed load rendered a 0-sat home screen that reads
-      // as "you have no wallets" rather than as an error.
-      final bloc = _blocWithFailingLoad(
-        const WalletStorageFailure('getWallets failed: SqliteException'),
-      );
-      addTearDown(bloc.close);
+  test('a failed wallet load is reported, not shown as an empty wallet', () async {
+    // Before #1895 this state was invisible: WalletStatus.failure was never
+    // read by the UI, so a failed load rendered a 0-sat home screen that reads
+    // as "you have no wallets" rather than as an error.
+    final bloc = _blocWithFailingLoad(
+      const WalletStorageFailure('getWallets failed: SqliteException'),
+    );
+    addTearDown(bloc.close);
 
-      bloc.add(const WalletStarted());
-      await pumpEventQueue();
+    bloc.add(const WalletStarted());
+    await pumpEventQueue();
 
-      expect(bloc.state.status, WalletStatus.failure);
-      expect(bloc.state.loadFailure, isA<WalletStorageFailure>());
-    },
-  );
+    expect(bloc.state.status, WalletStatus.failure);
+    expect(bloc.state.loadFailure, isA<WalletStorageFailure>());
+  });
 
   test('a failed sync round is reported, not silently dropped', () async {
     // The wallets themselves load, so the list stays correct — but a refresh
@@ -293,9 +292,8 @@ SyncWalletsUsecase _stubbedSync() {
   // mocktail needs a concrete SyncTrigger to match  against.
   registerFallbackValue(SyncTrigger.automatic);
   final sync = _MockSyncWalletsUsecase();
-  when(
-    () => sync.execute(trigger: any(named: 'trigger')),
-  ).thenAnswer((_) async => const Ok<void, WalletFailure>(null));
+  when(() => sync.execute(trigger: any(named: 'trigger')))
+      .thenAnswer((_) async => const Ok<void, WalletFailure>(null));
   return sync;
 }
 
@@ -362,14 +360,12 @@ WalletBloc _blocWithFailingSync(WalletFailure failure) {
 
   registerFallbackValue(SyncTrigger.automatic);
   final sync = _MockSyncWalletsUsecase();
-  when(
-    () => sync.execute(trigger: any(named: 'trigger')),
-  ).thenAnswer((_) async => Err<void, WalletFailure>(failure));
+  when(() => sync.execute(trigger: any(named: 'trigger')))
+      .thenAnswer((_) async => Err<void, WalletFailure>(failure));
 
   final syncing = _MockCheckWalletSyncingUsecase();
-  when(
-    () => syncing.execute(walletId: any(named: 'walletId')),
-  ).thenReturn(const Ok<bool, WalletFailure>(false));
+  when(() => syncing.execute(walletId: any(named: 'walletId')))
+      .thenReturn(const Ok<bool, WalletFailure>(false));
 
   return WalletBloc(
     getWalletsUsecase: getWallets,

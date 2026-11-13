@@ -20,6 +20,7 @@ import 'package:mocktail/mocktail.dart';
 
 import '../../sp_cubit_harness.dart';
 import '../../sp_test_streams.dart';
+
 import 'package:bb_mobile/generated/l10n/localization.dart';
 import 'package:bb_mobile/features/sp/domain/entities/sp_wallet_data.dart';
 
@@ -86,12 +87,10 @@ void main() {
     when(() => settingsCubit.stream).thenAnswer((_) => const Stream.empty());
     when(() => bitcoinPriceBloc.state).thenReturn(const BitcoinPriceState());
     when(() => bitcoinPriceBloc.stream).thenAnswer((_) => const Stream.empty());
-    when(
-      () => loadUsecase.execute(),
-    ).thenAnswer((_) async => Ok<SpWalletData, SpFailure>(_walletData()));
-    when(
-      () => harness.watchUsecase.execute(),
-    ).thenAnswer((_) => openSpNotificationStream());
+    when(() => loadUsecase.execute())
+        .thenAnswer((_) async => Ok<SpWalletData, SpFailure>(_walletData()));
+    when(() => harness.watchUsecase.execute())
+        .thenAnswer((_) => openSpNotificationStream());
 
     cubit = harness.build();
   });
@@ -352,9 +351,8 @@ void main() {
   ) async {
     final notifications = StreamController<SpNotification>.broadcast();
     addTearDown(notifications.close);
-    when(
-      () => harness.watchUsecase.execute(),
-    ).thenAnswer((_) => notifications.stream);
+    when(() => harness.watchUsecase.execute())
+        .thenAnswer((_) => notifications.stream);
     when(() => loadUsecase.execute()).thenAnswer(
       (_) async => Ok<SpWalletData, SpFailure>(
         _walletData(lastScannedHeight: 968876, chainTip: 970180),
@@ -381,9 +379,8 @@ void main() {
   ) async {
     final notifications = StreamController<SpNotification>.broadcast();
     addTearDown(notifications.close);
-    when(
-      () => harness.watchUsecase.execute(),
-    ).thenAnswer((_) => notifications.stream);
+    when(() => harness.watchUsecase.execute())
+        .thenAnswer((_) => notifications.stream);
     await cubit.load();
     await pumpPage(tester);
 

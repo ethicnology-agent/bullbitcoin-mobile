@@ -59,9 +59,8 @@ class BullAddressText extends StatelessWidget {
                 _truncated,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: Theme.of(
-                  context,
-                ).textTheme.labelMedium?.copyWith(color: colors.textMuted),
+                style: Theme.of(context).textTheme.labelMedium
+                    ?.copyWith(color: colors.textMuted),
               ),
             ),
             const SizedBox(width: 4),

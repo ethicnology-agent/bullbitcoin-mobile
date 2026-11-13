@@ -73,14 +73,13 @@ void main() {
     }
 
     Future<Result<PreparedPayBitcoinPayin, PayFailure>> run() =>
-        PreparePayBitcoinPayinUsecase(
-          prepareBitcoinSendUsecase: prepare,
-        ).execute(
-          walletId: 'wallet-1',
-          address: 'bc1qpayin',
-          networkFee: const NetworkFee.absolute(200),
-          amountSat: 100000,
-        );
+        PreparePayBitcoinPayinUsecase(prepareBitcoinSendUsecase: prepare)
+            .execute(
+              walletId: 'wallet-1',
+              address: 'bc1qpayin',
+              networkFee: const NetworkFee.absolute(200),
+              amountSat: 100000,
+            );
 
     test('a build failure is sanitized, reason kept for logs only', () async {
       stubFailure(const WalletTransactionBuildFailure(_rawReason));
@@ -238,9 +237,8 @@ void main() {
   group('BroadcastPayPayinUsecase', () {
     test('a rejected broadcast is sanitized, not quoted', () async {
       final broadcast = _MockBroadcastBitcoin();
-      when(
-        () => broadcast.execute(any(), isPsbt: any(named: 'isPsbt')),
-      ).thenThrow(Exception(_rawReason));
+      when(() => broadcast.execute(any(), isPsbt: any(named: 'isPsbt')))
+          .thenThrow(Exception(_rawReason));
 
       final result = await BroadcastPayPayinUsecase(
         broadcastBitcoinTransactionUsecase: broadcast,
@@ -256,9 +254,8 @@ void main() {
   group('LoadPayWalletUtxosUsecase', () {
     test('a utxo read failure is a value, not a throw', () async {
       final utxos = _MockGetWalletUtxos();
-      when(
-        () => utxos.execute(walletId: any(named: 'walletId')),
-      ).thenThrow(Exception(_rawReason));
+      when(() => utxos.execute(walletId: any(named: 'walletId')))
+          .thenThrow(Exception(_rawReason));
 
       final result = await LoadPayWalletUtxosUsecase(
         getWalletUtxosUsecase: utxos,
