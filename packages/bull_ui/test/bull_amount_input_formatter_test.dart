@@ -68,6 +68,33 @@ void main() {
       expect(value.selection, const TextSelection.collapsed(offset: 2));
     });
 
+    test('keeps the caret in place when the whole part is deleted', () {
+      final value = BullAmountInputFormatter('BTC').formatEditUpdate(
+        const TextEditingValue(
+          text: '5.25',
+          selection: TextSelection.collapsed(offset: 1),
+        ),
+        const TextEditingValue(
+          text: '.25',
+          selection: TextSelection.collapsed(offset: 0),
+        ),
+      );
+      expect(value.text, '0.25');
+      expect(value.selection, const TextSelection.collapsed(offset: 1));
+    });
+
+    test('leaves an invalid selection invalid', () {
+      final value = BullAmountInputFormatter('BTC').formatEditUpdate(
+        const TextEditingValue(text: ''),
+        const TextEditingValue(
+          text: '.5',
+          selection: TextSelection.collapsed(offset: -1),
+        ),
+      );
+      expect(value.text, '0.5');
+      expect(value.selection.isValid, isFalse);
+    });
+
     test('still rejects a leading separator for sats', () {
       expect(format(BullAmountInputFormatter('sats'), '.01'), '');
     });
