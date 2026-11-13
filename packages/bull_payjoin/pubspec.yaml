@@ -12,7 +12,7 @@ dependencies:
   bull_sdk:
     git:
       url: https://github.com/ethicnology-agent/bull_sdk
-      ref: f093cf3318c2c21cf730f514283f35cab290db73
+      ref: 1fac31fe9ed009cf0fee68061adaf902f14d15a1
       path: packages/bull_sdk
   crypto: ^3.0.7
   dio: ^5.9.0
@@ -24,7 +24,7 @@ dependencies:
   payjoin:
     git:
       url: https://github.com/ethicnology-agent/rust-payjoin
-      ref: c18a7696b682678dd86ac0a1130f14af48d188c9
+      ref: 0dbe3f781974c6c25d4e5314ca6d175e23ffcad6
       path: payjoin-ffi/dart
   primitives:
   sqlite3: ^3.5.2

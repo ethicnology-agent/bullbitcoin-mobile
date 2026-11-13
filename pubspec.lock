@@ -133,8 +133,8 @@ packages:
     dependency: transitive
     description:
       path: "."
-      ref: db1a841d4e5419d471a45597643324d188d352ac
-      resolved-ref: db1a841d4e5419d471a45597643324d188d352ac
+      ref: "94bd6ead0a3a15fe399acc4c0e8d1793397d7bde"
+      resolved-ref: "94bd6ead0a3a15fe399acc4c0e8d1793397d7bde"
       url: "https://github.com/ethicnology-agent/bdk-dart"
     source: git
     version: "1.0.1"
@@ -190,8 +190,8 @@ packages:
     dependency: "direct main"
     description:
       path: "packages/bitbox-transport"
-      ref: f093cf3318c2c21cf730f514283f35cab290db73
-      resolved-ref: f093cf3318c2c21cf730f514283f35cab290db73
+      ref: "1fac31fe9ed009cf0fee68061adaf902f14d15a1"
+      resolved-ref: "1fac31fe9ed009cf0fee68061adaf902f14d15a1"
       url: "https://github.com/ethicnology-agent/bull_sdk"
     source: git
     version: "0.1.0"
@@ -256,8 +256,8 @@ packages:
     dependency: "direct main"
     description:
       path: "packages/boltz-stream"
-      ref: f093cf3318c2c21cf730f514283f35cab290db73
-      resolved-ref: f093cf3318c2c21cf730f514283f35cab290db73
+      ref: "1fac31fe9ed009cf0fee68061adaf902f14d15a1"
+      resolved-ref: "1fac31fe9ed009cf0fee68061adaf902f14d15a1"
       url: "https://github.com/ethicnology-agent/bull_sdk"
     source: git
     version: "0.1.0"
@@ -345,8 +345,8 @@ packages:
     dependency: "direct main"
     description:
       path: "packages/bull_sdk"
-      ref: f093cf3318c2c21cf730f514283f35cab290db73
-      resolved-ref: f093cf3318c2c21cf730f514283f35cab290db73
+      ref: "1fac31fe9ed009cf0fee68061adaf902f14d15a1"
+      resolved-ref: "1fac31fe9ed009cf0fee68061adaf902f14d15a1"
       url: "https://github.com/ethicnology-agent/bull_sdk"
     source: git
     version: "1.0.0+1"
@@ -1550,8 +1550,8 @@ packages:
     dependency: transitive
     description:
       path: "packages/onion"
-      ref: f093cf3318c2c21cf730f514283f35cab290db73
-      resolved-ref: f093cf3318c2c21cf730f514283f35cab290db73
+      ref: "1fac31fe9ed009cf0fee68061adaf902f14d15a1"
+      resolved-ref: "1fac31fe9ed009cf0fee68061adaf902f14d15a1"
       url: "https://github.com/ethicnology-agent/bull_sdk"
     source: git
     version: "0.1.0"
@@ -1647,8 +1647,8 @@ packages:
     dependency: transitive
     description:
       path: "payjoin-ffi/dart"
-      ref: c18a7696b682678dd86ac0a1130f14af48d188c9
-      resolved-ref: c18a7696b682678dd86ac0a1130f14af48d188c9
+      ref: "0dbe3f781974c6c25d4e5314ca6d175e23ffcad6"
+      resolved-ref: "0dbe3f781974c6c25d4e5314ca6d175e23ffcad6"
       url: "https://github.com/ethicnology-agent/rust-payjoin"
     source: git
     version: "0.26.0"
@@ -1865,8 +1865,8 @@ packages:
     dependency: "direct main"
     description:
       path: "packages/satoshifier"
-      ref: f093cf3318c2c21cf730f514283f35cab290db73
-      resolved-ref: f093cf3318c2c21cf730f514283f35cab290db73
+      ref: "1fac31fe9ed009cf0fee68061adaf902f14d15a1"
+      resolved-ref: "1fac31fe9ed009cf0fee68061adaf902f14d15a1"
       url: "https://github.com/ethicnology-agent/bull_sdk"
     source: git
     version: "0.0.1"
