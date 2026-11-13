@@ -1,5 +1,6 @@
 import 'dart:io' show HttpDate, HttpException, HttpHeaders;
 
+import 'package:bull_logger/bull_logger.dart' show log;
 import 'package:clock/clock.dart';
 import 'package:dio/dio.dart';
 
@@ -12,21 +13,13 @@ import 'package:dio/dio.dart';
 /// expired and Confirm is refused in a loop. `OrderModel.toEntity` subtracts
 /// [offset] from the deadline so those comparisons hold.
 ///
-/// `Date` has one-second resolution and is stamped before the response travels,
-/// so a correct clock measures a small negative offset; anything within
-/// [tolerance] counts as no offset, leaving correctly set devices unchanged.
+/// `Date` has one-second resolution, so anything within [tolerance] counts as
+/// no offset, leaving correctly set devices unchanged.
 class ExchangeClockOffset {
   static const tolerance = Duration(seconds: 10);
+  static const _sentAtKey = 'exchangeClockOffsetSentAt';
 
   Duration _offset = Duration.zero;
-
-  /// Server time minus device time; zero while within [tolerance].
-  Duration get offset => _offset;
-
-  void observe({required DateTime serverTime, required DateTime deviceTime}) {
-    final measured = serverTime.difference(deviceTime);
-    _offset = measured.abs() <= tolerance ? Duration.zero : measured;
-  }
 
   /// Measures the offset from every response, errors included: an error
   /// response carries the server's `Date` just the same. The device time is
@@ -50,7 +43,25 @@ class ExchangeClockOffset {
     },
   );
 
-  static const _sentAtKey = 'exchangeClockOffsetSentAt';
+  /// Server time minus device time; zero while within [tolerance].
+  Duration get offset => _offset;
+
+  /// Whether the device clock is off by more than [tolerance].
+  bool get isDeviceClockOff => _offset != Duration.zero;
+
+  void observe({required DateTime serverTime, required DateTime deviceTime}) {
+    final measured = serverTime.difference(deviceTime);
+    final next = measured.abs() <= tolerance ? Duration.zero : measured;
+    if ((next == Duration.zero) != (_offset == Duration.zero)) {
+      log.fine(
+        next == Duration.zero
+            ? 'Device clock matches the exchange again'
+            : 'Device clock is off from the exchange: '
+                  'deviceAheadSeconds=${-next.inSeconds}',
+      );
+    }
+    _offset = next;
+  }
 
   void _observeDateHeader(Headers headers, RequestOptions request) {
     // `Headers.value` throws on a repeated header, and a throw here would
@@ -67,9 +78,14 @@ class ExchangeClockOffset {
     }
     final receivedAt = clock.now();
     final sentAt = request.extra[_sentAtKey];
-    final deviceTime = sentAt is DateTime && !sentAt.isAfter(receivedAt)
-        ? sentAt.add(receivedAt.difference(sentAt) ~/ 2)
-        : receivedAt;
-    observe(serverTime: serverTime, deviceTime: deviceTime);
+    if (sentAt is! DateTime || sentAt.isAfter(receivedAt)) {
+      observe(serverTime: serverTime, deviceTime: receivedAt);
+      return;
+    }
+    final roundTrip = receivedAt.difference(sentAt);
+    // A round trip longer than the tolerance cannot place the server's stamp
+    // within it; keep the previous measurement.
+    if (roundTrip > tolerance) return;
+    observe(serverTime: serverTime, deviceTime: sentAt.add(roundTrip ~/ 2));
   }
 }
