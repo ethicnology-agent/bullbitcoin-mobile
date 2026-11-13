@@ -35,9 +35,11 @@ subprojects {
             }
         }
 
-        tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-            kotlinOptions {
-                jvmTarget = rootProject.properties['android.jvmTarget']
+        tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile).configureEach {
+            compilerOptions {
+                jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.fromTarget(
+                    rootProject.properties['android.jvmTarget'].toString()
+                ))
             }
         }
     }

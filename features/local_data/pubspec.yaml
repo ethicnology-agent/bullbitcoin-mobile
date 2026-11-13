@@ -19,7 +19,7 @@ dependencies:
   bull_logger:
   bull_sqlite:
   bull_ui:
-  drift: 2.34.0
+  drift: ^2.35.4
   drift_flutter: ^0.3.1
   intl: any
   meta: ^1.17.0

@@ -9,7 +9,7 @@ environment:
 resolution: workspace
 
 dependencies:
-  drift: 2.34.0
+  drift: ^2.35.4
   # `fsync` of a directory, which `dart:io` does not offer. Already in the
   # workspace lockfile.
   ffi: ^2.2.0
