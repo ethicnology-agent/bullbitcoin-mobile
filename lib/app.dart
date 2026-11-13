@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:bb_mobile/design_compatibility_builder.dart';
+
 import 'package:bb_mobile/core/settings/domain/settings_entity.dart';
 import 'package:bb_mobile/core/themes/app_theme.dart';
 import 'package:bb_mobile/core/utils/constants.dart';
@@ -11,7 +13,7 @@ import 'package:bb_mobile/features/settings/presentation/bloc/settings_cubit.dar
 import 'package:bb_mobile/features/settings/ui/widgets/settings_failure_listener.dart';
 import 'package:bb_mobile/features/support/public/support_facade.dart';
 import 'package:bb_mobile/features/wallet/presentation/bloc/wallet_bloc.dart';
-import 'package:bb_mobile/generated/l10n/localization.dart';
+import 'package:bb_mobile/localizations.dart';
 import 'package:bb_mobile/locator.dart';
 import 'package:bb_mobile/router.dart';
 import 'package:bull_logger/bull_logger.dart';
@@ -20,7 +22,7 @@ import 'package:bull_payjoin/bull_payjoin.dart';
 import 'package:bull_tor/tor_adapter.dart' as tor;
 import 'package:bull_ui/bull_ui.dart' show BullSupportScope;
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart' show appFlavor;
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -176,14 +178,21 @@ class _BullBitcoinWalletAppState extends State<BullBitcoinWalletApp> {
                     theme: AppTheme.themeData(appThemeType),
                     locale: language?.locale,
                     localizationsDelegates: [
-                      ...AppLocalizations.localizationsDelegates,
+                      ...appLocalizationsDelegates,
                       LogsLocalizations.delegate,
                     ],
                     supportedLocales: AppLocalizations.supportedLocales,
                     builder: (context, child) {
-                      final app = BullSupportScope(
-                        onContactSupport: SupportFacade.contactSupport,
-                        child: AppStartupWidget(app: child!),
+                      final routedChild = child;
+                      if (routedChild == null) {
+                        return buildDesignCompatibility(context, null);
+                      }
+                      final app = buildDesignCompatibility(
+                        context,
+                        BullSupportScope(
+                          onContactSupport: SupportFacade.contactSupport,
+                          child: AppStartupWidget(app: routedChild),
+                        ),
                       );
                       // Mark beta-channel builds (`make android beta`) with a
                       // corner banner. Release mode drops the Flutter debug

@@ -9,7 +9,7 @@ import 'package:bb_mobile/startup_wizard.dart';
 import 'package:bull_local_data/bull_local_data.dart';
 import 'package:bull_logger/bull_logger.dart';
 import 'package:bull_ui/bull_ui.dart' show BullSupportScope;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:primitives/primitives.dart';
 
 Future<void> startApp() async {
@@ -90,7 +90,10 @@ Widget _localDataApp(LocalDataFailure failure, LocalDatabasePaths paths) =>
     MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.themeData(AppThemeType.dark),
-      localizationsDelegates: LocalDataLocalizations.localizationsDelegates,
+      localizationsDelegates: [
+        LocalDataLocalizations.delegate,
+        ...GlobalMaterialLocalizations.delegates,
+      ],
       supportedLocales: LocalDataLocalizations.supportedLocales,
       home: BullSupportScope(
         onContactSupport: SupportFacade.contactSupport,

@@ -9,9 +9,9 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
 
 class GoogleDriveAppDatasource {
-  static final _google = GoogleSignIn(
-    scopes: ['https://www.googleapis.com/auth/drive.appdata'],
-  );
+  static final _google = GoogleSignIn.instance;
+  static final _initialized = _google.initialize();
+  static const _scopes = ['https://www.googleapis.com/auth/drive.appdata'];
 
   drive.DriveApi? _driveApi;
 
@@ -21,11 +21,12 @@ class GoogleDriveAppDatasource {
 
   Future<void> connect() async {
     try {
-      final account = await _google.signIn();
-      if (account == null) throw 'Sign-in failed';
-
-      final client = await _google.authenticatedClient();
-      if (client == null) throw 'Failed to get authenticated client';
+      await _initialized;
+      final account = await _google.authenticate(scopeHint: _scopes);
+      final authorization =
+          await account.authorizationClient.authorizationForScopes(_scopes) ??
+          await account.authorizationClient.authorizeScopes(_scopes);
+      final client = authorization.authClient(scopes: _scopes);
 
       _driveApi = drive.DriveApi(client);
     } catch (e) {
@@ -40,6 +41,7 @@ class GoogleDriveAppDatasource {
   }
 
   Future<void> disconnect() async {
+    await _initialized;
     await _google.disconnect();
     _driveApi = null;
   }

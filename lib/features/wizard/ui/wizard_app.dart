@@ -8,8 +8,8 @@ import 'package:bb_mobile/features/wizard/domain/usecase/mark_wizard_complete_us
 import 'package:bb_mobile/features/wizard/domain/usecase/save_pending_wizard_choices_usecase.dart';
 import 'package:bb_mobile/features/wizard/presentation/bloc/wizard_bloc.dart';
 import 'package:bb_mobile/features/wizard/ui/screens/wizard_screen.dart';
-import 'package:bb_mobile/generated/l10n/localization.dart';
-import 'package:flutter/material.dart';
+import 'package:bb_mobile/localizations.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Standalone app shown before `Bull.init` runs to every user whose
@@ -76,7 +76,7 @@ class _WizardAppView extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           theme: AppTheme.themeData(appThemeType),
           locale: state.choices.language.locale,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: const WizardScreen(),
         );

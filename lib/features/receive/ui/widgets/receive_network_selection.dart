@@ -3,7 +3,7 @@ import 'package:bb_mobile/core/wallet/domain/entities/wallet.dart';
 import 'package:bb_mobile/features/receive/domain/enums/receive_network_type.dart';
 import 'package:bb_mobile/features/receive/domain/extensions/wallet_receive_extensions.dart';
 import 'package:bb_mobile/features/receive/ui/receive_router.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:go_router/go_router.dart';
 import 'package:bull_ui/bull_ui.dart' show BullSegmented;
 

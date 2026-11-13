@@ -7,7 +7,7 @@ import 'package:bb_mobile/features/recoverbull/presentation/recoverbull_failure_
 import 'package:bb_mobile/features/recoverbull/ui/pages/vault_created_page.dart';
 import 'package:bb_mobile/features/recoverbull/ui/pages/vault_selected_page.dart';
 import 'package:bb_mobile/features/recoverbull/ui/widgets/key_server_status_widget.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:bull_ui/bull_ui.dart'
     show

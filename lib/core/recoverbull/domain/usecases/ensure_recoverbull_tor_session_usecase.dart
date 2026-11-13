@@ -56,7 +56,7 @@ class EnsureRecoverBullTorSessionUsecase {
       final readiness = restartEmbedded
           ? await _embeddedTor.retry()
           : await _embeddedTor.ensureReady();
-      return switch (readiness) {
+      return await switch (readiness) {
         TorReady(:final route) when route.source == TorSource.embedded =>
           _openSession(),
         TorUnavailable(:final failure) => Err(

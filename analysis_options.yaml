@@ -26,6 +26,11 @@ analyzer:
   exclude:
     - lib/**/*.g.dart
     - lib/**/*.freezed.dart
+    # SDK-generated localization lists retain deprecated design delegates.
+    # Consumers use the standalone list in lib/localizations.dart instead.
+    - lib/generated/l10n/**
+    - features/logs/lib/generated/l10n/**
+    - features/local_data/lib/generated/l10n/**
     - pubspec.yaml
     - build/**
     - android/**

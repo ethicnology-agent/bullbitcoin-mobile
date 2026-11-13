@@ -10,7 +10,7 @@ import 'package:bb_mobile/features/recipients/presentation/models/cad_biller_vie
 import 'package:bb_mobile/features/recipients/presentation/models/recipient_form_data_model.dart';
 import 'package:bb_mobile/features/recipients/presentation/recipients_failure_l10n.dart';
 import 'package:bull_ui/bull_ui.dart' show Gap;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class BillPaymentCadForm extends StatefulWidget {

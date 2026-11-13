@@ -4,7 +4,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:bull_ui/src/theme/bull_icon.dart';
 import 'package:bull_ui/src/theme/bull_theme.dart';
 import 'package:bull_ui/src/theme/bull_shapes.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Toast utility shown at the top of the screen, below the status bar, with an
 /// optional leading icon and an action (`actionLabel` + `onAction`), e.g. the

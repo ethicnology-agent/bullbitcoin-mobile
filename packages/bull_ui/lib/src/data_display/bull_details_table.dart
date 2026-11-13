@@ -1,7 +1,7 @@
 import 'package:bull_ui/src/feedback/bull_shimmer.dart';
 import 'package:bull_ui/src/feedback/bull_snack_bar.dart';
 import 'package:bull_ui/src/theme/bull_theme.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:bull_ui/src/layout/gap.dart';
 

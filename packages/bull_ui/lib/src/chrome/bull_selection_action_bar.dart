@@ -1,6 +1,6 @@
 import 'package:bull_ui/src/theme/bull_theme.dart';
 import 'package:bull_ui/src/theme/bull_tokens.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Sticky bottom bar with a summary line above a row of action buttons
 /// (typically `BullToolButton`s). **New (key gap).** Generic slots — the

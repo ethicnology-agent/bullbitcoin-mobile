@@ -10,7 +10,7 @@ import 'package:bip39_mnemonic/bip39_mnemonic.dart' as bip39;
 import 'package:bull_ui/bull_ui.dart'
     show BullButton, BullLabeledTextInput, BullShapesX, BullText, Gap;
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 typedef Mnemonic = ({
   String label,

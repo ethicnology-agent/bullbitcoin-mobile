@@ -21,7 +21,7 @@ final class HasActiveCustomBitcoinOnionServerUsecase {
           isLiquid: false,
         ),
       );
-      return result.fold(
+      return await result.fold(
         (servers) => servers.any(
           (server) => server.isCustom && ElectrumServerUrl(server.url).isOnion,
         ),

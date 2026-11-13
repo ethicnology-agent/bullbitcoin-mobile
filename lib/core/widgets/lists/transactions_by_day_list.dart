@@ -2,7 +2,7 @@ import 'package:bb_mobile/core/themes/app_theme.dart';
 import 'package:bb_mobile/core/themes/fonts.dart';
 import 'package:bb_mobile/core/utils/transaction_day_label.dart';
 import 'package:bull_ui/bull_ui.dart' show BullText, Gap;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Items grouped by day, each group under its day label.
 ///

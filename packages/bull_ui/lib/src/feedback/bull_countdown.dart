@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:bull_ui/src/theme/bull_theme.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A `m:ss` countdown to a [DateTime], stopping at `0:00`.
 ///

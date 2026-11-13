@@ -5,7 +5,7 @@ import 'package:bb_mobile/features/recoverbull/ui/pages/fetch_vault_key_page.dar
 import 'package:bb_mobile/features/recoverbull/ui/pages/vault_provider_selection_page.dart';
 import 'package:bb_mobile/features/recoverbull/ui/widgets/key_server_status_widget.dart';
 import 'package:bb_mobile/features/recoverbull/utils/password_validator.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:bull_ui/bull_ui.dart'
     show BullButton, BullDialPad, BullShapesX, BullText, BullTopBar, Gap;
