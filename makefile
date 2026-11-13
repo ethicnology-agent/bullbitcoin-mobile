@@ -442,7 +442,7 @@ integration-test-regtest-linux:
 integration-test-regtest:
 	@test -n "$(REGTEST_DEVICE)" || (echo "Set REGTEST_DEVICE to the reserved Android transport serial" >&2; exit 1)
 	@python3 tools/testing/pinned_rust.py -- fvm dart run tools/gen_all_test.dart
-	@python3 tools/testing/pinned_rust.py -- fvm flutter test integration_test/all_test.dart --flavor regtest --dart-define=BULL_REGTEST_VALIDATION=true -d "$(REGTEST_DEVICE)" --reporter=expanded
+	@python3 tools/testing/pinned_rust.py -- fvm flutter test integration_test/all_test.dart --flavor regtest --dart-define=BULL_REGTEST_VALIDATION=true -d "$(REGTEST_DEVICE)" --reporter=expanded --no-uninstall
 
 android-regtest-debug:
 	@python3 tools/testing/pinned_rust.py -- fvm flutter build apk --debug --flavor regtest --target-platform android-arm64
