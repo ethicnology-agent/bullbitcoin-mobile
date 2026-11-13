@@ -1,6 +1,6 @@
 import 'package:bb_mobile/features/settings/domain/settings_entity.dart';
 import 'package:bull_recoverbull/bull_recoverbull.dart' as rb;
-import 'package:bb_mobile/core/utils/result.dart';
+import 'package:primitives/primitives.dart' show Err, Ok, Result;
 import 'package:bb_mobile/core/wallet/data/repositories/wallet_repository.dart';
 import 'package:bb_mobile/features/app_startup/domain/app_startup_failure.dart';
 import 'package:bb_mobile/features/app_startup/domain/app_startup_wallet_port.dart';

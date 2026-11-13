@@ -4,7 +4,7 @@ import 'package:bull_logger/bull_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:bull_tor/tor.dart';
-import 'package:primitives/primitives.dart' show NetworkEnv;
+import 'package:primitives/primitives.dart' show NetworkEnv, BitcoinUnit;
 
 part 'settings_entity.freezed.dart';
 
@@ -38,27 +38,6 @@ enum Environment {
 
 final class UnsupportedEnvironmentException implements Exception {
   const UnsupportedEnvironmentException();
-}
-
-enum BitcoinUnit {
-  btc(code: 'BTC', decimals: 8),
-  sats(code: 'sats', decimals: 0);
-
-  final String code;
-  final int decimals;
-
-  const BitcoinUnit({required this.code, required this.decimals});
-
-  factory BitcoinUnit.fromName(String name) {
-    return BitcoinUnit.values.firstWhere(
-      (bitcoinUnit) => bitcoinUnit.name == name,
-    );
-  }
-  factory BitcoinUnit.fromCode(String code) {
-    return BitcoinUnit.values.firstWhere(
-      (bitcoinUnit) => bitcoinUnit.code == code,
-    );
-  }
 }
 
 enum Language {

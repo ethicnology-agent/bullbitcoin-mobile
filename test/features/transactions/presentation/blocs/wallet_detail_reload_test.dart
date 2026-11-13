@@ -20,7 +20,7 @@ import 'package:bb_mobile/features/wallet/public/wallet_facade.dart';
 import 'package:bull_payjoin/bull_payjoin.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:primitives/primitives.dart' show BitcoinNetwork;
+import 'package:primitives/primitives.dart' show BitcoinNetwork, BitcoinUnit;
 
 class _Settings extends Mock implements SettingsRepository {}
 

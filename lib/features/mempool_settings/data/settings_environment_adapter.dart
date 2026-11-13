@@ -1,11 +1,16 @@
 import 'package:primitives/primitives.dart'
-    show BitcoinNetwork, NetworkCapabilities, NetworkCapability;
+    show
+        BitcoinNetwork,
+        Err,
+        NetworkCapabilities,
+        NetworkCapability,
+        Ok,
+        Result;
 import 'package:bb_mobile/core/mempool/domain/errors/mempool_failure.dart';
 import 'package:bb_mobile/core/mempool/domain/ports/environment_port.dart';
 import 'package:bb_mobile/core/settings/domain/repositories/settings_repository.dart';
 import 'package:bb_mobile/features/settings/domain/settings_entity.dart';
 import 'package:bull_logger/bull_logger.dart';
-import 'package:bb_mobile/core/utils/result.dart';
 
 class SettingsEnvironmentAdapter implements MempoolEnvironmentPort {
   final SettingsRepository _settingsRepository;

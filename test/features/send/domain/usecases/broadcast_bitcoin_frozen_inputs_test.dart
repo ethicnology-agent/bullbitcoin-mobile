@@ -1,3 +1,4 @@
+import 'package:primitives/primitives.dart' show BitcoinUnit;
 import 'dart:io';
 import 'package:bb_mobile/features/send/domain/broadcast_failure.dart';
 import 'package:bb_mobile/features/send/data/bitcoin_blockchain_repository.dart';

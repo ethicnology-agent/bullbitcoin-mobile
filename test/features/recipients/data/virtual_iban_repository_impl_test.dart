@@ -1,4 +1,4 @@
-import 'package:bb_mobile/core/utils/result.dart';
+import 'package:primitives/primitives.dart' show Err, Ok;
 import 'package:bb_mobile/features/recipients/data/bullbitcoin_api_virtual_iban_datasource.dart';
 import 'package:bb_mobile/features/recipients/data/virtual_iban_repository_impl.dart';
 import 'package:bb_mobile/features/recipients/domain/entities/virtual_iban.dart';

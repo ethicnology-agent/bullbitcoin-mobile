@@ -8,7 +8,7 @@ import 'package:bb_mobile/features/swap/domain/usecases/rescue_swap_usecase.dart
 import 'package:bb_mobile/features/swap/domain/swap_failure.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:primitives/primitives.dart' show Err;
+import 'package:primitives/primitives.dart' show Err, BitcoinUnit;
 
 class _Settings extends Mock implements SettingsRepository {}
 

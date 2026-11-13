@@ -1,5 +1,5 @@
 import 'package:bb_mobile/features/recipients/domain/recipients_failure.dart';
-import 'package:bb_mobile/core/utils/result.dart';
+import 'package:primitives/primitives.dart' show Err, Ok, Result;
 import 'package:meta/meta.dart';
 
 final class InteracSecurityDetails {

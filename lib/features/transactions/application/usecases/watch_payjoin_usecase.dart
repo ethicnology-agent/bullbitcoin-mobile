@@ -1,4 +1,4 @@
-import 'package:bb_mobile/core/utils/result.dart';
+import 'package:primitives/primitives.dart' show Err, Ok, Result;
 import 'package:bb_mobile/features/transactions/domain/transaction_failure.dart';
 import 'package:bull_payjoin/bull_payjoin.dart';
 import 'package:bull_logger/bull_logger.dart';
