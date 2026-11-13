@@ -222,6 +222,36 @@ void main() {
     }
   });
 
+  test(
+    'buildPsbt reports an empty wallet as having no spendable inputs',
+    () async {
+      final empty =
+          WalletModel.publicBdk(
+                id: 'bdk-wallet-datasource-empty-test',
+                externalDescriptor: walletModel.externalDescriptor,
+                internalDescriptor: walletModel.internalDescriptor,
+                network: walletModel.network,
+              )
+              as PublicBdkWalletModel;
+      final native = await BdkTestStore.createWallet(empty);
+      expect(native.listUnspent(), isEmpty);
+      await BdkTestStore.saveWallet(native, empty.hexId);
+      native.dispose();
+      final datasource = BdkWalletDatasource(
+        readWallet: BdkTestStore.createWallet,
+      );
+
+      await expectLater(
+        datasource.buildPsbt(
+          wallet: empty,
+          recipients: _fixedRecipients(10000),
+          networkFee: const NetworkFee.relativeSatPerKwu(1000),
+        ),
+        throwsA(isA<NoSpendableUtxoException>()),
+      );
+    },
+  );
+
   test('last revealed index read does not reveal an address', () async {
     final native = await BdkTestStore.createWallet(walletModel);
     final datasource = BdkWalletDatasource(readWallet: (_) async => native);
