@@ -988,6 +988,10 @@ void main() {
 
   group('PayBloc — order deadline', () {
     test('a quote past its deadline is never paid', () async {
+      final previousLogger = log;
+      final logger = _MockLogger();
+      log = logger;
+      addTearDown(() => log = previousLogger);
       when(
         () => payOrder.confirmationDeadline,
       ).thenReturn(DateTime.now().subtract(const Duration(seconds: 1)));
@@ -1002,6 +1006,15 @@ void main() {
       bloc.add(const PayEvent.sendPaymentConfirmed());
       await Future<void>.delayed(const Duration(milliseconds: 100));
 
+      verify(
+        () => logger.fine(
+          any(
+            that: matches(
+              r'^Pay confirm refused: failure=PayQuoteExpiredFailure, broadcast=false, secondsToDeadline=-?[0-9]+$',
+            ),
+          ),
+        ),
+      ).called(1);
       // The exchange expires the order at its deadline and does not credit a
       // payin sent after it.
       verifyNever(

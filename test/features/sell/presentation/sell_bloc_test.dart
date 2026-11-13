@@ -1052,6 +1052,10 @@ void main() {
   );
 
   test('a failure past the price-lock deadline asks for a refresh', () async {
+    final previousLogger = log;
+    final logger = _MockLogger();
+    log = logger;
+    addTearDown(() => log = previousLogger);
     // The countdown fires onTimeout once, and _onOrderRefreshTimePassed skipped
     // that one refresh because a confirmation was in flight. Nothing else would
     // ask again, so the bloc has to.
@@ -1087,6 +1091,15 @@ void main() {
     bloc.add(const SellEvent.sendPaymentConfirmed());
     await Future<void>.delayed(const Duration(milliseconds: 200));
 
+    verify(
+      () => logger.fine(
+        any(
+          that: matches(
+            r'^Sell confirm refused: failure=SellQuoteExpiredFailure, broadcast=false, secondsToDeadline=-?[0-9]+$',
+          ),
+        ),
+      ),
+    ).called(1);
     verify(
       () => refreshSellOrder.execute(
         orderId: 'order-1',

@@ -11,6 +11,7 @@ import 'package:bb_mobile/features/buy/domain/load_buy_context_usecase.dart';
 import 'package:bb_mobile/features/buy/domain/label_completed_buy_order_usecase.dart';
 import 'package:bb_mobile/features/buy/domain/refresh_buy_order_usecase.dart';
 import 'package:bb_mobile/features/buy/presentation/buy_bloc.dart';
+import 'package:bull_logger/bull_logger.dart';
 import 'package:clock/clock.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -52,6 +53,8 @@ class _SeedableBuyBloc extends BuyBloc {
 
   void seed(BuyState state) => emit(state);
 }
+
+class _MockLogger extends Mock implements Logger {}
 
 class _MockBuyOrder extends Mock implements BuyOrder {}
 
@@ -223,10 +226,23 @@ void main() {
     });
 
     test('a lapsed quote is refreshed, never confirmed', () async {
+      final previousLogger = log;
+      final logger = _MockLogger();
+      log = logger;
+      addTearDown(() => log = previousLogger);
       bloc.add(const BuyEvent.confirmOrder());
       await pumpEventQueue();
       verifyNever(() => confirm.execute(orderId: 'quote-order'));
       verify(refreshCall).called(1);
+      verify(
+        () => logger.fine(
+          any(
+            that: matches(
+              r'^Buy confirm refused: failure=BuyQuoteExpiredFailure, secondsToDeadline=-?[0-9]+$',
+            ),
+          ),
+        ),
+      ).called(1);
       expect(bloc.state.failure, isA<BuyQuoteExpiredFailure>());
     });
 
