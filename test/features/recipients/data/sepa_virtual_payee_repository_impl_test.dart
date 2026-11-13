@@ -1,3 +1,5 @@
+import 'package:bb_mobile/core/exchange/data/exchange_authentication.dart';
+import 'package:bb_mobile/core/exchange/domain/exchange_api_key_failure.dart';
 import 'package:bb_mobile/core/utils/result.dart';
 import 'package:bb_mobile/features/recipients/data/bullbitcoin_api_sepa_virtual_payee_datasource.dart';
 import 'package:bb_mobile/features/recipients/data/sepa_virtual_payee_repository_impl.dart';
@@ -73,6 +75,61 @@ void main() {
       options: any(named: 'options'),
     ),
   ).captured.cast<Map<String, dynamic>>();
+
+  group('credential refusals', () {
+    for (final unavailable in [false, true]) {
+      test(
+        'preserves ${unavailable ? 'unavailable' : 'missing'} credentials',
+        () async {
+          when(
+            () => mainnet.post<dynamic>(
+              any(),
+              data: any(named: 'data'),
+              options: any(named: 'options'),
+            ),
+          ).thenThrow(
+            DioException(
+              requestOptions: RequestOptions(path: '/ak/api-recipients'),
+              error: ExchangeAuthenticationException(
+                unavailable ? const ExchangeApiKeyReadFailure() : null,
+              ),
+            ),
+          );
+
+          final found = await repository.findStatus(
+            recipientId: 'r-1',
+            isTestnet: false,
+          );
+          final activated = await repository.activate(
+            recipientId: 'r-1',
+            isTestnet: false,
+          );
+
+          expect(
+            (found as Err<SepaVirtualPayeeStatus?, RecipientsFailure>).failure,
+            unavailable
+                ? isA<RecipientsLoadFailure>().having(
+                    (failure) => failure.logMessage,
+                    'safe diagnostic',
+                    'Exchange credential unavailable',
+                  )
+                : isA<RecipientsNotAuthenticatedFailure>(),
+          );
+          expect(
+            (activated as Err<SepaVirtualPayeeStatus, RecipientsFailure>)
+                .failure,
+            unavailable
+                ? isA<RecipientsUnexpectedFailure>().having(
+                    (failure) => failure.logMessage,
+                    'safe diagnostic',
+                    'Exchange credential unavailable',
+                  )
+                : isA<RecipientsNotAuthenticatedFailure>(),
+          );
+        },
+      );
+    }
+  });
 
   group('activate', () {
     test('asks the selected environment to activate the recipient', () async {
@@ -153,49 +210,19 @@ void main() {
       expect(await statusOf('r-2'), SepaVirtualPayeeStatus.active);
     });
 
-    test('refreshes a saved pending status from Fiat Republic', () async {
+    test('reads a pending status without activating again', () async {
       stubPages(mainnet, [
         _page([_payee('r-1', status: 'CREATED')], 1),
-        _response({
-          'result': {'element': _payee('r-1', status: 'ACTIVE')},
-        }),
-      ]);
-
-      expect(await statusOf('r-1'), SepaVirtualPayeeStatus.active);
-      final requests = sentRequests(mainnet);
-      expect(requests.map((request) => request['method']), [
-        'listRecipientsFiat',
-        'activateSepaVirtualPayee',
-      ]);
-      expect(requests.last['params'], {'recipientId': 'r-1'});
-    });
-
-    test('keeps waiting when the refreshed payee is still pending', () async {
-      stubPages(mainnet, [
-        _page([_payee('r-1', status: 'CREATED')], 1),
+        // If the old code reactivates, let it finish so the request assertion exposes the extra call.
         _response({
           'result': {'element': _payee('r-1', status: 'CREATED')},
         }),
       ]);
 
       expect(await statusOf('r-1'), SepaVirtualPayeeStatus.pending);
-    });
-
-    test('a refused pending-status refresh is a load failure', () async {
-      stubPages(mainnet, [
-        _page([_payee('r-1', status: 'CREATED')], 1),
-        _refusal,
+      expect(sentRequests(mainnet).map((request) => request['method']), [
+        'listRecipientsFiat',
       ]);
-
-      final result = await repository.findStatus(
-        recipientId: 'r-1',
-        isTestnet: false,
-      );
-
-      expect(
-        (result as Err<SepaVirtualPayeeStatus?, RecipientsFailure>).failure,
-        isA<RecipientsLoadFailure>(),
-      );
     });
 
     test('finds an active recipient beyond the first page', () async {
