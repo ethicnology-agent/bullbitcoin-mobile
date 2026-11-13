@@ -3,12 +3,13 @@ import 'dart:math' as math;
 import 'package:bip39_mnemonic/bip39_mnemonic.dart' show Language;
 import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
+import 'package:unorm_dart/unorm_dart.dart' show nfkd;
 
 /// One mnemonic word painted without a string-bearing widget in the tree.
 final class PaintedWord extends _PaintedText {
   @internal
   PaintedWord(String word, {super.language, super.style, super.key})
-    : super([word], _Cell.word, plain: word);
+    : super([nfkd(word)], _Cell.word, plain: nfkd(word));
 }
 
 /// A passphrase painted without exposing its text to the host.
@@ -28,7 +29,11 @@ final class PaintedPassphrase extends _PaintedText {
 final class PaintedMnemonic extends _PaintedText {
   @internal
   PaintedMnemonic(List<String> words, {super.language, super.style, super.key})
-    : super(List.of(words), _Cell.word, plain: words.join(language.separator));
+    : super(
+        words.map(nfkd).toList(),
+        _Cell.word,
+        plain: words.map(nfkd).join(language.separator),
+      );
 }
 
 /// Secret text shares one private renderer. The host can place its widget but cannot read its text; screenshot protection belongs to the host screen.

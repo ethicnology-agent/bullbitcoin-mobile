@@ -1,7 +1,9 @@
-import 'package:bb_mobile/core/utils/result.dart';
 import 'package:bb_mobile/core/wallet/data/repositories/wallet_repository.dart';
 import 'package:bb_mobile/core/wallet/domain/entities/wallet.dart';
 import 'package:bb_mobile/core/wallet/domain/wallet_failure.dart';
+import 'package:bip39_mnemonic/bip39_mnemonic.dart' as bip39;
+import 'package:unorm_dart/unorm_dart.dart' show nfc;
+import 'package:primitives/primitives.dart';
 import 'package:bb_mobile/features/import_mnemonic/domain/check_duplicate_mnemonic_usecase.dart';
 import 'package:bb_mobile/features/import_mnemonic/domain/import_mnemonic_failure.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -59,6 +61,39 @@ void main() {
       walletRepository: wallets,
     );
   });
+
+  for (final language in bip39.Language.values) {
+    test(
+      'recognizes ${language.name} duplicates across Unicode forms',
+      () async {
+        final words = bip39.Mnemonic(List.filled(16, 0), language).words;
+        expect(
+          await usecase.execute(mnemonicWords: words, language: language),
+          isA<Ok<void, ImportMnemonicFailure>>(),
+        );
+        final imported = await secrets.import(words: words, language: language);
+        expect(imported, isA<Ok<Secret, SecretFailure>>());
+        final secret = (imported as Ok<Secret, SecretFailure>).value;
+        walletsAre([signingWallet(secret.id.hex)]);
+        final duplicate = await usecase.execute(
+          mnemonicWords: words.map(nfc).toList(),
+          language: language,
+        );
+        expect(
+          (duplicate as Err).failure,
+          isA<ImportMnemonicDuplicateFailure>(),
+        );
+        expect(
+          await usecase.execute(
+            mnemonicWords: words,
+            language: language,
+            passphrase: 'TREZOR',
+          ),
+          isA<Ok<void, ImportMnemonicFailure>>(),
+        );
+      },
+    );
+  }
 
   group('CheckDuplicateMnemonicUsecase', () {
     test('returns Ok when the mnemonic is not stored', () async {
