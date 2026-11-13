@@ -1,7 +1,11 @@
+import 'package:bull_logger/bull_logger.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:bb_mobile/core/exchange/data/services/exchange_clock_offset.dart';
 import 'package:clock/clock.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+class _MockLogger extends Mock implements Logger {}
 
 void main() {
   final serverNow = DateTime.utc(2026, 11, 6, 12);
@@ -15,6 +19,7 @@ void main() {
         );
 
       expect(offset.offset, Duration.zero);
+      expect(offset.isDeviceClockOff, isFalse);
     });
 
     test('a device clock running ahead gives a negative offset', () {
@@ -25,6 +30,7 @@ void main() {
         );
 
       expect(offset.offset, const Duration(minutes: -30));
+      expect(offset.isDeviceClockOff, isTrue);
     });
 
     test('a device clock running behind gives a positive offset', () {
@@ -47,6 +53,32 @@ void main() {
 
       expect(offset.offset, Duration.zero);
     });
+  });
+
+  test('clock diagnostics log transitions without repeating samples', () {
+    final previous = log;
+    final logger = _MockLogger();
+    log = logger;
+    addTearDown(() => log = previous);
+    final offset = ExchangeClockOffset()
+      ..observe(
+        serverTime: serverNow,
+        deviceTime: serverNow.add(const Duration(minutes: 30)),
+      )
+      ..observe(
+        serverTime: serverNow,
+        deviceTime: serverNow.add(const Duration(minutes: 31)),
+      )
+      ..observe(serverTime: serverNow, deviceTime: serverNow);
+
+    expect(offset.offset, Duration.zero);
+    verifyInOrder([
+      () => logger.fine(
+        'Device clock is off from the exchange: deviceAheadSeconds=1800',
+      ),
+      () => logger.fine('Device clock matches the exchange again'),
+    ]);
+    verifyNoMoreInteractions(logger);
   });
 
   group('interceptor', () {
@@ -126,6 +158,16 @@ void main() {
         sentAt: serverNow,
         latency: const Duration(seconds: 40),
       );
+
+      expect(offset.offset, Duration.zero);
+    });
+
+    test('a round trip longer than the tolerance is discarded', () async {
+      // Device 30 minutes ahead, but the answer took 40 s: the sample cannot
+      // place the server's stamp within the tolerance, so it is not used.
+      final offset = await respondWith({
+        'date': ['Fri, 06 Nov 2026 12:00:20 GMT'],
+      }, latency: const Duration(seconds: 40));
 
       expect(offset.offset, Duration.zero);
     });
