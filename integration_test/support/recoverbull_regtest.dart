@@ -1,20 +1,19 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 
-import 'package:bb_mobile/core/recoverbull/domain/entity/encrypted_vault.dart';
-import 'package:bb_mobile/core/recoverbull/domain/recoverbull_tor_route.dart';
-import 'package:bb_mobile/core/recoverbull/domain/repositories/recoverbull_repository.dart';
-import 'package:bb_mobile/core/recoverbull/domain/usecases/fetch_vault_key_from_server_usecase.dart';
-import 'package:bb_mobile/core/recoverbull/domain/usecases/restore_vault_usecase.dart';
-import 'package:bb_mobile/core/recoverbull/domain/usecases/store_vault_key_into_server_usecase.dart';
+import 'package:bb_mobile/core/settings/domain/repositories/settings_repository.dart';
 import 'package:bb_mobile/features/settings/domain/settings_entity.dart';
 import 'package:bb_mobile/features/wallet/data/wallet_repository.dart';
 import 'package:bb_mobile/locator.dart';
+import 'package:bull_recoverbull/bull_recoverbull.dart' as rb;
 import 'package:bull_tor/tor.dart';
+import 'package:convert/convert.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:primitives/primitives.dart' show Ok, Err;
-import 'package:secrets/secrets.dart' hide EncryptedVault;
+import 'package:recoverbull/recoverbull.dart';
+import 'package:secrets/secrets.dart';
 
 import 'integration_harness.dart';
 
@@ -35,14 +34,6 @@ Future<void> restoreLocalRecoverbull() async {
   } finally {
     socket.destroy();
   }
-  final route = RecoverBullTorRoute(
-    TorRoute(
-      source: TorSource.external,
-      endpoint: TorProxyEndpoint(host: '127.0.0.1', port: 59051),
-      evidence: TorReadinessEvidence.externalSocksHandshake,
-    ),
-    () async {},
-  );
   final source = await IntegrationHarness.generateSecret();
   final backup = switch (await source.backup.recoverbull()) {
     Ok(:final value) => value,
@@ -50,53 +41,75 @@ Future<void> restoreLocalRecoverbull() async {
       'Vault creation failed: ${failure.runtimeType}',
     ),
   };
-  final vault = EncryptedVault(file: backup.vault.json);
+  final recoverbull = locator<rb.RecoverBullFacade>();
+  final vault = switch (recoverbull.parseVault(backup.vault.json)) {
+    Ok(:final value) => value,
+    Err(:final failure) => fail('Vault parsing failed: ${failure.runtimeType}'),
+  };
+  final configured = switch (await recoverbull.settings()) {
+    Ok(:final value) => value,
+    Err(:final failure) => fail(
+      'Vault settings failed: ${failure.runtimeType}',
+    ),
+  };
+  expect(configured.server, Uri.parse('http://regtest.recoverbull.onion:3000'));
+  if (await recoverbull.acceptServer(configured.server) case Err(
+    :final failure,
+  )) {
+    fail('Vault consent failed: ${failure.runtimeType}');
+  }
+
+  // Only fixture provisioning uses the low-level client. Recovery exercises
+  // the mounted facade, durable admission, selected route and Secrets import.
   final random = Random.secure();
   final password = base64UrlEncode(
     List.generate(32, (_) => random.nextInt(256)),
   );
-  final repository = locator<RecoverBullRepository>();
+  final identifier = Uint8List.fromList(hex.decode(vault.id));
+  final salt = Uint8List.fromList(hex.decode(vault.salt));
+  final key = Uint8List.fromList(hex.decode(backup.key.hex));
+  final passwordBytes = Uint8List.fromList(utf8.encode(password));
+  final client = locator<TorHttpClientFactory>().create(
+    TorProxyEndpoint(host: '127.0.0.1', port: 59051),
+  )..connectionTimeout = const Duration(seconds: 5);
+  final fixture = KeyServer(address: configured.server, client: client);
+  final settings = locator<SettingsRepository>();
+  final before = await settings.fetch();
   var stored = false;
+  var proxyChanged = false;
   try {
-    final store = await locator<StoreVaultKeyIntoServerUsecase>().execute(
-      password: password,
-      vault: vault,
-      vaultKey: backup.key.hex,
-      route: route,
+    await fixture.storeBackupKey(
+      backupId: identifier,
+      password: passwordBytes,
+      backupKey: key,
+      salt: salt,
     );
-    if (store case Err(:final failure)) {
-      fail('Local key storage failed: ${failure.runtimeType}');
-    }
     stored = true;
-    final fetched = await locator<FetchVaultKeyFromServerUsecase>().execute(
-      vault: vault,
-      password: password,
-      route: route,
-    );
-    final key = switch (fetched) {
-      Ok(:final value) => value,
-      Err(:final failure) => fail(
-        'Local key retrieval failed: ${failure.runtimeType}',
-      ),
-    };
-    // Compare as a boolean: an assertion must never render a vault key.
-    expect(key == backup.key.hex, isTrue);
     await IntegrationHarness.clearDefaultWalletsForRestore();
-    final removed = await locator<Secrets>().trash(source.id);
-    if (removed case Err(:final failure)) {
+    if (await locator<Secrets>().trash(source.id) case Err(:final failure)) {
       fail('Fixture removal failed: ${failure.runtimeType}');
     }
-    final restored = await locator<RestoreVaultUsecase>().execute(
-      vault: vault,
-      vaultKey: key,
-    );
-    if (restored case Err(:final failure)) {
-      fail('Vault restoration failed: ${failure.runtimeType}');
+    final proxy = await settings.setTorProxy(enabled: true, port: 59051);
+    if (proxy case Err(:final failure)) {
+      fail('Fixture proxy selection failed: ${failure.runtimeType}');
     }
-    final result = await locator<WalletRepository>().getWallets(
+    proxyChanged = true;
+    final completion = switch (await recoverbull.recoverFromServer(
+      vault: vault,
+      password: password,
+    )) {
+      Ok(:final value) => value,
+      Err(:final failure) => fail(
+        'Vault restoration failed: ${failure.runtimeType}',
+      ),
+    };
+    expect(completion.recovery, isA<rb.VaultRecovered>());
+    expect(completion.warning, isNull);
+    expect(completion.verifiedContext?.fingerprint, source.id);
+    expect(completion.verifiedContext?.network, rb.BitcoinNetwork.regtest);
+    final wallets = switch (await locator<WalletRepository>().getWallets(
       environment: Environment.regtest,
-    );
-    final wallets = switch (result) {
+    )) {
       Ok(:final value) =>
         value
             .where((wallet) => wallet.masterFingerprint == source.id.hex)
@@ -115,14 +128,29 @@ Future<void> restoreLocalRecoverbull() async {
       isTrue,
     );
   } finally {
-    if (stored) {
-      await repository.trashVaultKey(
-        vault.id,
-        password,
-        vault.salt,
-        route.endpoint,
-      );
+    try {
+      if (stored) {
+        final removed = await fixture.trashBackupKey(
+          backupId: identifier,
+          password: passwordBytes,
+          salt: salt,
+        );
+        removed.fillRange(0, removed.length, 0);
+      }
+    } finally {
+      client.close(force: true);
+      for (final bytes in [identifier, salt, key, passwordBytes]) {
+        bytes.fillRange(0, bytes.length, 0);
+      }
+      if (proxyChanged) {
+        final restored = await settings.setTorProxy(
+          enabled: before.useTorProxy,
+          port: before.torProxyPort,
+        );
+        if (restored case Err(:final failure)) {
+          fail('Fixture proxy cleanup failed: ${failure.runtimeType}');
+        }
+      }
     }
-    await route.close();
   }
 }

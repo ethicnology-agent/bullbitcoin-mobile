@@ -261,6 +261,10 @@ abstract final class IntegrationHarness {
       startSpWatchers: false,
     );
     await initializeWalletRuntime(locator);
+    await AppLocator.setupRecoverBull(
+      locator,
+      databasePath: p.join(run.path, 'recoverbull.sqlite'),
+    );
     _initialized = true;
     tearDownAll(() async {
       try {
