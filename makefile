@@ -191,9 +191,10 @@ container-tools:
 	flutter_version=$$(awk 'BEGIN{RS="";} { gsub(/\r/,""); s=$$0; sub(/.*"flutter"[[:space:]]*:[[:space:]]*"/,"",s); sub(/".*$$/,"",s); print s; exit }' .fvmrc); \
 	jvm_target=$$(grep -E '^android\.jvmTarget=' android/gradle.properties | cut -d= -f2); \
 	android_api=$$(grep -E '^android\.compileSdk=' android/gradle.properties | cut -d= -f2); \
+	android_platform=$$(grep -E '^android\.sdkPlatform=' android/gradle.properties | cut -d= -f2); \
 	android_build_tools=$$(grep -E '^android\.buildToolsVersion=' android/gradle.properties | cut -d= -f2); \
 	android_ndk=$$(grep -E '^android\.ndkVersion=' android/gradle.properties | cut -d= -f2); \
-	for kv in "flutter (.fvmrc)=$$flutter_version" "android.jvmTarget=$$jvm_target" "android.compileSdk=$$android_api" "android.buildToolsVersion=$$android_build_tools" "android.ndkVersion=$$android_ndk"; do \
+	for kv in "flutter (.fvmrc)=$$flutter_version" "android.jvmTarget=$$jvm_target" "android.compileSdk=$$android_api" "android.sdkPlatform=$$android_platform" "android.buildToolsVersion=$$android_build_tools" "android.ndkVersion=$$android_ndk"; do \
 		if [ -z "$${kv#*=}" ]; then \
 			echo "ERROR: $${kv%%=*} resolved empty — check .fvmrc / android/gradle.properties" >&2; \
 			exit 1; \
@@ -203,7 +204,7 @@ container-tools:
 		--build-arg FLUTTER_VERSION=$$flutter_version \
 		--build-arg RUST_VERSION=$(RUST_VERSION) \
 		--build-arg JVM_TARGET=$$jvm_target \
-		--build-arg ANDROID_API_LEVEL=$$android_api \
+		--build-arg ANDROID_API_LEVEL=$$android_platform \
 		--build-arg ANDROID_BUILD_TOOLS=$$android_build_tools \
 		--build-arg ANDROID_NDK=$$android_ndk \
 		--build-arg BDK_RUST_VERSION=$(BDK_RUST_VERSION) \
