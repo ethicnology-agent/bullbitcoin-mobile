@@ -352,18 +352,34 @@ void main() {
     final future = sqlite.sqlite3.open(path);
     future.execute('CREATE TABLE future_sentinel (value TEXT NOT NULL)');
     future.execute("INSERT INTO future_sentinel VALUES ('retained')");
+    future.execute('PRAGMA journal_mode = DELETE');
     future.execute('PRAGMA user_version = 4');
     future.dispose();
-    final result = await open();
-    if (result case Ok(:final value)) await value.dispose();
-    expect(result, isA<Err<PayjoinLifecycle, PayjoinFailure>>());
-    expect(
-      directory.listSync().where((f) => f.path.contains('.unreadable-')),
-      isEmpty,
-    );
+    final before = File(path).readAsBytesSync();
+    for (var attempt = 0; attempt < 3; attempt++) {
+      final result = await open();
+      if (result case Ok(:final value)) await value.dispose();
+      expect(
+        result,
+        isA<Err<PayjoinLifecycle, PayjoinFailure>>().having(
+          (r) => r.failure,
+          'failure',
+          isA<PayjoinMigrationFailure>(),
+        ),
+      );
+      expect(File(path).readAsBytesSync(), before);
+      expect(
+        directory.listSync().where((f) => f.path.contains('.unreadable-')),
+        isEmpty,
+      );
+    }
     final preserved = sqlite.sqlite3.open(path);
     try {
       expect(preserved.select('PRAGMA user_version').single['user_version'], 4);
+      expect(
+        preserved.select('PRAGMA journal_mode').single['journal_mode'],
+        'delete',
+      );
       expect(
         preserved.select('SELECT value FROM future_sentinel').single['value'],
         'retained',
