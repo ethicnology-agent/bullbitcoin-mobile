@@ -1,3 +1,4 @@
+import 'package:bb_mobile/core/exchange/data/services/exchange_clock_offset.dart';
 import 'package:bb_mobile/core/exchange/data/http/exchange_authentication_interceptor.dart';
 import 'package:bb_mobile/core/exchange/data/datasources/bullbitcoin_api_datasource.dart';
 import 'package:bb_mobile/core/exchange/data/http/authenticated_bullbitcoin_dio_factory.dart';
@@ -56,6 +57,7 @@ class ExchangeLocator {
   }
 
   static void registerDatasources(GetIt locator) {
+    locator.registerLazySingleton<ExchangeClockOffset>(ExchangeClockOffset.new);
     for (final isTestnet in [false, true]) {
       final environment = isTestnet ? 'testnet' : 'mainnet';
       locator.registerLazySingleton<BullbitcoinApiDatasource>(
@@ -64,7 +66,7 @@ class ExchangeLocator {
             locator,
             isTestnet: isTestnet,
             timeout: const Duration(seconds: 30),
-          ),
+          )..interceptors.add(locator<ExchangeClockOffset>().interceptor),
         ),
         instanceName: '${environment}ExchangeApiDatasource',
       );
@@ -147,6 +149,7 @@ class ExchangeLocator {
         ),
 
         isTestnet: false,
+        clockOffset: locator<ExchangeClockOffset>(),
       ),
       instanceName: 'mainnetExchangeOrderRepository',
     );
@@ -157,6 +160,7 @@ class ExchangeLocator {
         ),
 
         isTestnet: true,
+        clockOffset: locator<ExchangeClockOffset>(),
       ),
       instanceName: 'testnetExchangeOrderRepository',
     );

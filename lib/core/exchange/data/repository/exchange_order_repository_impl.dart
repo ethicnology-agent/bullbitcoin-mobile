@@ -1,3 +1,4 @@
+import 'package:bb_mobile/core/exchange/data/services/exchange_clock_offset.dart';
 import 'package:dio/dio.dart';
 import 'package:bb_mobile/core/exchange/domain/exchange_order_failure.dart';
 import 'package:bb_mobile/core/utils/result.dart';
@@ -14,10 +15,12 @@ import 'package:bb_mobile/features/dca/domain/dca.dart';
 class ExchangeOrderRepositoryImpl implements ExchangeOrderRepository {
   final BullbitcoinApiDatasource _bullbitcoinApiDatasource;
   final bool _isTestnet;
+  final ExchangeClockOffset _clockOffset;
 
   ExchangeOrderRepositoryImpl({
     required this._bullbitcoinApiDatasource,
     required this._isTestnet,
+    required this._clockOffset,
   });
 
   @override
@@ -27,7 +30,10 @@ class ExchangeOrderRepositoryImpl implements ExchangeOrderRepository {
         orderId: orderId,
       );
 
-      return orderModel.toEntity(isTestnet: _isTestnet);
+      return orderModel.toEntity(
+        isTestnet: _isTestnet,
+        clockOffset: _clockOffset.offset,
+      );
     } catch (e, st) {
       rethrowExchangeAuthentication(e, st);
       throw Exception('Failed to get order: $e');
@@ -48,7 +54,12 @@ class ExchangeOrderRepositoryImpl implements ExchangeOrderRepository {
       );
       if (orderModel == null) return const Ok(null);
 
-      return Ok(orderModel.toEntity(isTestnet: _isTestnet));
+      return Ok(
+        orderModel.toEntity(
+          isTestnet: _isTestnet,
+          clockOffset: _clockOffset.offset,
+        ),
+      );
     } on Exception catch (e) {
       if (e case DioException(
         error: final Error bug,
@@ -80,7 +91,10 @@ class ExchangeOrderRepositoryImpl implements ExchangeOrderRepository {
       List<Order> orders = orderModels
           .map((model) {
             try {
-              return model.toEntity(isTestnet: _isTestnet);
+              return model.toEntity(
+                isTestnet: _isTestnet,
+                clockOffset: _clockOffset.offset,
+              );
             } catch (e, stackTrace) {
               log.severe(
                 message: 'Error mapping order ${model.orderId}',
@@ -169,7 +183,12 @@ class ExchangeOrderRepositoryImpl implements ExchangeOrderRepository {
         bip21URI: payjoinBip21,
       );
 
-      final order = orderModel.toEntity(isTestnet: _isTestnet) as BuyOrder;
+      final order =
+          orderModel.toEntity(
+                isTestnet: _isTestnet,
+                clockOffset: _clockOffset.offset,
+              )
+              as BuyOrder;
 
       return order;
     } on BullBitcoinApiMinAmountException {
@@ -199,7 +218,12 @@ class ExchangeOrderRepositoryImpl implements ExchangeOrderRepository {
         usePayjoin: usePayjoin,
       );
 
-      final order = orderModel.toEntity(isTestnet: _isTestnet) as SellOrder;
+      final order =
+          orderModel.toEntity(
+                isTestnet: _isTestnet,
+                clockOffset: _clockOffset.offset,
+              )
+              as SellOrder;
 
       return order;
     } on BullBitcoinApiMinAmountException {
@@ -235,7 +259,10 @@ class ExchangeOrderRepositoryImpl implements ExchangeOrderRepository {
       );
 
       // The API classifies bank payouts as Fiat Payment, including own-account Sell.
-      final order = orderModel.toEntity(isTestnet: _isTestnet);
+      final order = orderModel.toEntity(
+        isTestnet: _isTestnet,
+        clockOffset: _clockOffset.offset,
+      );
       if (order is! FiatPaymentOrder) {
         throw const FormatException('Invalid EUR sell payout order type');
       }
@@ -277,7 +304,11 @@ class ExchangeOrderRepositoryImpl implements ExchangeOrderRepository {
       );
 
       final order =
-          orderModel.toEntity(isTestnet: _isTestnet) as FiatPaymentOrder;
+          orderModel.toEntity(
+                isTestnet: _isTestnet,
+                clockOffset: _clockOffset.offset,
+              )
+              as FiatPaymentOrder;
 
       return order;
     } on BullBitcoinApiMinAmountException {
@@ -300,7 +331,10 @@ class ExchangeOrderRepositoryImpl implements ExchangeOrderRepository {
         orderId: orderId,
       );
 
-      final order = orderModel.toEntity(isTestnet: _isTestnet);
+      final order = orderModel.toEntity(
+        isTestnet: _isTestnet,
+        clockOffset: _clockOffset.offset,
+      );
 
       if (order is! BuyOrder) {
         throw UnexpectedOrderTypeException('BuyOrder');
@@ -322,7 +356,10 @@ class ExchangeOrderRepositoryImpl implements ExchangeOrderRepository {
         orderId: orderId,
       );
 
-      final order = orderModel.toEntity(isTestnet: _isTestnet);
+      final order = orderModel.toEntity(
+        isTestnet: _isTestnet,
+        clockOffset: _clockOffset.offset,
+      );
 
       if (order is! WithdrawOrder) {
         throw UnexpectedOrderTypeException('WithdrawOrder');
@@ -350,7 +387,10 @@ class ExchangeOrderRepositoryImpl implements ExchangeOrderRepository {
         orderId: orderId,
       );
 
-      final order = orderModel.toEntity(isTestnet: _isTestnet);
+      final order = orderModel.toEntity(
+        isTestnet: _isTestnet,
+        clockOffset: _clockOffset.offset,
+      );
 
       if (order is! BuyOrder) {
         throw UnexpectedOrderTypeException('BuyOrder');
@@ -372,7 +412,10 @@ class ExchangeOrderRepositoryImpl implements ExchangeOrderRepository {
         orderId: orderId,
       );
 
-      final order = orderModel.toEntity(isTestnet: _isTestnet);
+      final order = orderModel.toEntity(
+        isTestnet: _isTestnet,
+        clockOffset: _clockOffset.offset,
+      );
 
       if (order is! SellOrder) {
         throw Exception(
@@ -396,7 +439,10 @@ class ExchangeOrderRepositoryImpl implements ExchangeOrderRepository {
         orderId: orderId,
       );
 
-      final order = orderModel.toEntity(isTestnet: _isTestnet);
+      final order = orderModel.toEntity(
+        isTestnet: _isTestnet,
+        clockOffset: _clockOffset.offset,
+      );
 
       if (order is! FiatPaymentOrder) {
         throw UnexpectedOrderTypeException('FiatPaymentOrder');
@@ -424,7 +470,12 @@ class ExchangeOrderRepositoryImpl implements ExchangeOrderRepository {
         orderId: orderId,
       );
 
-      final order = orderModel.toEntity(isTestnet: _isTestnet) as BuyOrder;
+      final order =
+          orderModel.toEntity(
+                isTestnet: _isTestnet,
+                clockOffset: _clockOffset.offset,
+              )
+              as BuyOrder;
 
       return order;
     } on ApiKeyException {
@@ -452,7 +503,12 @@ class ExchangeOrderRepositoryImpl implements ExchangeOrderRepository {
         securityAnswer: securityAnswer,
       );
 
-      final order = orderModel.toEntity(isTestnet: _isTestnet) as WithdrawOrder;
+      final order =
+          orderModel.toEntity(
+                isTestnet: _isTestnet,
+                clockOffset: _clockOffset.offset,
+              )
+              as WithdrawOrder;
 
       return order;
     } on BullBitcoinApiMinAmountException {

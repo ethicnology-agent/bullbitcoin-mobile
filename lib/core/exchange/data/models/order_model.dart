@@ -257,7 +257,13 @@ class OrderModel {
       liquidTransactionId == txId ||
       payjoinDetails?['txid'] == txId;
 
-  Order toEntity({required bool isTestnet}) {
+  /// [clockOffset] is server time minus device time: the confirmation
+  /// deadline is moved onto the device clock, which is what every caller
+  /// compares it with. Display timestamps stay as the server sent them.
+  Order toEntity({
+    required bool isTestnet,
+    Duration clockOffset = Duration.zero,
+  }) {
     final orderMsg = message != null && message is Map<String, dynamic>
         ? OrderMessage(
             code: message?['code']?.toString() ?? '',
@@ -271,8 +277,9 @@ class OrderModel {
     final orderStatusEnum = OrderStatus.fromValue(orderStatus);
     final payinStatusEnum = OrderPayinStatus.fromValue(payinStatus);
     final payoutStatusEnum = OrderPayoutStatus.fromValue(payoutStatus);
-    final confirmationDeadlineDt = confirmationDeadline != null
-        ? DateTime.tryParse(confirmationDeadline!)
+    final deadline = confirmationDeadline;
+    final confirmationDeadlineDt = deadline != null
+        ? DateTime.tryParse(deadline)?.subtract(clockOffset)
         : null;
     final createdAtDt = DateTime.parse(createdAt);
     final completedAtDt = completedAt != null
