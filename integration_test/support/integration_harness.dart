@@ -151,6 +151,14 @@ abstract final class IntegrationHarness {
     if (!isRegtest || !_initialized) {
       throw StateError('An isolated regtest run is required');
     }
+    await suspendPayjoin();
+    await resumePayjoin();
+  }
+
+  static Future<void> suspendPayjoin() async {
+    if (!isRegtest || !_initialized) {
+      throw StateError('An isolated regtest run is required');
+    }
     await locator<PayjoinLifecycle>().dispose();
     await locator.unregister<Payjoin>();
     await locator.unregister<PayjoinSender>();
@@ -159,6 +167,12 @@ abstract final class IntegrationHarness {
     await locator.unregister<PayjoinPolicyAccess>();
     await locator.unregister<PayjoinDiagnostics>();
     await locator.unregister<PayjoinLifecycle>();
+  }
+
+  static Future<void> resumePayjoin() async {
+    if (!isRegtest || !_initialized) {
+      throw StateError('An isolated regtest run is required');
+    }
     PayjoinSetup.setup(
       locator,
       locator<SqliteDatabase>(),
@@ -250,7 +264,9 @@ abstract final class IntegrationHarness {
     _initialized = true;
     tearDownAll(() async {
       try {
-        await locator<PayjoinLifecycle>().dispose();
+        if (locator.isRegistered<PayjoinLifecycle>()) {
+          await locator<PayjoinLifecycle>().dispose();
+        }
         for (final walletId in _ownedWalletIds) {
           final removed = await locator<WalletRepository>().deleteWallet(
             walletId: walletId,
