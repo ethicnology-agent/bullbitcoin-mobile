@@ -190,8 +190,8 @@ packages:
     dependency: "direct main"
     description:
       path: "packages/bitbox-transport"
-      ref: "1fac31fe9ed009cf0fee68061adaf902f14d15a1"
-      resolved-ref: "1fac31fe9ed009cf0fee68061adaf902f14d15a1"
+      ref: e32d27e2009534369ac3e1c5b9fa14c884480c14
+      resolved-ref: e32d27e2009534369ac3e1c5b9fa14c884480c14
       url: "https://github.com/ethicnology-agent/bull_sdk"
     source: git
     version: "0.1.0"
@@ -256,8 +256,8 @@ packages:
     dependency: "direct main"
     description:
       path: "packages/boltz-stream"
-      ref: "1fac31fe9ed009cf0fee68061adaf902f14d15a1"
-      resolved-ref: "1fac31fe9ed009cf0fee68061adaf902f14d15a1"
+      ref: e32d27e2009534369ac3e1c5b9fa14c884480c14
+      resolved-ref: e32d27e2009534369ac3e1c5b9fa14c884480c14
       url: "https://github.com/ethicnology-agent/bull_sdk"
     source: git
     version: "0.1.0"
@@ -345,8 +345,8 @@ packages:
     dependency: "direct main"
     description:
       path: "packages/bull_sdk"
-      ref: "1fac31fe9ed009cf0fee68061adaf902f14d15a1"
-      resolved-ref: "1fac31fe9ed009cf0fee68061adaf902f14d15a1"
+      ref: e32d27e2009534369ac3e1c5b9fa14c884480c14
+      resolved-ref: e32d27e2009534369ac3e1c5b9fa14c884480c14
       url: "https://github.com/ethicnology-agent/bull_sdk"
     source: git
     version: "1.0.0+1"
@@ -1550,8 +1550,8 @@ packages:
     dependency: transitive
     description:
       path: "packages/onion"
-      ref: "1fac31fe9ed009cf0fee68061adaf902f14d15a1"
-      resolved-ref: "1fac31fe9ed009cf0fee68061adaf902f14d15a1"
+      ref: e32d27e2009534369ac3e1c5b9fa14c884480c14
+      resolved-ref: e32d27e2009534369ac3e1c5b9fa14c884480c14
       url: "https://github.com/ethicnology-agent/bull_sdk"
     source: git
     version: "0.1.0"
@@ -1865,8 +1865,8 @@ packages:
     dependency: "direct main"
     description:
       path: "packages/satoshifier"
-      ref: "1fac31fe9ed009cf0fee68061adaf902f14d15a1"
-      resolved-ref: "1fac31fe9ed009cf0fee68061adaf902f14d15a1"
+      ref: e32d27e2009534369ac3e1c5b9fa14c884480c14
+      resolved-ref: e32d27e2009534369ac3e1c5b9fa14c884480c14
       url: "https://github.com/ethicnology-agent/bull_sdk"
     source: git
     version: "0.0.1"

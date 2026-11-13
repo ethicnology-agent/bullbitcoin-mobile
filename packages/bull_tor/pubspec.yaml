@@ -14,7 +14,7 @@ dependencies:
   bull_sdk:
     git:
       url: https://github.com/ethicnology-agent/bull_sdk
-      ref: 1fac31fe9ed009cf0fee68061adaf902f14d15a1
+      ref: e32d27e2009534369ac3e1c5b9fa14c884480c14
       path: packages/bull_sdk
   get_it: ^9.1.1
   meta: ^1.17.0
