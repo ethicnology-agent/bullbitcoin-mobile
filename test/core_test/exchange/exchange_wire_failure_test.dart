@@ -1,3 +1,4 @@
+import 'package:bb_mobile/core/exchange/data/services/exchange_clock_offset.dart';
 import 'package:bb_mobile/core/exchange/data/models/order_stats_model.dart';
 import 'package:bb_mobile/core/exchange/data/models/recipient_model.dart';
 import 'package:bb_mobile/core/exchange/data/datasources/bullbitcoin_api_datasource.dart';
@@ -43,6 +44,7 @@ void main() {
         ),
       );
       final repository = ExchangeOrderRepositoryImpl(
+        clockOffset: ExchangeClockOffset(),
         bullbitcoinApiDatasource: datasource,
         isTestnet: true,
       );
@@ -80,6 +82,7 @@ void main() {
     test('order read maps invalid wire envelope ${body.runtimeType}', () async {
       respond(body);
       final repository = ExchangeOrderRepositoryImpl(
+        clockOffset: ExchangeClockOffset(),
         bullbitcoinApiDatasource: datasource,
         isTestnet: true,
       );
@@ -138,6 +141,7 @@ void main() {
     test('action wire mismatch remains an infrastructure exception', () async {
       respond(body);
       final repository = ExchangeOrderRepositoryImpl(
+        clockOffset: ExchangeClockOffset(),
         bullbitcoinApiDatasource: datasource,
         isTestnet: true,
       );

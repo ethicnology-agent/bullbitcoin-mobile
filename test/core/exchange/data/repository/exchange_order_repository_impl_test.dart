@@ -1,3 +1,4 @@
+import 'package:bb_mobile/core/exchange/data/services/exchange_clock_offset.dart';
 import 'package:bb_mobile/core/utils/result.dart';
 import 'package:bb_mobile/core/errors/exchange_errors.dart';
 import 'package:bb_mobile/core/exchange/data/datasources/bullbitcoin_api_datasource.dart';
@@ -13,16 +14,19 @@ class _MockApiDatasource extends Mock implements BullbitcoinApiDatasource {}
 
 void main() {
   late _MockApiDatasource api;
+  late ExchangeClockOffset clockOffset;
 
   late ExchangeOrderRepositoryImpl repository;
 
   setUp(() {
     api = _MockApiDatasource();
+    clockOffset = ExchangeClockOffset();
 
     repository = ExchangeOrderRepositoryImpl(
       bullbitcoinApiDatasource: api,
 
       isTestnet: false,
+      clockOffset: clockOffset,
     );
   });
 
@@ -178,5 +182,47 @@ void main() {
         throwsA(isA<BullBitcoinApiConfidentialSepaNotActivatedException>()),
       );
     });
+  });
+  group('the confirmation deadline follows the device clock', () {
+    final serverDeadline = DateTime.parse('2026-07-01T12:10:00.000Z');
+
+    test('a device clock within tolerance keeps the server deadline', () async {
+      clockOffset.observe(
+        serverTime: DateTime.utc(2026, 7, 1, 12),
+        deviceTime: DateTime.utc(2026, 7, 1, 12, 0, 8),
+      );
+      stubOrders([orderJsonFixture()]);
+
+      final orders = switch (await repository.getOrders()) {
+        Ok(:final value) => value,
+        Err() => fail('Expected orders'),
+      };
+
+      expect(orders.single.confirmationDeadline, serverDeadline);
+    });
+
+    test(
+      'a device clock 30 minutes fast sees the deadline 30 minutes later',
+      () async {
+        clockOffset.observe(
+          serverTime: DateTime.utc(2026, 7, 1, 12),
+          deviceTime: DateTime.utc(2026, 7, 1, 12, 30),
+        );
+        stubOrders([orderJsonFixture()]);
+
+        final orders = switch (await repository.getOrders()) {
+          Ok(:final value) => value,
+          Err() => fail('Expected orders'),
+        };
+        final order = orders.single;
+
+        expect(
+          order.confirmationDeadline,
+          serverDeadline.add(const Duration(minutes: 30)),
+        );
+        // Display timestamps are not moved.
+        expect(order.createdAt, DateTime.parse('2026-07-01T12:00:00.000Z'));
+      },
+    );
   });
 }

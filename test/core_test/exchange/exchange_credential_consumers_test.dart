@@ -1,3 +1,4 @@
+import 'package:bb_mobile/core/exchange/data/services/exchange_clock_offset.dart';
 import 'package:bb_mobile/core/exchange/domain/entity/order.dart';
 import 'package:bb_mobile/core/exchange/domain/entity/sepa_payment_processor.dart';
 import 'package:bb_mobile/core/settings/data/settings_repository.dart';
@@ -74,6 +75,7 @@ void main() {
       bullbitcoinApiDatasource: api,
     );
     orders = ExchangeOrderRepositoryImpl(
+      clockOffset: ExchangeClockOffset(),
       bullbitcoinApiDatasource: api,
       isTestnet: true,
     );

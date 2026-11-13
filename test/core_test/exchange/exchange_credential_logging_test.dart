@@ -1,3 +1,4 @@
+import 'package:bb_mobile/core/exchange/data/services/exchange_clock_offset.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -138,6 +139,7 @@ void main() {
         () => repository.readActiveApiKey(isTestnet: true),
       );
       final orders = ExchangeOrderRepositoryImpl(
+        clockOffset: ExchangeClockOffset(),
         bullbitcoinApiDatasource: BullbitcoinApiDatasource(
           bullbitcoinApiHttpClient: dio,
         ),
