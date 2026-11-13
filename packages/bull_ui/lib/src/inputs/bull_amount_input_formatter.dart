@@ -41,10 +41,12 @@ class BullAmountInputFormatter extends TextInputFormatter {
       // A leading separator means a zero whole part: ".01" is "0.01".
       if (newText.startsWith('.')) {
         newText = '0$newText';
-        selection = TextSelection(
-          baseOffset: selection.baseOffset + 1,
-          extentOffset: selection.extentOffset + 1,
-        );
+        if (selection.isValid) {
+          selection = selection.copyWith(
+            baseOffset: selection.baseOffset + 1,
+            extentOffset: selection.extentOffset + 1,
+          );
+        }
       }
     }
 
