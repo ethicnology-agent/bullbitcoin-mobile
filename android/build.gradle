@@ -45,6 +45,12 @@ subprojects {
     }
 }
 
+// Configure Flutter before plugins read its SDK defaults. Keep this after
+// registering the SDK/compiler callbacks above: evaluation can start here.
+subprojects {
+    project.evaluationDependsOn(":app")
+}
+
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }
