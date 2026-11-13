@@ -2428,15 +2428,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.2.1"
-  webview_cookie_manager:
-    dependency: "direct main"
-    description:
-      path: "."
-      ref: "9de214d020b747177f65a5775b8b4be3cb9f9276"
-      resolved-ref: "9de214d020b747177f65a5775b8b4be3cb9f9276"
-      url: "https://github.com/ethicnology-agent/webview_cookie_manager.git"
-    source: git
-    version: "2.0.7"
   webview_flutter:
     dependency: "direct main"
     description:

@@ -114,10 +114,6 @@ dependencies:
   custom_sliding_segmented_control: ^2.0.0
   shimmer: ^4.0.0
   flutter_zxing: ^3.1.1
-  webview_cookie_manager:
-    git:
-      url: https://github.com/ethicnology-agent/webview_cookie_manager.git
-      ref: 9de214d020b747177f65a5775b8b4be3cb9f9276
   webview_flutter: ^4.13.0
   webview_flutter_android: ^4.10.10
   webview_flutter_wkwebview: ^3.23.4
