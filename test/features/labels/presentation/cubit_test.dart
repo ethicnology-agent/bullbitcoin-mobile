@@ -14,7 +14,17 @@ class _MockExport extends Mock implements ExportLabelsUsecase {}
 
 class _MockImportFromFile extends Mock implements ImportLabelsFromFileUsecase {}
 
-class _MockFilePicker extends Mock implements FilePicker {}
+class _MockFilePicker extends Mock implements FilePickerPlatform {}
+
+final class _PickedFile extends PlatformFile {
+  @override
+  final String? path;
+
+  _PickedFile(this.path);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 const _path = '/tmp/picked/labels.jsonl';
 
@@ -29,7 +39,7 @@ void main() {
     picker = _MockFilePicker();
     registerFallbackValue(LabelFormat.bip329);
     registerFallbackValue(FileType.any);
-    when(() => picker.clearTemporaryFiles()).thenAnswer((_) async => true);
+    when(() => picker.clearTemporaryFiles()).thenAnswer((_) async {});
   });
 
   Bip329LabelsCubit buildCubit() => Bip329LabelsCubit(
@@ -38,13 +48,11 @@ void main() {
     filePicker: picker,
   );
 
-  void pickReturns(FilePickerResult? result) =>
-      when(() => picker.pickFiles(type: any(named: 'type')))
+  void pickReturns(PlatformFile? result) =>
+      when(() => picker.pickFile(type: any(named: 'type')))
           .thenAnswer((_) async => result);
 
-  FilePickerResult picked({String? path = _path}) => FilePickerResult([
-    PlatformFile(name: 'labels.jsonl', path: path, size: 10),
-  ]);
+  PlatformFile picked({String? path = _path}) => _PickedFile(path);
 
   void importReturns(Result<int, LabelFailure> result) => when(
     () => importFromFile.execute(
@@ -63,7 +71,7 @@ void main() {
 
       await cubit.importLabelsFromFile(LabelFormat.bip329);
 
-      verify(() => picker.pickFiles(type: FileType.any)).called(1);
+      verify(() => picker.pickFile(type: FileType.any)).called(1);
     });
 
     test('a dismissed picker is not a failure', () async {
@@ -83,7 +91,7 @@ void main() {
     });
 
     test('a picker that throws is reported, not swallowed', () async {
-      when(() => picker.pickFiles(type: any(named: 'type')))
+      when(() => picker.pickFile(type: any(named: 'type')))
           .thenThrow(PlatformException(code: 'Unsupported file extension'));
       final cubit = buildCubit();
       addTearDown(cubit.close);

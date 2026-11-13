@@ -1,7 +1,7 @@
 import 'package:bb_mobile/core/widgets/mnemonic_keyboard.dart';
-import 'package:bb_mobile/generated/l10n/localization.dart';
+import 'package:bb_mobile/localizations.dart';
 import 'package:bull_ui/testing.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Future<void> pumpKeyboard(
@@ -17,7 +17,7 @@ Future<void> pumpKeyboard(
   await tester.pumpWidget(
     MaterialApp(
       theme: ThemeData(extensions: testBullExtensions),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: MnemonicKeyboard(

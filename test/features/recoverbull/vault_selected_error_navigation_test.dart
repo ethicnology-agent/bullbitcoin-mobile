@@ -10,10 +10,10 @@ import 'package:bb_mobile/features/recoverbull/ui/pages/fetch_vault_key_page.dar
 import 'package:bb_mobile/features/recoverbull/ui/pages/password_input_page.dart';
 import 'package:bb_mobile/features/recoverbull/ui/pages/vault_provider_selection_page.dart';
 import 'package:bb_mobile/features/recoverbull/ui/pages/vault_selected_page.dart';
-import 'package:bb_mobile/generated/l10n/localization.dart';
+import 'package:bb_mobile/localizations.dart';
 import 'package:bull_tor/tor.dart';
 import 'package:bull_ui/bull_ui.dart' show BullSnackBar;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -106,7 +106,7 @@ void main() {
               child: MaterialApp(
                 theme: AppTheme.themeData(AppThemeType.light),
                 navigatorObservers: [observer],
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                localizationsDelegates: appLocalizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 home: const VaultProviderSelectionPage(),
               ),

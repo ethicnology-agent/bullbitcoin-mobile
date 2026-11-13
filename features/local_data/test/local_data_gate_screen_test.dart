@@ -8,7 +8,7 @@ import 'package:bull_local_data/src/presentation/local_data_gate_cubit.dart';
 import 'package:bull_local_data/src/ui/local_data_gate_screen.dart';
 import 'package:bull_ui/bull_ui.dart';
 import 'package:bull_ui/testing.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:primitives/primitives.dart';
@@ -44,7 +44,10 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData(extensions: testBullExtensions),
-        localizationsDelegates: LocalDataLocalizations.localizationsDelegates,
+        localizationsDelegates: [
+          LocalDataLocalizations.delegate,
+          ...GlobalMaterialLocalizations.delegates,
+        ],
         supportedLocales: LocalDataLocalizations.supportedLocales,
         home: BullSupportScope(
           onContactSupport: (context, {message}) {},
@@ -140,7 +143,10 @@ void main() {
     );
     Widget app(LocalDataFailure failure) => MaterialApp(
       theme: ThemeData(extensions: testBullExtensions),
-      localizationsDelegates: LocalDataLocalizations.localizationsDelegates,
+      localizationsDelegates: [
+        LocalDataLocalizations.delegate,
+        ...GlobalMaterialLocalizations.delegates,
+      ],
       supportedLocales: LocalDataLocalizations.supportedLocales,
       home: BullSupportScope(
         onContactSupport: (context, {message}) {},

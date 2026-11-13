@@ -13,7 +13,7 @@ import 'package:bb_mobile/core/widgets/lists/tx_list_item.dart';
 import 'package:bb_mobile/features/sp/domain/entities/sp_coin.dart';
 import 'package:bb_mobile/features/sp/domain/entities/sp_notification.dart';
 import 'package:bb_mobile/features/sp/domain/entities/sp_payment.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -21,7 +21,7 @@ import 'package:mocktail/mocktail.dart';
 import '../../sp_cubit_harness.dart';
 import '../../sp_test_streams.dart';
 
-import 'package:bb_mobile/generated/l10n/localization.dart';
+import 'package:bb_mobile/localizations.dart';
 import 'package:bb_mobile/features/sp/domain/entities/sp_wallet_data.dart';
 
 class _MockSettingsCubit extends Mock implements SettingsCubit {}
@@ -59,7 +59,7 @@ Widget _buildPage({
   required BitcoinPriceBloc bitcoinPriceBloc,
 }) => MaterialApp(
   theme: AppTheme.themeData(AppThemeType.light),
-  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  localizationsDelegates: appLocalizationsDelegates,
   supportedLocales: AppLocalizations.supportedLocales,
   home: MultiBlocProvider(
     providers: [
