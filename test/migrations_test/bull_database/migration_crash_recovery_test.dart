@@ -86,7 +86,7 @@ void main() {
   // current code. The relaunch must reach the current schema, validate, and
   // keep every label that survived the crash.
   // Old untransactional crash points rebuild many temporary schemas. Allow
-  // disk contention with the other migration suites in the parallel run.
+  // up to five minutes for I/O contention in the full parallel suite.
   group('killed after any commit while upgrading on an older release', () {
     for (final MapEntry(key: version, value: fixture) in _fixtures.entries) {
       test('from schema $version, the next launch recovers', () async {
@@ -94,7 +94,7 @@ void main() {
           seed: (file) => _seedFixture(file, version, fixture),
           crashingOpen: (executor) => _ReleasedMigrationOrder(executor),
         );
-      }, timeout: const Timeout(Duration(minutes: 2)));
+      }, timeout: const Timeout(Duration(minutes: 5)));
     }
   });
 
