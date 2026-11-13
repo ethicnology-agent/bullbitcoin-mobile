@@ -22,7 +22,7 @@ ARG RUST_VERSION="1.100.0"
 
 # Android versions (passed via --build-arg from Makefile, defaults as fallback)
 ARG JVM_TARGET="21"
-ARG ANDROID_API_LEVEL="36"
+ARG ANDROID_API_LEVEL="37"
 ARG ANDROID_BUILD_TOOLS="36.0.0"
 ARG ANDROID_NDK="29.0.14206865"
 

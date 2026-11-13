@@ -8,7 +8,7 @@
 | Flutter | 3.50.0 via fvm (pinned in `.fvmrc`) | `fvm install` in repo root |
 | Dart | bundled with Flutter (SDK 3.14.0, per `pubspec.yaml`) | comes with Flutter |
 | Java | >= 17 (JDK 21 matches `android.jvmTarget`) | system package manager or [SDKMAN](https://sdkman.io) |
-| Android SDK | `compileSdk` 36 | Android Studio SDK Manager |
+| Android SDK | `compileSdk` 37 | Android Studio SDK Manager |
 | Android NDK | `29.0.14206865` (see `android/gradle.properties`) | Android Studio SDK Manager |
 
 The bwk bindings the SP feature calls come from the `bull_sdk` package (see `pubspec.yaml`), not a local crate. Flutter Rust Bridge 2.13 Native Assets hooks compile its aggregate Rust library (`rust_lib_bull_sdk`). Each native crate declares its exact compiler in `rust-toolchain.toml`; `make` exports the matching `RUSTUP_TOOLCHAIN` and disables automatic toolchain installation. Install the compiler and required Android target before building.
