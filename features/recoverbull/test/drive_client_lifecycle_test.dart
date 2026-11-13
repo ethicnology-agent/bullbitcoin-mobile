@@ -25,6 +25,57 @@ void main() {
   });
   tearDown(() => datasource.dispose());
 
+  test('event-only discovery does not discard the foreground client', () async {
+    await datasource.connect();
+    google.eventOnly = true;
+    expect(await datasource.connectSilently(), isNull);
+    expect(await datasource.fetchAllMetadata(), isEmpty);
+    expect(client.closes, 0);
+    expect(google.disconnects, 0);
+  });
+
+  test('silent discovery never requests missing Drive scopes', () async {
+    datasource.dispose();
+    datasource = GoogleDriveAppDatasource(googleSignIn: google);
+    expect(await datasource.connectSilently(), isNull);
+    expect(google.authorization.prompts, 0);
+    expect(google.disconnects, 0);
+    await expectLater(datasource.fetchAllMetadata(), throwsA(isA<Exception>()));
+  });
+
+  test('foreground connection can request missing Drive scopes', () async {
+    datasource.dispose();
+    datasource = GoogleDriveAppDatasource(googleSignIn: google);
+    await datasource.connect();
+    expect(google.authorization.prompts, 1);
+    expect(google.disconnects, 0);
+  });
+
+  for (final returnsAccount in [true, false]) {
+    test(
+      'a late silent result ($returnsAccount) cannot replace a newer account',
+      () async {
+        await datasource.connect();
+        final first = google.account;
+        final pending = Completer<GoogleSignInAccount?>();
+        google.pendingSilent = pending.future;
+        final refresh = datasource.connectSilently();
+        await Future<void>.delayed(Duration.zero);
+        google.account = _Account('second@example.invalid');
+        final replacement = _Client();
+        authenticate = () async => replacement;
+        await datasource.connect();
+        pending.complete(returnsAccount ? first : null);
+        expect(await refresh, isNull);
+        expect(client.closes, 1);
+        expect(client.writes, 0);
+        expect(replacement.closes, 0);
+        expect(await datasource.fetchAllMetadata(), isEmpty);
+        expect(google.disconnects, 0);
+      },
+    );
+  }
+
   test('a Drive delete confirmation cannot cross an account change', () async {
     client.hasFile = true;
     final repository = GoogleDriveRepositoryImpl(datasource: datasource);
