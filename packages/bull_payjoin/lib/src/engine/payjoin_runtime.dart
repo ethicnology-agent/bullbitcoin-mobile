@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'package:drift/native.dart' show SqliteException;
+import 'package:drift/isolate.dart' show DriftRemoteException;
 
 import 'package:bull_payjoin/src/data/local_payjoin_datasource.dart';
 import 'package:bull_payjoin/src/data/payjoin_database.dart';
@@ -37,23 +39,17 @@ Future<Result<PayjoinLifecycle, PayjoinFailure>> openPayjoin({
   // other's destination, and the order of `openPayjoin` calls would silently
   // decide where a session's failures are reported.
   final payjoinLog = logger.PayjoinLogger(log);
-  var database = await _tryOpenDatabase(databasePath, payjoinLog);
-  if (database == null) {
-    // Self-heal: a corrupt database file or a schema downgrade would
-    // otherwise fail every open retry identically — and because
-    // reservedOutpoints() gates coin selection, that bricks every bitcoin
-    // send in the app until reinstall. Move the unreadable file aside (kept
-    // for forensics) and retry once with a fresh database; the legacy import
-    // below re-populates it from the root database's legacy tables. Sessions
-    // created after that import are lost, but their funds are not: a
-    // sender's counterparty still holds the original and can broadcast it,
-    // and a receiver's sender owns their own fallback.
+  final opened = await _tryOpenDatabase(databasePath, payjoinLog);
+  var database = opened.database;
+  if (database == null && opened.isCorrupt) {
+    // Preserve the existing recovery only for positively identified corrupt
+    // files. A locked or failed migration must keep every session reservation.
     database = await _quarantineAndReopenDatabase(databasePath, payjoinLog);
-    if (database == null) {
-      return const Err(
-        PayjoinMigrationFailure('Could not open or migrate Payjoin storage'),
-      );
-    }
+  }
+  if (database == null) {
+    return const Err(
+      PayjoinMigrationFailure('Could not open or migrate Payjoin storage'),
+    );
   }
 
   try {
@@ -99,25 +95,44 @@ Future<Result<PayjoinLifecycle, PayjoinFailure>> openPayjoin({
   }
 }
 
-Future<PayjoinDatabase?> _tryOpenDatabase(
+Future<({PayjoinDatabase? database, bool isCorrupt})> _tryOpenDatabase(
   String databasePath,
   logger.PayjoinLogger payjoinLog,
 ) async {
+  PayjoinDatabase? database;
   try {
-    final database = PayjoinDatabase.open(databasePath);
+    database = PayjoinDatabase.open(databasePath);
     // Force the lazy open NOW: drift spawns the background isolate, opens
     // the file and runs schema migrations on the first statement, so a
     // corrupt file or a schema downgrade surfaces here rather than
     // mid-import.
     await database.customSelect('SELECT 1').getSingle();
-    return database;
+    return (database: database, isCorrupt: false);
   } catch (error, trace) {
     payjoinLog.severe(
       code: PayjoinLogCode.migrationFailure,
       error: error,
       trace: trace,
     );
-    return null;
+    try {
+      await database?.close();
+    } catch (closeError, closeTrace) {
+      payjoinLog.severe(
+        code: PayjoinLogCode.migrationFailure,
+        error: closeError,
+        trace: closeTrace,
+      );
+      return (database: null, isCorrupt: false);
+    }
+    Object cause = error;
+    while (cause is DriftRemoteException) {
+      cause = cause.remoteCause;
+    }
+    // SQLite extended result codes retain their primary code in the low byte.
+    final corrupt =
+        cause is SqliteException &&
+        const {11, 26}.contains(cause.resultCode & 0xff);
+    return (database: null, isCorrupt: corrupt);
   }
 }
 
@@ -154,7 +169,7 @@ Future<PayjoinDatabase?> _quarantineAndReopenDatabase(
       'sessions created after the legacy import were lost',
     ),
   );
-  return _tryOpenDatabase(databasePath, payjoinLog);
+  return (await _tryOpenDatabase(databasePath, payjoinLog)).database;
 }
 
 final class _PayjoinLifecycle implements PayjoinLifecycle {

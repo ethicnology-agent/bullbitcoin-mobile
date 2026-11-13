@@ -103,6 +103,10 @@ final class PayjoinDatabase extends _$PayjoinDatabase {
         File(path),
         setup: (database) {
           database.execute('PRAGMA busy_timeout = 2000;');
+          // Refuse future files before changing their journal configuration.
+          if (database.userVersion > schema) {
+            throw StateError('Payjoin storage schema is newer than this build');
+          }
           database.execute('PRAGMA journal_mode = WAL;');
           database.execute('PRAGMA synchronous = FULL;');
         },
