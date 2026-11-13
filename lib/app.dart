@@ -1,3 +1,5 @@
+import 'package:bull_recoverbull/bull_recoverbull.dart';
+
 import 'dart:async';
 
 import 'package:bb_mobile/design_compatibility_builder.dart';
@@ -180,6 +182,7 @@ class _BullBitcoinWalletAppState extends State<BullBitcoinWalletApp> {
                     localizationsDelegates: [
                       ...appLocalizationsDelegates,
                       LogsLocalizations.delegate,
+                      ...RecoverBullFeature.localizationsDelegates,
                     ],
                     supportedLocales: AppLocalizations.supportedLocales,
                     builder: (context, child) {
@@ -191,7 +194,14 @@ class _BullBitcoinWalletAppState extends State<BullBitcoinWalletApp> {
                         context,
                         BullSupportScope(
                           onContactSupport: SupportFacade.contactSupport,
-                          child: AppStartupWidget(app: routedChild),
+                          child: AppStartupWidget(
+                            app: locator<RecoverBullFeature>().withAlerts(
+                              routedChild,
+                              onOpen: () => AppRouter.router.pushNamed(
+                                'recoverbullFlows',
+                              ),
+                            ),
+                          ),
                         ),
                       );
                       // Mark beta-channel builds (`make android beta`) with a

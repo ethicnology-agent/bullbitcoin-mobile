@@ -695,7 +695,7 @@ packages:
     source: hosted
     version: "0.3.1"
   extension_google_sign_in_as_googleapis_auth:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: extension_google_sign_in_as_googleapis_auth
       sha256: "8a9c887a377ee5b990b2b29be229de8401a43002a7d0d0b29f7d014c1c6bfeac"
@@ -1069,7 +1069,7 @@ packages:
     source: hosted
     version: "0.3.3+1"
   google_sign_in:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: google_sign_in
       sha256: "521031b65853b4409b8213c0387d57edaad7e2a949ce6dea0d8b2afc9cb29763"
@@ -1109,7 +1109,7 @@ packages:
     source: hosted
     version: "1.1.3"
   googleapis:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: googleapis
       sha256: "48200d0b604fc49ed87053bd8c42711a110e958dd80d52db03cbe723f8fb44dc"
@@ -1837,11 +1837,11 @@ packages:
     source: hosted
     version: "1.1.1"
   recoverbull:
-    dependency: "direct main"
+    dependency: transitive
     description:
       path: "."
-      ref: "92925c959f219fa4dfd0fe0f40392ddf868e2774"
-      resolved-ref: "92925c959f219fa4dfd0fe0f40392ddf868e2774"
+      ref: "293b0d709f6c7775180f775c6a5fe99a39f175ce"
+      resolved-ref: "293b0d709f6c7775180f775c6a5fe99a39f175ce"
       url: "https://github.com/SatoshiPortal/recoverbull-client-dart.git"
     source: git
     version: "1.0.0"
