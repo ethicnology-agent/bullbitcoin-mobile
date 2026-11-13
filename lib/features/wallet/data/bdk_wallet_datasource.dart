@@ -283,9 +283,15 @@ class BdkWalletDatasource {
     try {
       psbt = txBuilder.finish(wallet: bdkWallet);
     } on bdk.InsufficientFundsCreateTxException catch (e) {
+      if (bdkWallet.listUnspent().isEmpty) {
+        throw NoSpendableUtxoException('No unspent outputs');
+      }
       // Mapped here so callers don't depend on a BDK type.
       throw InsufficientFundsException(e.toString());
     } on bdk.CoinSelectionCreateTxException catch (e) {
+      if (bdkWallet.listUnspent().isEmpty) {
+        throw NoSpendableUtxoException('No unspent outputs');
+      }
       // The same situation reported through a different variant: BDK raises
       // this one when the selection can't cover the outputs plus the fee,
       // which is what hand-picked coins hit.
