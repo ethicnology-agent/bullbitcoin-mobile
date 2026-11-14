@@ -5,8 +5,8 @@ version: 6.15.0+228
 
 
 environment:
-  sdk: ">=3.14.0 <4.0.0"
-  flutter: ">=3.50.0"
+  sdk: "3.14.0"
+  flutter: "3.50.0"
 workspace:
   - packages/secrets
   - packages/bull_payjoin
