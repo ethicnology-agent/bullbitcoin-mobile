@@ -92,161 +92,140 @@ class Report {
   }
 
   static Future<void> _initSentry(String dsn) async {
-    await SentryFlutter.init(
-      (options) => configureSentryOptions(options, dsn: dsn),
-    );
+    await SentryFlutter.init((options) {
+      options.dsn = kReleaseMode ? dsn : '';
+      options.compressPayload = true;
+      options.debug = false;
+
+      // ── PII and identification
+      options.sendDefaultPii = false;
+      options.attachThreads = false;
+      options.reportPackages = false;
+      options.considerInAppFramesByDefault = true;
+
+      // ── Screen content capture
+      options.attachScreenshot = false;
+      // ignore: experimental_member_use
+      options.attachViewHierarchy = false;
+      options.replay.sessionSampleRate = 0.0;
+      options.replay.onErrorSampleRate = 0.0;
+
+      // ── Logs and prints ───────────────────────────────────────────
+      options.enableLogs = false;
+      options.enablePrintBreadcrumbs = false;
+
+      // ── User-interaction tracking ─────────────────────────────────
+      options.enableUserInteractionBreadcrumbs = false;
+      options.enableUserInteractionTracing = false;
+      options.enableWindowMetricBreadcrumbs = false;
+      options.enableBrightnessChangeBreadcrumbs = false;
+      options.enableTextScaleChangeBreadcrumbs = false;
+
+      // ── Network
+      options.captureFailedRequests = false;
+      options.propagateTraceparent = false;
+
+      // ── Profiling
+      // ignore: experimental_member_use
+      options.profilesSampleRate = 0.0;
+
+      // ── Misc reporting
+      options.reportSilentFlutterErrors = true;
+
+      // ── Defaults pinned for intent. Match SDK defaults today; pinned
+      //    so a future SDK upgrade that flips them doesn't drift our
+      //    privacy posture without a code review.
+      options.attachStacktrace = true;
+      options.maxBreadcrumbs = 100;
+
+      // ── Consent-gated. These flags are init-only — once the SDK is
+      //    constructed the booleans cannot be hot-toggled. Mid-session
+      //    opt-out is enforced dynamically via `beforeSend` and
+      //    `beforeSendTransaction` below; these flags only stop *new*
+      //    transactions / sessions / breadcrumbs from being generated
+      //    when consent is OFF at boot.
+      final consent = Report.consent;
+      options.sendClientReports = consent;
+      options.enableAutoSessionTracking = consent;
+      options.enableAutoPerformanceTracing = consent;
+      options.enableAutoNativeBreadcrumbs = consent;
+      options.enableAppLifecycleBreadcrumbs = consent;
+      options.tracesSampleRate = consent ? 0.2 : 0.0; // 0.2 instead of 1.0
+      options.anrEnabled = consent;
+      options.enableWatchdogTerminationTracking = consent;
+      options.enableAppHangTracking = consent;
+
+      // ── Final scrub. No consent → no event, no exceptions (even
+      //    install/upgrade milestones tagged `category=migration`).
+      //    Passing events are anonymized so we never leak txids,
+      //    addresses, or seed-derived strings.
+      //
+      //    Re-reads `Report.consent` on every event (rather than using
+      //    a closure-captured boolean) so the runtime opt-out path —
+      //    `SettingsRepository.setErrorReportingEnabled(false)` →
+      //    `Report.updateConsent(false)` — takes effect for the
+      //    remainder of the session, not just for the next cold
+      //    start.
+      options.beforeSend = (event, hint) {
+        if (!Report.consent) return null;
+
+        event.exceptions?.forEach((e) => e.value = null);
+        // Keep only the install UUID we set ourselves; drop anything else
+        // (ip_address, username, geo, …) that could appear on `event.user`.
+        final uid = event.user?.id;
+        event.user = uid == null ? null : SentryUser(id: uid);
+        event.request = null;
+
+        // Breadcrumbs are minimized first; route arguments and all other
+        // payloads are never safe to transmit.
+        event.breadcrumbs = event.breadcrumbs?.map((b) {
+          return Breadcrumb(
+            category: b.category,
+            level: b.level,
+            timestamp: b.timestamp,
+            type: b.type,
+            message: null,
+            data: null,
+          );
+        }).toList();
+
+        // Some SDK frame maps are unmodifiable. Failure to clear one must not
+        // prevent the already-minimized event from being sent.
+        try {
+          for (final ex in event.exceptions ?? <SentryException>[]) {
+            for (final f in ex.stackTrace?.frames ?? []) {
+              try {
+                f.vars.clear();
+              } catch (_) {}
+            }
+          }
+          for (final t in event.threads ?? <SentryThread>[]) {
+            for (final f in t.stacktrace?.frames ?? []) {
+              try {
+                f.vars.clear();
+              } catch (_) {}
+            }
+          }
+        } catch (_) {}
+
+        return event;
+      };
+
+      // Transactions ride a separate pipeline from `beforeSend` (events).
+      // With no callback set, traces generated when consent was ON at
+      // boot would keep flowing after a runtime opt-out until the next
+      // cold start. Re-reading `Report.consent` here closes that gap
+      // symmetrically with `beforeSend`.
+      options.beforeSendTransaction = (transaction, hint) {
+        if (!Report.consent) return null;
+        return transaction;
+      };
+    });
 
     final uuid = installUuid;
     if (uuid != null) {
       Sentry.configureScope((scope) => scope.setUser(SentryUser(id: uuid)));
     }
-  }
-
-  /// Configures the SDK without initializing platform integrations.
-  @visibleForTesting
-  static void configureSentryOptions(
-    SentryFlutterOptions options, {
-    required String dsn,
-  }) {
-    options.dsn = kReleaseMode ? dsn : '';
-    options.compressPayload = true;
-    options.debug = false;
-
-    // ── PII and identification
-    options.sendDefaultPii = false;
-    options.attachThreads = false;
-    options.reportPackages = false;
-    options.considerInAppFramesByDefault = true;
-
-    // ── Screen content capture
-    options.attachScreenshot = false;
-    // ignore: experimental_member_use
-    options.attachViewHierarchy = false;
-    // ignore: experimental_member_use
-    options.replay.enableWebReplay = false;
-    options.replay.sessionSampleRate = 0.0;
-    options.replay.onErrorSampleRate = 0.0;
-
-    // ── Logs and prints ───────────────────────────────────────────
-    options.beforeSendLog = (log, hint) => null;
-    options.beforeSendMetric = (metric, hint) => null;
-    options.enablePrintBreadcrumbs = false;
-
-    // ── User-interaction tracking ─────────────────────────────────
-    options.enableUserInteractionBreadcrumbs = false;
-    options.enableUserInteractionTracing = false;
-    options.enableWindowMetricBreadcrumbs = false;
-    options.enableBrightnessChangeBreadcrumbs = false;
-    options.enableTextScaleChangeBreadcrumbs = false;
-
-    // ── Network
-    options.captureFailedRequests = false;
-    options.captureNativeFailedRequests = false;
-    options.propagateTraceparent = false;
-
-    // ── Misc reporting
-    options.reportSilentFlutterErrors = true;
-
-    // ── Defaults pinned for intent. Match SDK defaults today; pinned
-    //    so a future SDK upgrade that flips them doesn't drift our
-    //    privacy posture without a code review.
-    options.attachStacktrace = true;
-    options.maxBreadcrumbs = 100;
-
-    // ── Consent-gated. These flags are init-only — once the SDK is
-    //    constructed the booleans cannot be hot-toggled. Mid-session
-    //    opt-out is enforced dynamically via `beforeSend` and
-    //    `beforeSendTransaction` below; these flags only stop *new*
-    //    transactions / sessions / breadcrumbs from being generated
-    //    when consent is OFF at boot.
-    final consent = Report.consent;
-    options.sendClientReports = consent;
-    options.enableAutoSessionTracking = consent;
-    options.enableAutoPerformanceTracing = consent;
-    options.enableAutoNativeBreadcrumbs = consent;
-    options.enableAppLifecycleBreadcrumbs = consent;
-    // Keep the transaction pipeline: its callback enforces live opt-out.
-    options.traceLifecycle = SentryTraceLifecycle.static;
-    options.tracesSampleRate = consent ? 0.2 : 0.0; // 0.2 instead of 1.0
-    options.anrEnabled = consent;
-    options.enableWatchdogTerminationTracking = consent;
-    options.enableAppHangTracking = consent;
-
-    // ── Final scrub. No consent → no event, no exceptions (even
-    //    install/upgrade milestones tagged `category=migration`).
-    //    Passing events are anonymized so we never leak txids,
-    //    addresses, or seed-derived strings.
-    //
-    //    Re-reads `Report.consent` on every event (rather than using
-    //    a closure-captured boolean) so the runtime opt-out path —
-    //    `SettingsRepository.setErrorReportingEnabled(false)` →
-    //    `Report.updateConsent(false)` — takes effect for the
-    //    remainder of the session, not just for the next cold
-    //    start.
-    options.beforeSend = (event, hint) {
-      if (!Report.consent) return null;
-
-      event.exceptions?.forEach((e) => e.value = null);
-      // Keep only the install UUID we set ourselves; drop anything else
-      // (ip_address, username, geo, …) that could appear on `event.user`.
-      final uid = event.user?.id;
-      event.user = uid == null ? null : SentryUser(id: uid);
-      event.request = null;
-      _removeNewDeviceTelemetry(event);
-
-      // Breadcrumbs are minimized first; route arguments and all other
-      // payloads are never safe to transmit.
-      event.breadcrumbs = event.breadcrumbs?.map((b) {
-        return Breadcrumb(
-          category: b.category,
-          level: b.level,
-          timestamp: b.timestamp,
-          type: b.type,
-          message: null,
-          data: null,
-        );
-      }).toList();
-
-      // Some SDK frame maps are unmodifiable. Failure to clear one must not
-      // prevent the already-minimized event from being sent.
-      try {
-        for (final ex in event.exceptions ?? <SentryException>[]) {
-          for (final f in ex.stackTrace?.frames ?? []) {
-            try {
-              f.vars.clear();
-            } catch (_) {}
-          }
-        }
-        for (final t in event.threads ?? <SentryThread>[]) {
-          for (final f in t.stacktrace?.frames ?? []) {
-            try {
-              f.vars.clear();
-            } catch (_) {}
-          }
-        }
-      } catch (_) {}
-
-      return event;
-    };
-
-    // Transactions ride a separate pipeline from `beforeSend` (events).
-    // With no callback set, traces generated when consent was ON at
-    // boot would keep flowing after a runtime opt-out until the next
-    // cold start. Re-reading `Report.consent` here closes that gap
-    // symmetrically with `beforeSend`.
-    options.beforeSendTransaction = (transaction, hint) {
-      if (!Report.consent) return null;
-      _removeNewDeviceTelemetry(transaction);
-      return transaction;
-    };
-  }
-
-  static void _removeNewDeviceTelemetry(SentryEvent event) {
-    final device = event.contexts.device;
-    if (device == null) return;
-    // Added in SDK 10.2; retain the previously collected device context.
-    final data = device.toJson()..remove('connection_effective_type');
-    event.contexts.device = SentryDevice.fromJson(data);
   }
 
   /// Writes the boot-time consent mirror so the next cold start's
