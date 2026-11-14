@@ -7,14 +7,20 @@ import 'package:bull_recoverbull/bull_recoverbull.dart';
 import 'package:bull_recoverbull/src/domain/entities/drive_file_metadata.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:google_sign_in_platform_interface/google_sign_in_platform_interface.dart';
 import 'package:http/http.dart' as http;
 
 void main() {
   late _Google google;
+  late _Tokens tokens;
+  late GoogleSignInPlatform previousPlatform;
   late _Client client;
   late GoogleDriveAppDatasource datasource;
   late Future<http.Client?> Function() authenticate;
   setUp(() {
+    previousPlatform = GoogleSignInPlatform.instance;
+    tokens = _Tokens();
+    GoogleSignInPlatform.instance = tokens;
     google = _Google();
     client = _Client();
     authenticate = () async => client;
@@ -23,33 +29,66 @@ void main() {
       authenticatedClient: () => authenticate(),
     );
   });
-  tearDown(() => datasource.dispose());
+  tearDown(() async {
+    datasource.dispose();
+    GoogleSignInPlatform.instance = previousPlatform;
+    await google.events.close();
+  });
 
-  test('event-only discovery does not discard the foreground client', () async {
+  test('a sign-out invalidates the foreground client', () async {
     await datasource.connect();
-    google.eventOnly = true;
-    expect(await datasource.connectSilently(), isNull);
-    expect(await datasource.fetchAllMetadata(), isEmpty);
-    expect(client.closes, 0);
+    await google.signOut();
+    expect(client.closes, 1);
+    await expectLater(datasource.fetchAllMetadata(), throwsA(isA<Exception>()));
     expect(google.disconnects, 0);
   });
 
-  test('silent discovery never requests missing Drive scopes', () async {
+  test('silent discovery never requests interactive token recovery', () async {
     datasource.dispose();
     datasource = GoogleDriveAppDatasource(googleSignIn: google);
+    tokens.accessToken = null;
     expect(await datasource.connectSilently(), isNull);
-    expect(google.authorization.prompts, 0);
+    expect(tokens.recoveryRequests, [false]);
+    expect(google.signIns, 0);
     expect(google.disconnects, 0);
     await expectLater(datasource.fetchAllMetadata(), throwsA(isA<Exception>()));
   });
 
-  test('foreground connection can request missing Drive scopes', () async {
+  test('foreground connection can authenticate interactively', () async {
     datasource.dispose();
     datasource = GoogleDriveAppDatasource(googleSignIn: google);
     await datasource.connect();
-    expect(google.authorization.prompts, 1);
+    expect(google.signIns, 1);
+    expect(tokens.recoveryRequests, [true]);
     expect(google.disconnects, 0);
   });
+
+  for (final disposed in [false, true]) {
+    test('late token recovery is fenced after '
+        '${disposed ? 'disposal' : 'account change'}', () async {
+      datasource.dispose();
+      datasource = GoogleDriveAppDatasource(googleSignIn: google);
+      final pending = Completer<GoogleSignInTokenData>();
+      tokens.pending = pending.future;
+      final refresh = datasource.connectSilently();
+      await tokens.requested.future;
+      if (disposed) {
+        datasource.dispose();
+      } else {
+        google.account = _Account('second@example.invalid');
+      }
+      pending.complete(
+        GoogleSignInTokenData(accessToken: 'synthetic-test-token'),
+      );
+      expect(await refresh, isNull);
+      await expectLater(
+        datasource.fetchAllMetadata(),
+        throwsA(disposed ? isA<StateError>() : isA<Exception>()),
+      );
+      expect(tokens.recoveryRequests, [false]);
+      expect(google.disconnects, 0);
+    });
+  }
 
   for (final returnsAccount in [true, false]) {
     test(
@@ -134,59 +173,41 @@ void main() {
 final class _Account extends Fake implements GoogleSignInAccount {
   @override
   final String email;
-  _Account(this.email, [GoogleSignInAuthorizationClient? authorization])
-    : authorizationClient = authorization ?? _Authorization();
-  @override
-  final GoogleSignInAuthorizationClient authorizationClient;
+  _Account(this.email);
 }
 
 final class _Google extends Fake implements GoogleSignIn {
-  final authorization = _Authorization();
-  late GoogleSignInAccount? _account = _Account(
-    'first@example.invalid',
-    authorization,
-  );
-  final events = StreamController<GoogleSignInAuthenticationEvent>.broadcast(
-    sync: true,
-  );
+  GoogleSignInAccount? _account = _Account('first@example.invalid');
+  final events = StreamController<GoogleSignInAccount?>.broadcast(sync: true);
   bool failSilently = false;
-  bool eventOnly = false;
   Future<GoogleSignInAccount?>? pendingSilent;
   int disconnects = 0;
+  int signIns = 0;
   GoogleSignInAccount? get account => _account;
   set account(GoogleSignInAccount? value) {
     _account = value;
-    events.add(
-      value == null
-          ? GoogleSignInAuthenticationEventSignOut()
-          : GoogleSignInAuthenticationEventSignIn(user: value),
-    );
+    events.add(value);
   }
 
   @override
-  Stream<GoogleSignInAuthenticationEvent> get authenticationEvents =>
-      events.stream;
+  GoogleSignInAccount? get currentUser => account;
   @override
-  Future<void> initialize({
-    String? clientId,
-    String? serverClientId,
-    String? nonce,
-    String? hostedDomain,
-  }) async {}
+  List<String> get scopes => ['https://www.googleapis.com/auth/drive.appdata'];
   @override
-  Future<GoogleSignInAccount> authenticate({
-    List<String> scopeHint = const [],
-  }) async {
+  Stream<GoogleSignInAccount?> get onCurrentUserChanged => events.stream;
+  @override
+  Future<GoogleSignInAccount?> signIn() async {
+    signIns++;
     final value = account;
     if (value == null) throw const FormatException('Unavailable');
     return value;
   }
 
   @override
-  Future<GoogleSignInAccount?>? attemptLightweightAuthentication({
-    bool reportAllExceptions = false,
+  Future<GoogleSignInAccount?> signInSilently({
+    bool suppressErrors = true,
+    bool reAuthenticate = false,
   }) {
-    if (eventOnly) return null;
     final pending = pendingSilent;
     if (pending != null) return pending;
     if (failSilently) return Future.error(const FormatException('Unavailable'));
@@ -194,9 +215,34 @@ final class _Google extends Fake implements GoogleSignIn {
   }
 
   @override
-  Future<void> disconnect() async {
+  Future<GoogleSignInAccount?> signOut() async {
+    account = null;
+    return null;
+  }
+
+  @override
+  Future<GoogleSignInAccount?> disconnect() async {
     disconnects++;
     account = null;
+    return null;
+  }
+}
+
+final class _Tokens extends GoogleSignInPlatform {
+  final recoveryRequests = <bool?>[];
+  String? accessToken = 'synthetic-test-token';
+  Future<GoogleSignInTokenData>? pending;
+  final requested = Completer<void>();
+  @override
+  Future<GoogleSignInTokenData> getTokens({
+    required String email,
+    bool? shouldRecoverAuth,
+  }) async {
+    recoveryRequests.add(shouldRecoverAuth);
+    if (!requested.isCompleted) requested.complete();
+    final pendingTokens = pending;
+    if (pendingTokens != null) return await pendingTokens;
+    return GoogleSignInTokenData(accessToken: accessToken);
   }
 }
 
@@ -223,23 +269,5 @@ final class _Client extends http.BaseClient {
   @override
   void close() {
     closes++;
-  }
-}
-
-final class _Authorization extends Fake
-    implements GoogleSignInAuthorizationClient {
-  int prompts = 0;
-  @override
-  Future<GoogleSignInClientAuthorization?> authorizationForScopes(
-    List<String> scopes,
-  ) async => null;
-  @override
-  Future<GoogleSignInClientAuthorization> authorizeScopes(
-    List<String> scopes,
-  ) async {
-    prompts++;
-    return const GoogleSignInClientAuthorization(
-      accessToken: 'synthetic-test-token',
-    );
   }
 }
