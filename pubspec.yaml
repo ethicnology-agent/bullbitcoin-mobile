@@ -42,7 +42,7 @@ dependencies:
   primitives:
   background_tasks:
   notifications:
-  flutter_local_notifications: ^22.3.0
+  flutter_local_notifications: ^23.0.2
   transaction_sync:
   bull_tor:
   screen_privacy:
