@@ -1,3 +1,4 @@
+import 'package:bb_mobile/features/exchange/domain/usecases/get_exchange_web_settings_usecase.dart';
 import 'package:primitives/primitives.dart';
 import '../domain/exchange_access.dart';
 import '../domain/exchange_availability.dart';
@@ -38,6 +39,7 @@ export '../ui/exchange_trading_guard.dart' show ExchangeTradingGuard;
 
 class ExchangeFacade {
   const ExchangeFacade({
+    required GetExchangeWebSettingsUsecase getExchangeWebSettingsUsecase,
     required GetExchangeAccountUsecase getExchangeAccountUsecase,
     required SaveExchangePreferencesUsecase saveExchangePreferencesUsecase,
     required ResolveExchangeAccessUsecase resolveAccess,
@@ -45,11 +47,13 @@ class ExchangeFacade {
     required this._signOut,
     required WatchExchangeAccessUsecase watchAccess,
     required this._tradingGuard,
-  }) : _getAccount = getExchangeAccountUsecase,
+  }) : _getWebSettings = getExchangeWebSettingsUsecase,
+       _getAccount = getExchangeAccountUsecase,
        _savePreferences = saveExchangePreferencesUsecase,
        _resolve = resolveAccess,
        _watch = watchAccess;
 
+  final GetExchangeWebSettingsUsecase _getWebSettings;
   final GetExchangeAccountUsecase _getAccount;
   final SaveExchangePreferencesUsecase _savePreferences;
   final ResolveExchangeAccessUsecase _resolve;
@@ -57,6 +61,14 @@ class ExchangeFacade {
   final SignOutExchangeUsecase _signOut;
   final WatchExchangeAccessUsecase _watch;
   final GuardExchangeTradingUsecase _tradingGuard;
+
+  Future<bool> networkUnavailable() async {
+    final result = await _getWebSettings.execute();
+    return switch (result) {
+      Err(failure: ExchangeUnsupportedNetworkFailure()) => true,
+      _ => false,
+    };
+  }
 
   ExchangeAccess get currentAccess => _watch.current;
   Stream<ExchangeAccess> watchAccess() => _watch.execute();

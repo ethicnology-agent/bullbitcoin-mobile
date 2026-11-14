@@ -1,5 +1,6 @@
 import 'package:bb_mobile/core/exchange/domain/entity/user_summary.dart';
 import 'package:bb_mobile/core/settings/data/settings_repository.dart';
+import 'package:bb_mobile/features/settings/domain/settings_entity.dart';
 import 'package:primitives/primitives.dart';
 import '../exchange_access.dart';
 import '../exchange_failure.dart';
@@ -38,8 +39,13 @@ class GetExchangeAccountUsecase {
       if (_access.epoch != epoch) {
         return const Err(ExchangeOperationStaleFailure());
       }
-      if (environment case Err(:final failure)) return Err(failure);
-      final isTestnet = (environment as Ok).value.isTestnet as bool;
+      final bool isTestnet;
+      switch (environment) {
+        case Ok(:final value):
+          isTestnet = value == Environment.testnet;
+        case Err(:final failure):
+          return Err(failure);
+      }
       final result = await (isTestnet ? _testnet : _mainnet).getAccount();
       if (_access.epoch != epoch) {
         return const Err(ExchangeOperationStaleFailure());

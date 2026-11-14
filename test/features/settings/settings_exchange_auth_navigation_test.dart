@@ -1,5 +1,5 @@
 import 'package:bb_mobile/features/settings/ui/screens/exchange/exchange_settings_screen.dart';
-import 'package:bb_mobile/core/settings/domain/settings_entity.dart';
+import 'package:bb_mobile/features/settings/domain/settings_entity.dart';
 import 'package:bb_mobile/features/exchange/presentation/exchange_cubit.dart';
 import 'package:bb_mobile/features/exchange/presentation/exchange_state.dart';
 import 'package:bb_mobile/features/settings/ui/settings_router.dart';

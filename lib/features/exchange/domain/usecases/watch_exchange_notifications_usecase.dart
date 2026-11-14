@@ -1,8 +1,11 @@
 import '../repositories/exchange_access_repository.dart';
+import 'package:bb_mobile/core/settings/domain/repositories/settings_repository.dart';
+import 'package:bb_mobile/features/exchange/domain/read_exchange_environment.dart';
 import 'package:bb_mobile/core/exchange/domain/entity/notification_message.dart';
 import 'package:bb_mobile/core/exchange/domain/repositories/exchange_notification_repository.dart';
 import 'package:primitives/primitives.dart';
 import 'package:bb_mobile/features/exchange/domain/exchange_failure.dart';
+import 'package:meta/meta.dart';
 
 /// The notification socket, as the cubit needs it.
 ///
@@ -10,11 +13,13 @@ import 'package:bb_mobile/features/exchange/domain/exchange_failure.dart';
 /// raw reason. The lifted failure exists so a caller *could* react, though the
 /// socket is best-effort and the cubit deliberately does not surface it.
 class WatchExchangeNotificationsUsecase {
+  final SettingsRepository _settingsRepository;
   final ExchangeNotificationRepository _exchangeNotificationRepository;
   final ExchangeAccessRepository _access;
 
   const WatchExchangeNotificationsUsecase({
     required this._exchangeNotificationRepository,
+    required this._settingsRepository,
     required this._access,
   });
 
@@ -32,8 +37,16 @@ class WatchExchangeNotificationsUsecase {
         },
       );
 
-  Future<Result<void, ExchangeFailure>> _connect(bool reconnect) =>
+  Future<Result<void, ExchangeFailure>> _open({required bool reconnect}) =>
       _access.runAuthenticated(() async {
+        final allowed = await readExchangeEnvironment(
+          _settingsRepository,
+          ExchangeNotificationsUnavailableFailure.new,
+        );
+        if (allowed case Err(:final failure)) {
+          _exchangeNotificationRepository.disconnect();
+          return Err(failure);
+        }
         final result = reconnect
             ? await _exchangeNotificationRepository.reconnect()
             : await _exchangeNotificationRepository.connect();
@@ -43,8 +56,11 @@ class WatchExchangeNotificationsUsecase {
         );
       });
 
-  Future<Result<void, ExchangeFailure>> connect() => _connect(false);
-  Future<Result<void, ExchangeFailure>> reconnect() => _connect(true);
+  @useResult
+  Future<Result<void, ExchangeFailure>> connect() => _open(reconnect: false);
+
+  @useResult
+  Future<Result<void, ExchangeFailure>> reconnect() => _open(reconnect: true);
 
   void disconnect() => _exchangeNotificationRepository.disconnect();
 }

@@ -37,6 +37,9 @@ import 'package:bb_mobile/features/settings/presentation/bloc/settings_cubit.dar
 import 'package:bb_mobile/features/settings/public/settings_facade.dart';
 import 'package:bull_payjoin/bull_payjoin.dart';
 import 'package:get_it/get_it.dart';
+import 'package:bb_mobile/features/wallet/public/wallet_facade.dart';
+import 'package:bb_mobile/features/settings/domain/usecases/discover_wallet_usecase.dart';
+import 'package:bb_mobile/features/settings/presentation/wallet_discovery_cubit.dart';
 
 class SettingsLocator {
   static void setup(GetIt locator) {
@@ -69,6 +72,12 @@ class SettingsLocator {
         locator<WatchSettingsExchangeAccessUsecase>(),
         locator<SetSettingsExchangeAccessUsecase>(),
       ),
+    );
+    locator.registerFactory<DiscoverWalletUsecase>(
+      () => DiscoverWalletUsecase(locator<WalletFacade>()),
+    );
+    locator.registerFactory<WalletDiscoveryCubit>(
+      () => WalletDiscoveryCubit(locator<DiscoverWalletUsecase>()),
     );
     // Usecases
     locator.registerFactory<SetEnvironmentUsecase>(

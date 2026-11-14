@@ -88,3 +88,8 @@ final class ExchangeUnexpectedFailure extends ExchangeFailure {
 final class ExchangeOperationStaleFailure extends ExchangeFailure {
   const ExchangeOperationStaleFailure();
 }
+
+/// This environment has no supported exchange backend.
+final class ExchangeUnsupportedNetworkFailure extends ExchangeFailure {
+  const ExchangeUnsupportedNetworkFailure();
+}

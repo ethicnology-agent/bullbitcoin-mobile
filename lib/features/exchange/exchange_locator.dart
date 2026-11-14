@@ -13,7 +13,7 @@ import 'package:bb_mobile/core/exchange/data/datasources/bullbitcoin_api_datasou
 import 'package:bb_mobile/features/exchange/data/exchange_account_repository_impl.dart';
 import 'package:bb_mobile/core/exchange/domain/repositories/exchange_api_key_repository.dart';
 import 'package:bb_mobile/core/exchange/domain/repositories/exchange_user_repository.dart';
-import 'package:bb_mobile/core/exchange/domain/usecases/send_support_chat_message_usecase.dart';
+import 'package:bb_mobile/features/exchange/domain/usecases/send_support_chat_message_usecase.dart';
 import 'package:bb_mobile/core/settings/data/settings_repository.dart';
 import 'package:bb_mobile/core/settings/domain/repositories/settings_repository.dart'
     as settings_contract;
@@ -44,7 +44,7 @@ class ExchangeLocator {
         readEnvironment: () async =>
             (await locator<settings_contract.SettingsRepository>().fetch())
                 .environment
-                .isTestnet,
+                .requireHistoricalTestnet(),
         platformAllowed: platformAllowed,
         disconnectNotifications: () async =>
             locator<ExchangeNotificationRepository>().disconnect(),
@@ -76,6 +76,7 @@ class ExchangeLocator {
     registerBlocs(locator);
     locator.registerLazySingleton<ExchangeFacade>(
       () => ExchangeFacade(
+        getExchangeWebSettingsUsecase: locator<GetExchangeWebSettingsUsecase>(),
         getExchangeAccountUsecase: locator<GetExchangeAccountUsecase>(),
         saveExchangePreferencesUsecase:
             locator<SaveExchangePreferencesUsecase>(),
@@ -160,6 +161,7 @@ class ExchangeLocator {
 
     locator.registerFactory<RequestExchangeAccountDeletionUsecase>(
       () => RequestExchangeAccountDeletionUsecase(
+        settingsRepository: locator<settings_contract.SettingsRepository>(),
         sendSupportChatMessageUsecase: locator<SendSupportChatMessageUsecase>(),
       ),
     );
@@ -174,6 +176,7 @@ class ExchangeLocator {
     locator.registerFactory<WatchExchangeNotificationsUsecase>(
       () => WatchExchangeNotificationsUsecase(
         access: locator<ExchangeAccessRepository>(),
+        settingsRepository: locator<settings_contract.SettingsRepository>(),
         exchangeNotificationRepository:
             locator<ExchangeNotificationRepository>(),
       ),

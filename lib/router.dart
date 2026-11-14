@@ -1,6 +1,8 @@
 import 'package:bb_mobile/features/bitcoin_price/public/bitcoin_price_facade.dart';
 import 'package:bb_mobile/features/support/public/support_facade.dart';
 import 'package:bull_quick_actions/bull_quick_actions.dart';
+import 'package:bb_mobile/features/wallet/presentation/network_wallet_setup_cubit.dart';
+import 'package:bb_mobile/features/settings/public/settings_facade.dart';
 
 import 'package:bb_mobile/core/utils/build_context_x.dart';
 import 'package:bb_mobile/core/screens/route_error_screen.dart';
@@ -61,6 +63,7 @@ class AppRouter {
       GlobalKey<NavigatorState>(debugLabel: 'rootNav');
 
   static final _exchangeConfig = ExchangeRouterConfig(
+    networkUnavailable: () => locator<ExchangeFacade>().networkUnavailable(),
     isSuperuser: (context) =>
         context.read<SettingsCubit>().state.isSuperuser ?? false,
     homePath: WalletRoute.walletHome.path,
@@ -120,6 +123,7 @@ class AppRouter {
       final settingsState = context.read<SettingsCubit>().state;
       return spRedirect(
         path,
+        environment: settingsState.environment?.networkEnv,
         isSuperuser: settingsState.isSuperuser ?? false,
         isDevModeEnabled: settingsState.isDevModeEnabled ?? false,
         // The SP feature's own synchronous flag, not the wallet feature's copy:
@@ -168,6 +172,7 @@ class AppRouter {
             onQuickAction: _openQuickAction,
             onCustomizeQuickActions: (context) =>
                 context.pushNamed(SettingsRoute.quickActions.name),
+            createSetupCubit: () => locator<NetworkWalletSetupCubit>(),
           ),
           ...ExchangeRouter.routes(_exchangeConfig),
         ],
@@ -185,7 +190,9 @@ class AppRouter {
         buildPriceHistory: (context) => locator<BitcoinPriceFacade>()
             .buildHistory(onBack: () => context.pop()),
       ),
-      TransactionsRouter.transactionsRoute,
+      TransactionsRouter.transactionsRoute(
+        scope: (child) => ActiveNetworkScope(child: child),
+      ),
       TransactionsRouter.exportTransactionsRoute,
       ...TransactionsRouter.transactionDetailsRoutes,
       ReceiveRouter.route,

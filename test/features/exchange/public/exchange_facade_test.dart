@@ -3,6 +3,7 @@ import 'package:bb_mobile/features/exchange/domain/usecases/enable_exchange_usec
 import 'package:bb_mobile/features/exchange/domain/usecases/sign_out_exchange_usecase.dart';
 import 'package:bb_mobile/features/exchange/domain/usecases/watch_exchange_access_usecase.dart';
 import 'package:bb_mobile/features/exchange/domain/usecases/guard_exchange_trading_usecase.dart';
+import 'package:bb_mobile/features/exchange/domain/usecases/get_exchange_web_settings_usecase.dart';
 import 'package:bb_mobile/core/exchange/domain/entity/user_summary.dart';
 import 'package:bb_mobile/features/exchange/domain/usecases/get_exchange_account_usecase.dart';
 import 'package:bb_mobile/features/exchange/domain/usecases/save_exchange_preferences_usecase.dart';
@@ -26,15 +27,20 @@ class _Watch extends Mock implements WatchExchangeAccessUsecase {}
 
 class _Guard extends Mock implements GuardExchangeTradingUsecase {}
 
+class _MockWebSettings extends Mock implements GetExchangeWebSettingsUsecase {}
+
 void main() {
   late _MockGetExchangeAccountUsecase getAccount;
   late _MockSaveExchangePreferencesUsecase savePreferences;
   late ExchangeFacade facade;
+  late _MockWebSettings webSettings;
 
   setUp(() {
     getAccount = _MockGetExchangeAccountUsecase();
     savePreferences = _MockSaveExchangePreferencesUsecase();
+    webSettings = _MockWebSettings();
     facade = ExchangeFacade(
+      getExchangeWebSettingsUsecase: webSettings,
       getExchangeAccountUsecase: getAccount,
       saveExchangePreferencesUsecase: savePreferences,
       resolveAccess: _Resolve(),
@@ -43,6 +49,17 @@ void main() {
       watchAccess: _Watch(),
       tradingGuard: _Guard(),
     );
+  });
+
+  test('only unsupported networks redirect exchange entry', () async {
+    when(
+      webSettings.execute,
+    ).thenAnswer((_) async => const Err(ExchangeUnsupportedNetworkFailure()));
+    expect(await facade.networkUnavailable(), isTrue);
+    when(
+      webSettings.execute,
+    ).thenAnswer((_) async => const Err(ExchangeUnexpectedFailure()));
+    expect(await facade.networkUnavailable(), isFalse);
   });
 
   test('publishes account details without returning the core entity', () async {
