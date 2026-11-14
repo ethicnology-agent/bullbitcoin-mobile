@@ -83,7 +83,7 @@ secrets-api-docs:
 secrets-api-docs-check:
 	@fvm dart packages/secrets/tool/api_docs.dart --check
 
-checks: analyze bull-ui-check native-write-check custody-check secrets-api-docs-check fix-check format-check rustc-pins-test unit-test
+checks: app-icons-check analyze bull-ui-check native-write-check custody-check secrets-api-docs-check fix-check format-check rustc-pins-test unit-test
 
 # Supply-chain regression gate: every external GitHub Actions `uses:` reference
 # must stay pinned to a full commit SHA (mutable tags can be repointed).
@@ -434,3 +434,16 @@ catalogue:
 	@cd packages/bull_ui_catalogue && \
 		fvm dart run build_runner build && \
 		fvm flutter run -d chrome
+
+# Keep the icon tool's cli_util separate from Melos, and resolve asset/output
+# paths from the app root using the tool's explicit package configuration.
+.PHONY: app-icons app-icons-deps app-icons-check
+app-icons-deps:
+	@fvm dart pub --directory=tools/app_icons get --enforce-lockfile
+
+app-icons: app-icons-deps
+	@fvm dart --packages=tools/app_icons/.dart_tool/package_config.json tools/app_icons/bin/generate.dart $(ICON_ARGS)
+
+app-icons-check: app-icons-deps
+	@cd tools/app_icons && fvm dart analyze --fatal-infos
+	@fvm dart --packages=tools/app_icons/.dart_tool/package_config.json tools/app_icons/bin/generate.dart --help
