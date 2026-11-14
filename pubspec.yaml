@@ -70,19 +70,19 @@ dependencies:
   bull_sdk:
     git:
       url: https://github.com/SatoshiPortal/bull_sdk
-      ref: 50089d72ede5578428aa5c7c019cdb7accd6c4e5
+      ref: 01298a0b85f523a9443df3ec9da92e488c7d2dbc
       path: packages/bull_sdk
   boltz_stream:
     git:
       url: https://github.com/SatoshiPortal/bull_sdk
-      ref: 50089d72ede5578428aa5c7c019cdb7accd6c4e5
+      ref: 01298a0b85f523a9443df3ec9da92e488c7d2dbc
       path: packages/boltz-stream
   bitbox_transport:
     git:
       url: https://github.com/SatoshiPortal/bull_sdk
-      ref: 50089d72ede5578428aa5c7c019cdb7accd6c4e5
+      ref: 01298a0b85f523a9443df3ec9da92e488c7d2dbc
       path: packages/bitbox-transport
-  universal_ble: ^1.2.0
+  universal_ble: ^3.3.0
   auto_size_text: ^3.0.0
   freezed_annotation: ^3.1.0
   convert: ^3.1.2
@@ -126,7 +126,7 @@ dependencies:
   satoshifier:
     git:
       url: https://github.com/SatoshiPortal/bull_sdk
-      ref: 50089d72ede5578428aa5c7c019cdb7accd6c4e5
+      ref: 01298a0b85f523a9443df3ec9da92e488c7d2dbc
       path: packages/satoshifier
   flutter_nfc_kit: ^3.6.1
   ndef: ^0.4.0
@@ -134,7 +134,7 @@ dependencies:
     git:
       url: https://github.com/SatoshiPortal/ledger-flutter-plus-plugins
       path: packages/ledger-bitcoin
-      ref: c4240d1f518c5903b67191253212754a31ed5333
+      ref: d71f36e95a763491adab95fc1f5abf86f532ac4e
   permission_handler: ^13.0.2
   cbor: ^6.3.7
   ur:
@@ -180,6 +180,9 @@ dev_dependencies:
 # https://github.com/payjoin/rust-payjoin/commit/6c39a08
 # Keep the official archive; remove these once its released constraints allow 2.
 dependency_overrides:
+  # UPower 0.7 metadata still requires dbus 0.7. Its unchanged runtime passes
+  # all 14 upstream tests with 0.8; remove after battery_plus/UPower update.
+  dbus: ^0.8.0
   hooks: ^2.0.2
   code_assets: ^2.0.0
 

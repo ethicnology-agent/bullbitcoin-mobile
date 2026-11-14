@@ -190,8 +190,8 @@ packages:
     dependency: "direct main"
     description:
       path: "packages/bitbox-transport"
-      ref: "50089d72ede5578428aa5c7c019cdb7accd6c4e5"
-      resolved-ref: "50089d72ede5578428aa5c7c019cdb7accd6c4e5"
+      ref: "01298a0b85f523a9443df3ec9da92e488c7d2dbc"
+      resolved-ref: "01298a0b85f523a9443df3ec9da92e488c7d2dbc"
       url: "https://github.com/SatoshiPortal/bull_sdk"
     source: git
     version: "0.1.0"
@@ -239,10 +239,10 @@ packages:
     dependency: transitive
     description:
       name: bluez
-      sha256: "61a7204381925896a374301498f2f5399e59827c6498ae1e924aaa598751b545"
+      sha256: "4747e4f25abf91a9a341a1c3f83a9081be9bdd189d913e391b6707db4214b4d2"
       url: "https://pub.dev"
     source: hosted
-    version: "0.8.3"
+    version: "0.9.0"
   bolt11_decoder:
     dependency: "direct main"
     description:
@@ -256,8 +256,8 @@ packages:
     dependency: "direct main"
     description:
       path: "packages/boltz-stream"
-      ref: "50089d72ede5578428aa5c7c019cdb7accd6c4e5"
-      resolved-ref: "50089d72ede5578428aa5c7c019cdb7accd6c4e5"
+      ref: "01298a0b85f523a9443df3ec9da92e488c7d2dbc"
+      resolved-ref: "01298a0b85f523a9443df3ec9da92e488c7d2dbc"
       url: "https://github.com/SatoshiPortal/bull_sdk"
     source: git
     version: "0.1.0"
@@ -345,8 +345,8 @@ packages:
     dependency: "direct main"
     description:
       path: "packages/bull_sdk"
-      ref: "50089d72ede5578428aa5c7c019cdb7accd6c4e5"
-      resolved-ref: "50089d72ede5578428aa5c7c019cdb7accd6c4e5"
+      ref: "01298a0b85f523a9443df3ec9da92e488c7d2dbc"
+      resolved-ref: "01298a0b85f523a9443df3ec9da92e488c7d2dbc"
       url: "https://github.com/SatoshiPortal/bull_sdk"
     source: git
     version: "1.0.0+1"
@@ -490,10 +490,10 @@ packages:
     dependency: transitive
     description:
       name: connectivity_plus
-      sha256: "762c99f890ca8bf87f7337236f99edd42793843bc6c3631da294a76653a54bd0"
+      sha256: d7749fd36d8b404a4935612b94eca7c3ce3705377ab678e24ff2a4301436f741
       url: "https://pub.dev"
     source: hosted
-    version: "7.3.1"
+    version: "7.3.2"
   connectivity_plus_platform_interface:
     dependency: transitive
     description:
@@ -607,13 +607,13 @@ packages:
     source: hosted
     version: "1.2.0"
   dbus:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
       name: dbus
-      sha256: a48d5da28e89bd02196e80d81ed8d7954923d00a0f4a68cc20b575038f023383
+      sha256: f7db8504e715b835f5ebe5fe74604ccd961d504c73389a5d8e81bafc2e2f3612
       url: "https://pub.dev"
     source: hosted
-    version: "0.7.15"
+    version: "0.8.0"
   decimal:
     dependency: "direct main"
     description:
@@ -1389,8 +1389,8 @@ packages:
     dependency: "direct main"
     description:
       path: "packages/ledger-bitcoin"
-      ref: c4240d1f518c5903b67191253212754a31ed5333
-      resolved-ref: c4240d1f518c5903b67191253212754a31ed5333
+      ref: d71f36e95a763491adab95fc1f5abf86f532ac4e
+      resolved-ref: d71f36e95a763491adab95fc1f5abf86f532ac4e
       url: "https://github.com/SatoshiPortal/ledger-flutter-plus-plugins"
     source: git
     version: "0.0.3"
@@ -1398,10 +1398,10 @@ packages:
     dependency: transitive
     description:
       name: ledger_flutter_plus
-      sha256: "59c5a6062505c721c2ca909fa085c52cffe93de995174b8418b54a6acf52eb70"
+      sha256: d0ff0a0a3d7960878184f9e3eac15fb4b14496defcae05925e9ae4efc9da230d
       url: "https://pub.dev"
     source: hosted
-    version: "1.5.6"
+    version: "2.0.0"
   ledger_usb_plus:
     dependency: transitive
     description:
@@ -1542,10 +1542,10 @@ packages:
     dependency: transitive
     description:
       name: nm
-      sha256: "2c9aae4127bdc8993206464fcc063611e0e36e72018696cd9631023a31b24254"
+      sha256: "2ae480aa3379716b8bb58dfebb168e2919394c92b629efaaa0baaa5d140786e6"
       url: "https://pub.dev"
     source: hosted
-    version: "0.5.0"
+    version: "0.6.0"
   no_screenshot:
     dependency: transitive
     description:
@@ -1574,8 +1574,8 @@ packages:
     dependency: transitive
     description:
       path: "packages/onion"
-      ref: "50089d72ede5578428aa5c7c019cdb7accd6c4e5"
-      resolved-ref: "50089d72ede5578428aa5c7c019cdb7accd6c4e5"
+      ref: "01298a0b85f523a9443df3ec9da92e488c7d2dbc"
+      resolved-ref: "01298a0b85f523a9443df3ec9da92e488c7d2dbc"
       url: "https://github.com/SatoshiPortal/bull_sdk"
     source: git
     version: "0.1.0"
@@ -1888,8 +1888,8 @@ packages:
     dependency: "direct main"
     description:
       path: "packages/satoshifier"
-      ref: "50089d72ede5578428aa5c7c019cdb7accd6c4e5"
-      resolved-ref: "50089d72ede5578428aa5c7c019cdb7accd6c4e5"
+      ref: "01298a0b85f523a9443df3ec9da92e488c7d2dbc"
+      resolved-ref: "01298a0b85f523a9443df3ec9da92e488c7d2dbc"
       url: "https://github.com/SatoshiPortal/bull_sdk"
     source: git
     version: "0.0.1"
@@ -2238,10 +2238,10 @@ packages:
     dependency: "direct main"
     description:
       name: universal_ble
-      sha256: "8325ca9f5cce2fba2b4efef74a4fcfe7144f303b409d6fc6ed16197b00a1a241"
+      sha256: bfbc5dea17fa04e365d3870309d8a8a49067ff5195a84d4f6f73c92aa96bf7ed
       url: "https://pub.dev"
     source: hosted
-    version: "1.2.0"
+    version: "3.3.0"
   universal_io:
     dependency: transitive
     description:
@@ -2399,10 +2399,10 @@ packages:
     dependency: transitive
     description:
       name: wakelock_plus
-      sha256: "22b3e7e937721de70e63c85e7139f4ac781dc22863b9262431a53ac030eb074b"
+      sha256: "39a1d99085cf3190d41305bca05f0c0d77522f355f7f99bb648ee231192d9d68"
       url: "https://pub.dev"
     source: hosted
-    version: "1.8.0"
+    version: "1.8.2"
   wakelock_plus_platform_interface:
     dependency: transitive
     description:
