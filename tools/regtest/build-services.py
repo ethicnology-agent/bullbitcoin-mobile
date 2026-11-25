@@ -22,7 +22,12 @@ def source(name, url, revision):
         run("git", "-C", str(directory), "checkout", "--detach", "FETCH_HEAD")
     actual = subprocess.check_output(["git", "-C", str(directory), "rev-parse", "HEAD"], text=True).strip()
     if actual != revision:
-        raise RuntimeError(f"Preserve existing {name} checkout: a different revision is checked out")
+        # A bumped pin moves a clean checkout; local changes are preserved.
+        changes = subprocess.check_output(["git", "-C", str(directory), "status", "--porcelain"], text=True)
+        if changes.strip():
+            raise RuntimeError(f"Preserve existing {name} checkout: it has local changes at another revision")
+        run("git", "-C", str(directory), "fetch", "--depth=1", url, revision)
+        run("git", "-C", str(directory), "checkout", "--detach", "FETCH_HEAD")
     return directory
 
 
@@ -43,6 +48,16 @@ def main():
         temporary = binaries / (name + ".tmp")
         shutil.copy2(original, temporary)
         temporary.replace(binaries / name)
+    # scuttle (captaind, watchmand, barkd, posd) and crash-cache, as images
+    # named by their pinned revisions.
+    for name, (url, revision), image, dockerfile in (
+            ("scuttle", stack.SCUTTLE, stack.SCUTTLE_IMAGE, "contrib/docker/Dockerfile"),
+            ("crash-cache", stack.CRASH_CACHE, stack.CRASH_CACHE_IMAGE, "Dockerfile"),
+            ("electrs", stack.ELECTRS, stack.ELECTRS_IMAGE, str(Path(__file__).with_name("electrs.Dockerfile").resolve()))):
+        if subprocess.run(["podman", "image", "exists", image]).returncode != 0:
+            directory = source(name, url, revision)
+            run("podman", "--cgroup-manager=cgroupfs", "build", "-f", str(directory / dockerfile),
+                "-t", image, str(directory), env={**os.environ, "DBUS_SESSION_BUS_ADDRESS": "disabled"})
     stack.prepare_certificates()
 
 

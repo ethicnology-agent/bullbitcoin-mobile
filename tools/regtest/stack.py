@@ -4,6 +4,7 @@
 import argparse
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import socket
@@ -21,6 +22,21 @@ STATE = Path(os.environ.get("BULL_REGTEST_STATE", Path.home() / ".local/share/bu
 NIGIRI = STATE / "nigiri"
 COMPOSE = STATE / "compose.yml"
 LOCK = Path(__file__).with_name("images.json")
+# Built locally by build-services.py from these pinned sources, so they are
+# named by revision instead of pinned by registry digest. scuttle is
+# Bitcoin Jungle's fork of Second's bark: the Ark server with expiry payouts
+# (captaind, watchmand), its wallet daemon (barkd) and posd. crash-cache is
+# BULL's Sentry-compatible crash report collector.
+SCUTTLE = ("https://github.com/Bitcoin-Jungle/scuttle.git", "c031d0b7bfd24d21d92c4f9d338321cbe7e63ba6")
+CRASH_CACHE = ("https://github.com/ethicnology/crash-cache.git", "ae657408c9c1c10677929827baae23da72690333")
+SCUTTLE_IMAGE = f"localhost/bull-regtest-scuttle:{SCUTTLE[1][:12]}"
+CRASH_CACHE_IMAGE = f"localhost/bull-regtest-crash-cache:{CRASH_CACHE[1][:12]}"
+# Blockstream's electrs for Bitcoin: Nigiri's predates POST /txs/package,
+# which bark needs to broadcast boards (electrs.Dockerfile).
+ELECTRS = ("https://github.com/Blockstream/electrs.git", "6cad780be93835b962af735171fae872f9526503")
+ELECTRS_IMAGE = f"localhost/bull-regtest-electrs:{ELECTRS[1][:12]}"
+LOCAL_IMAGES = (SCUTTLE_IMAGE, CRASH_CACHE_IMAGE, ELECTRS_IMAGE)
+POSTGRES_IMAGE = "docker.io/library/postgres:18-alpine"
 SERVICES = (
     "bitcoin", "liquid", "electrs", "electrs-liquid", "electrum-ws",
     "chopsticks", "chopsticks-liquid", "esplora", "esplora-liquid",
@@ -52,8 +68,23 @@ def prepare():
     source = yaml.safe_load((NIGIRI / "docker-compose.yml").read_text())
     pins = json.loads(LOCK.read_text()) if LOCK.exists() else {}
     services = {name: source["services"][name] for name in SERVICES}
-    # Bark 0.8.1 requires Core 31; Nigiri 0.5.17 still embeds Core 30.
-    services["bitcoin"]["image"] = "ghcr.io/getumbrel/docker-bitcoind:v31.0"
+    # scuttle's captaind requires Core 31 or later; Nigiri 0.5.17 still
+    # embeds Core 30. 32.1 is what scuttle's deployments run.
+    services["bitcoin"]["image"] = "ghcr.io/getumbrel/docker-bitcoind:v32.1"
+    # chopsticks (Nigiri's faucet and Esplora proxy) uses Core's unnamed
+    # default wallet, which Core 31 and later no longer create. `up` makes
+    # it (see ensure_default_wallet); bitcoind loads it and the funding
+    # wallet on every start.
+    services["bitcoin"]["command"] = ["-wallet=bull-regtest", "-wallet="]
+    # The explorers read their API from the browser: loopback by default, a
+    # public Esplora when the stack is hosted.
+    services["esplora"]["environment"] = {
+        "API_URL": os.environ.get("BULL_REGTEST_ESPLORA_URL", "http://localhost:3000")}
+    services["esplora-liquid"]["environment"] = {
+        "API_URL": os.environ.get("BULL_REGTEST_LIQUID_ESPLORA_URL", "http://localhost:3001")}
+    # Same arguments as Nigiri's electrs, on a current build (see ELECTRS).
+    services["electrs"]["image"] = ELECTRS_IMAGE
+    services["electrs"]["entrypoint"] = ["/usr/local/bin/electrs"]
     # Match Liquid's relay floor and Boltz's Elements fee policy.
     services["liquid"]["command"] = ["-datadir=config", "-minrelaytxfee=0.00000100", "-acceptdiscountct=1"]
     services.update({
@@ -67,21 +98,89 @@ def prepare():
                         str(Path(__file__).with_name("start-cln.sh").resolve()) + ":/app/start-cln.sh:ro"],
             "depends_on": ["bitcoin"],
         },
+        "ark-postgres": {
+            "image": POSTGRES_IMAGE,
+            "environment": {"POSTGRES_DB": "captaind", "POSTGRES_USER": "captaind",
+                            "POSTGRES_PASSWORD": "captaind"},
+            "volumes": ["ark-postgres:/var/lib/postgresql"], "restart": "on-failure",
+        },
         "captaind": {
-            "image": "docker.io/secondark/captaind:0.8.1",
+            "image": SCUTTLE_IMAGE,
             "entrypoint": ["sh", "/app/start-captaind.sh"],
-            "volumes": ["captaind:/data/captaind", "postgres:/var/lib/postgresql/data",
-                        "cln:/data/cln", str(Path(__file__).with_name("captaind.toml").resolve())
-                        + ":/root/captaind/captaind.toml:ro",
+            "volumes": ["captaind:/data/captaind", "cln:/data/cln:ro",
+                        str(Path(__file__).with_name("captaind.toml").resolve()) + ":/root/captaind/captaind.toml:ro",
                         str(Path(__file__).with_name("start-captaind.sh").resolve()) + ":/app/start-captaind.sh:ro"],
-            "ports": ["3535:3535"], "depends_on": ["cln"], "restart": "on-failure",
+            "ports": ["3535:3535"], "depends_on": ["cln", "ark-postgres"], "restart": "on-failure",
+        },
+        "watchmand": {
+            "image": SCUTTLE_IMAGE,
+            "entrypoint": ["sh", "/app/start-watchmand.sh"],
+            "volumes": ["watchmand:/data/watchmand", "captaind:/data/captaind:ro",
+                        str(Path(__file__).with_name("watchmand.toml").resolve()) + ":/root/watchmand/watchmand.toml:ro",
+                        str(Path(__file__).with_name("start-watchmand.sh").resolve()) + ":/app/start-watchmand.sh:ro"],
+            "depends_on": ["captaind"], "restart": "on-failure",
         },
         "bark": {
-            "image": "docker.io/secondark/bark:0.8.1",
+            "image": SCUTTLE_IMAGE,
             "entrypoint": ["/usr/local/bin/barkd"],
-            "command": ["--no-ui", "--host", "0.0.0.0", "--port", "3000"],
+            "command": ["--host", "0.0.0.0", "--port", "3000"],
+            "environment": {"BARKD_NO_UI": "true"},
             "ports": ["3538:3000"],
             "volumes": ["bark:/root"], "restart": "on-failure",
+        },
+        # posd's own barkd: it issues the invoices of sales and Lightning
+        # addresses and forwards each payment to the store owner's mailbox.
+        "posd-barkd": {
+            "image": SCUTTLE_IMAGE,
+            "entrypoint": ["/usr/local/bin/barkd"],
+            "command": ["--host", "0.0.0.0", "--port", "3000"],
+            "environment": {"BARKD_NO_UI": "true"},
+            "volumes": ["posd-barkd:/root"], "depends_on": ["captaind"], "restart": "on-failure",
+        },
+        "posd-postgres": {
+            "image": POSTGRES_IMAGE,
+            "environment": {"POSTGRES_DB": "posd", "POSTGRES_USER": "posd", "POSTGRES_PASSWORD": "posd"},
+            "volumes": ["posd-postgres:/var/lib/postgresql"], "restart": "on-failure",
+        },
+        "posd": {
+            "image": SCUTTLE_IMAGE,
+            "entrypoint": ["sh", "/app/start-posd.sh"],
+            "environment": {
+                "POSD__BRANDS__BITCOINJUNGLE__PUBLIC_URL":
+                    os.environ.get("BULL_REGTEST_POSD_URL", "http://127.0.0.1:3080"),
+                "POSD__BRANDS__BULLBITCOIN__PUBLIC_URL":
+                    os.environ.get("BULL_REGTEST_POSD_BULL_URL", "http://localhost:3080"),
+            },
+            "volumes": ["posd-barkd:/data/posd-barkd:ro",
+                        str(Path(__file__).with_name("posd.toml").resolve()) + ":/root/posd/posd.toml:ro",
+                        str(Path(__file__).with_name("start-posd.sh").resolve()) + ":/app/start-posd.sh:ro"],
+            "ports": ["3080:3080"], "depends_on": ["captaind", "posd-barkd", "posd-postgres", "bitcoin"],
+            "restart": "on-failure",
+        },
+        "crash-cache-postgres": {
+            "image": POSTGRES_IMAGE,
+            "environment": {"POSTGRES_DB": "crash_cache", "POSTGRES_USER": "crash_cache",
+                            "POSTGRES_PASSWORD": "crash_cache"},
+            "volumes": ["crash-cache-postgres:/var/lib/postgresql"], "restart": "on-failure",
+        },
+        "crash-cache": {
+            "image": CRASH_CACHE_IMAGE,
+            "environment": {
+                "DATABASE_URL": "postgresql://crash_cache:crash_cache@crash-cache-postgres:5432/crash_cache",
+                "CRASH_CACHE_HOST": "0.0.0.0", "CRASH_CACHE_PORT": "3000",
+                # crash-cache requires every setting. Its small profile, with
+                # reports processed every 10 seconds instead of every minute.
+                "DATABASE_POOL_SIZE": "10", "DATABASE_POOL_TIMEOUT_SECS": "20",
+                "MAX_COMPRESSED_PAYLOAD_BYTES": "50 * 1024",
+                "MAX_UNCOMPRESSED_PAYLOAD_BYTES": "200 * 1024",
+                "WORKER_INTERVAL_SECS": "10", "WORKER_REPORTS_BATCH_SIZE": "100",
+                "MAX_CONCURRENT_COMPRESSIONS": "4",
+                "RATE_LIMIT_REQUESTS_PER_SEC": "800", "RATE_LIMIT_PER_IP_PER_SEC": "30",
+                "RATE_LIMIT_PER_PROJECT_PER_SEC": "500", "RATE_LIMIT_BURST_MULTIPLIER": "2",
+                "ANALYTICS_FLUSH_INTERVAL_SECS": "10", "ANALYTICS_RETENTION_DAYS": "30",
+                "ANALYTICS_BUFFER_SIZE": "20000",
+            },
+            "ports": ["8097:3000"], "depends_on": ["crash-cache-postgres"], "restart": "on-failure",
         },
         "exchange": {
             "image": "docker.io/library/python:3.11-slim-bookworm",
@@ -120,6 +219,10 @@ def prepare():
         "volumes": ["boltz-cln:/root/.lightning",
                     str(Path(__file__).with_name("start-cln.sh").resolve()) + ":/app/start-cln.sh:ro"],
     }
+    # Each node's peer port on the host, so Lightning nodes outside the stack
+    # can connect and open channels.
+    for node, port in (("cln", 19735), ("cln-peer", 29735), ("boltz-cln", 39735)):
+        services[node]["ports"] = [f"{port}:9735"]
     for node in ("cln-peer", "boltz-cln"):
         services[node]["environment"] = {
             **services[node]["environment"],
@@ -165,11 +268,14 @@ def prepare():
     }
     for name, service in services.items():
         image = service["image"]
-        if image not in pins:
+        if image in LOCAL_IMAGES:
+            pass
+        elif image not in pins:
             run("podman", "pull", image)
             info = json.loads(run("podman", "image", "inspect", image, capture=True))[0]
             pins[image] = info["RepoDigests"][0]
-        service["image"] = pins[image]
+        if image not in LOCAL_IMAGES:
+            service["image"] = pins[image]
         service["container_name"] = f"bull-regtest-{name}"
         service["stop_grace_period"] = "60s"
         service["ports"] = [f"127.0.0.1:{port}" for port in service.get("ports", [])]
@@ -180,8 +286,10 @@ def prepare():
         if name in ("bitcoin", "liquid"):
             service["user"] = "0:0"
     COMPOSE.write_text(yaml.safe_dump({"version": "3.8", "services": services,
-                                      "volumes": {name: {} for name in ("cln", "cln-peer", "boltz-cln", "captaind", "postgres", "bark", "bark-peer", "boltz", "boltz-postgres", "recoverbull")}},
+                                      "volumes": {name: {} for name in ("cln", "cln-peer", "boltz-cln", "captaind", "ark-postgres", "watchmand", "bark", "bark-peer", "posd-barkd", "posd-postgres", "crash-cache-postgres", "boltz", "boltz-postgres", "recoverbull")}},
                                      sort_keys=False))
+    used = {service["image"] for service in services.values()}
+    pins = {image: pin for image, pin in pins.items() if pin in used}
     LOCK.write_text(json.dumps(pins, indent=2) + "\n")
     print(f"Configuration: {COMPOSE}")
 
@@ -230,6 +338,24 @@ def ensure_wallet(liquid, name):
         return
     existing = {item["name"] for item in rpc(liquid, "listwalletdir")["wallets"]}
     rpc(liquid, "loadwallet" if name in existing else "createwallet", name)
+
+
+def ensure_default_wallet():
+    """Give bitcoind the unnamed wallet chopsticks needs.
+
+    Core refuses to create a wallet with an empty name but still loads one:
+    a wallet.dat at the top of the wallet directory. Create a named wallet
+    and move its file there.
+    """
+    if "" in rpc(False, "listwallets"):
+        return
+    if not any(item["name"] == "" for item in rpc(False, "listwalletdir")["wallets"]):
+        rpc(False, "createwallet", "chopsticks-default")
+        rpc(False, "unloadwallet", "chopsticks-default")
+        run("podman", "exec", "bull-regtest-bitcoin", "sh", "-c",
+            "cd /data/.bitcoin/regtest/wallets && mv chopsticks-default/wallet.dat wallet.dat"
+            " && rm -rf chopsticks-default", capture=True)
+    rpc(False, "loadwallet", "")
 
 
 def bark(method, path, body=None, peer=False):
@@ -318,9 +444,10 @@ def bootstrap():
         raise RuntimeError("Lightning channel did not become active")
     wait_indexers()
     initialize_ark()
+    initialize_scuttle()
     initialize_controller()
     wait_services()
-    print("Bitcoin, Liquid, Lightning, Bark, Boltz and dummy exchange initialized")
+    print("Bitcoin, Liquid, Lightning, scuttle (Ark, posd), Boltz, crash-cache and dummy exchange initialized")
 
 
 def wait_indexers():
@@ -368,6 +495,43 @@ def initialize_ark():
     bark("POST", "onchain/sync", {})
 
 
+def initialize_scuttle():
+    """Give watchmand its sweep address, posd its wallet, crash-cache a project."""
+    try:
+        run("podman", "exec", "bull-regtest-watchmand", "test", "-s", "/data/watchmand/sweep_address", capture=True)
+    except subprocess.CalledProcessError:
+        address = rpc(False, "getnewaddress", wallet="bull-regtest")
+        run("podman", "exec", "-i", "bull-regtest-watchmand", "sh", "-c",
+            "umask 077; cat > /data/watchmand/sweep_address.tmp && mv /data/watchmand/sweep_address.tmp /data/watchmand/sweep_address",
+            stdin=address)
+    # The token stays inside posd-barkd's container.
+    barkd = ("curl -sf -H \"Authorization: Bearer $(cat /root/.bark/auth_token)\" "
+             "-H 'Content-Type: application/json' http://127.0.0.1:3000/api/v1/")
+    deadline = time.monotonic() + 120
+    while True:
+        try:
+            wallet = json.loads(run("podman", "exec", "bull-regtest-posd-barkd", "sh", "-c", barkd + "wallet", capture=True))
+            break
+        except (subprocess.CalledProcessError, json.JSONDecodeError):
+            if time.monotonic() > deadline:
+                raise RuntimeError("posd's barkd did not start")
+            time.sleep(2)
+    if wallet.get("fingerprint") is None:
+        body = json.dumps({"network": "regtest", "ark_server": "http://captaind:3535",
+                           "chain_source": {"esplora": {"url": "http://chopsticks:3000"}}})
+        run("podman", "exec", "bull-regtest-posd-barkd", "sh", "-c",
+            barkd + "wallet/create -X POST -d '" + body + "'", capture=True)
+    dsn = STATE / "crash-cache-dsn"
+    if not dsn.exists():
+        output = run("podman", "exec", "bull-regtest-crash-cache", "crash-cache", "project", "create",
+                     "bull-regtest", capture=True)
+        line = next(item for item in output.splitlines() if "DSN" in item)
+        # The DSN names the container's own listen address; give the host's.
+        value = re.sub(r"@[^/]+/", "@127.0.0.1:8097/", line.split("DSN:", 1)[1].strip(), count=1)
+        dsn.write_text(value + "\n")
+    print("crash-cache DSN: " + dsn.read_text().strip())
+
+
 def initialize_controller():
     for node in ("cln-peer", "boltz-cln"):
         path = "/root/.lightning/regtest/regtest-controller.rune"
@@ -393,6 +557,9 @@ def wait_services():
                     json.load(response)
             for peer in (False, True):
                 bark("GET", "wallet/balance", peer=peer)
+            for url in ("http://127.0.0.1:3080/api/v1/openapi.json", "http://127.0.0.1:8097/health"):
+                with urllib.request.urlopen(url, timeout=5):
+                    pass
             trust = ssl.create_default_context(cafile=str(STATE / "mailrooms/cert.pem"))
             for hostname, port in (("localhost", 8040), ("127.0.0.1", 8041)):
                 with socket.create_connection((hostname, port), timeout=5) as connection:
@@ -438,7 +605,23 @@ def main():
         for name in ("cert.pem", "key.pem", "cert.der"):
             if not (STATE / "mailrooms" / name).is_file():
                 raise RuntimeError("Prepare Payjoin TLS with tools/regtest/build-services.py first")
+        for image in LOCAL_IMAGES:
+            if subprocess.run(["podman", "image", "exists", image]).returncode != 0:
+                raise RuntimeError(f"Build {image} with tools/regtest/build-services.py first")
         prepare()
+        # chopsticks exits without Core's unnamed wallet: make it, and the
+        # funding wallet, before everything else.
+        compose("up", "-d", "bitcoin")
+        deadline = time.monotonic() + 180
+        while True:
+            try:
+                ensure_wallet(False, "bull-regtest")
+                ensure_default_wallet()
+                break
+            except subprocess.CalledProcessError:
+                if time.monotonic() > deadline:
+                    raise RuntimeError("bitcoind did not start")
+                time.sleep(2)
         compose("up", "-d")
         bootstrap()
     elif args.command == "status":

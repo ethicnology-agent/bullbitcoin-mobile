@@ -30,7 +30,12 @@ class StackConfigurationTest(unittest.TestCase):
             services = yaml.safe_load(original)["services"]
             for name, service in services.items():
                 with self.subTest(service=name):
-                    self.assertIn("@sha256:", service["image"])
+                    # Pulled images are pinned by digest; the images
+                    # build-services.py builds are named by source revision.
+                    if service["image"].startswith("localhost/bull-regtest-"):
+                        self.assertRegex(service["image"], r":[0-9a-f]{12}$")
+                    else:
+                        self.assertIn("@sha256:", service["image"])
                     for port in service.get("ports", []):
                         self.assertTrue(port.startswith("127.0.0.1:"))
             self.assertEqual(
@@ -42,6 +47,13 @@ class StackConfigurationTest(unittest.TestCase):
             self.assertEqual(services["recoverbull"]["environment"]["CANARY"], "🐦")
             self.assertIn("-acceptdiscountct=1", services["liquid"]["command"])
             self.assertEqual(services["bitcoin"]["user"], "0:0")
+            self.assertEqual(services["bitcoin"]["command"], ["-wallet=bull-regtest", "-wallet="])
+            # scuttle, not upstream bark: the Ark server, watchman, wallets
+            # and posd all run the scuttle image.
+            for name in ("captaind", "watchmand", "bark", "bark-peer", "posd-barkd", "posd"):
+                self.assertTrue(services[name]["image"].startswith("localhost/bull-regtest-scuttle:"), name)
+            self.assertEqual(services["posd"]["ports"], ["127.0.0.1:3080:3080"])
+            self.assertEqual(services["crash-cache"]["ports"], ["127.0.0.1:8097:3000"])
 
     def test_up_refuses_missing_ancillary_binaries_before_preparing_resources(self):
         with tempfile.TemporaryDirectory(prefix="bull-regtest-preflight-") as directory:

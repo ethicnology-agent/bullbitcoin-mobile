@@ -1,0 +1,50 @@
+# posd, scuttle's point-of-sale and Lightning address service. Its private
+# barkd (posd-barkd) issues the invoices and forwards each payment to the
+# store owner's Ark mailbox. start-posd.sh adds that barkd's token; the
+# brands' public URLs default to loopback and can be set with
+# POSD__BRANDS__<BRAND>__PUBLIC_URL (stack.py passes BULL_REGTEST_POSD_URL and
+# BULL_REGTEST_POSD_BULL_URL through).
+network = "regtest"
+ark_server_url = "http://captaind:3535"
+
+[http]
+listen = "0.0.0.0:3080"
+trust_forwarded_host = true
+
+[brands.bitcoinjungle]
+name = "Bitcoin Jungle"
+public_url = "http://127.0.0.1:3080"
+theme_color = "#edece1"
+theme_color_dark = "#0e0e0e"
+assets = "/usr/share/scuttle/brands/bitcoinjungle"
+
+[brands.bullbitcoin]
+name = "Bull Bitcoin"
+public_url = "http://localhost:3080"
+theme_color = "#f5f0e8"
+theme_color_dark = "#161512"
+assets = "/usr/share/scuttle/brands/bullbitcoin"
+
+[postgres]
+host = "posd-postgres"
+port = 5432
+name = "posd"
+user = "posd"
+password = "posd"
+max_connections = 10
+
+[barkd]
+url = "http://posd-barkd:3000"
+token = "set by start-posd.sh"
+
+[bitcoind]
+url = "http://bitcoin:18443"
+rpc_user = "admin1"
+rpc_password = "123"
+wallet = "posd"
+
+[price]
+# The live Bull Bitcoin price, as in production: fiat amounts at the till are
+# real, and the price path is exercised. Its currencies are posd's defaults.
+source = "bull-bitcoin"
+cache_secs = 60

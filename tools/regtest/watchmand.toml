@@ -1,0 +1,41 @@
+# scuttle's watchman: sweeps the server's expired rounds and pays expired
+# VTXOs out on-chain (expiry payouts). start-watchmand.sh adds the sweep
+# address, which bootstrap takes from the bull-regtest wallet.
+data_dir = "/data/watchmand"
+network = "regtest"
+sync_manager_block_poll_interval = "100ms"
+htlc_settlement_poll_interval = "60s"
+min_trusted_confs = 2
+otel_deployment_name = "bull-regtest"
+admin_address = "127.0.0.1:4536"
+
+[watchman]
+# Reacts every minute instead of mainnet's ten, so a test that mines past an
+# expiry sees the payout soon after.
+reaction_interval = "1m"
+sweep_interval = "2h"
+progress_grace_period = 2
+claim_chunksize = 20
+incremental_relay_fee = "100 sat/kvb"
+expiry_payout_max_fee_rate = "1000 sat/vb"
+min_cpfp_amount = "10000 sat"
+
+[fee_estimator]
+update_interval = "1m"
+history_duration = "60m"
+fallback_fee_rate_fast = "5sat/vb"
+fallback_fee_rate_regular = "2sat/vb"
+fallback_fee_rate_slow = "1sat/vb"
+
+[postgres]
+host = "ark-postgres"
+port = 5432
+name = "captaind"
+user = "captaind"
+password = "captaind"
+max_connections = 10
+
+[bitcoind]
+url = "http://bitcoin:18443"
+rpc_user = "admin1"
+rpc_pass = "123"
