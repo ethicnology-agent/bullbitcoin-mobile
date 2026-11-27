@@ -1,0 +1,59 @@
+name: Experimental targeted CI 3464
+on:
+  push:
+    branches: [experiment/ci-targeted-3464-20261127]
+permissions:
+  contents: read
+jobs:
+  ark:
+    name: Ark ${{ matrix.revision }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - revision: base
+            sha: 1c0fc8932d8c7a6841aa42640451bf9eb48ba934
+          - revision: head
+            sha: 49f676c7cb6214aa0054778457022f750b6d6d17
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ matrix.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/flutter-setup
+        with:
+          cargo-cache: 'true'
+      - name: Ark widget tests
+        run: fvm flutter test features/ark/test --no-pub --reporter expanded
+  payjoin:
+    name: Payjoin isolated ARM64
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 49f676c7cb6214aa0054778457022f750b6d6d17
+          persist-credentials: false
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android /opt/hostedtoolcache /usr/share/dotnet /opt/ghc || true
+          df -h /
+      - uses: ./.github/actions/flutter-setup
+        with:
+          cargo-cache: 'true'
+      - name: Install Linux desktop dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang lld cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev libsecret-1-dev libsecret-tools libcurl4-openssl-dev dbus gnome-keyring xdg-desktop-portal xdg-desktop-portal-gtk libsqlite3-dev xvfb xauth xdg-user-dirs
+      - name: Payjoin isolated regtest
+        run: |
+          export CARGO_TARGET_DIR="$RUNNER_TEMP/payjoin-mailrooms"
+          cargo build --locked --manifest-path tools/local_payjoin_mailrooms/Cargo.toml
+          tools/local_payjoin_mailrooms/build-peer.sh "$RUNNER_TEMP/payjoin-peer"
+          tools/local_payjoin_integration.sh --pull-images
+          export BULL_PAYJOIN_MAILROOMS="$CARGO_TARGET_DIR/debug/bull-regtest-mailrooms"
+          export BULL_PAYJOIN_TEST_PEER="$RUNNER_TEMP/payjoin-peer/bin/payjoin-cli"
+          unset CARGO_TARGET_DIR
+          tools/local_payjoin_integration.sh
