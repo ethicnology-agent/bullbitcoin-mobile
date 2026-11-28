@@ -44,7 +44,14 @@ Future<void> requestRace((String, bool, SendPort) args) async {
             ),
             context: 'public-context',
           );
-    parent.send(['done', result is Ok]);
+    parent.send([
+      'done',
+      close ? 'closure' : 'reserve',
+      switch (result) {
+        Ok() => 'ok',
+        Err(:final failure) => failure.runtimeType.toString(),
+      },
+    ]);
   } on Exception catch (error) {
     parent.send(['failed', error.runtimeType.toString()]);
   } finally {
@@ -80,6 +87,13 @@ void main() {
       db.close();
     }
   }
+
+  Future<Set<Fingerprint>> fingerprints(
+    SqliteArkFundingReservations store,
+  ) async => switch (await store.getCustodyFingerprints()) {
+    Ok(:final value) => value,
+    Err() => throw StateError('Source references unavailable'),
+  };
 
   Future<void> pinned(bool expected) async {
     switch (await fixture.store.getCustodyFingerprints()) {
@@ -429,15 +443,96 @@ void main() {
     await pinned(true);
   });
 
+  test('DELETE contention can leave both attempts without a winner', () async {
+    final request = await begin();
+    final reader = sqlite3.open(fixture.path);
+    final writer = sqlite3.open(fixture.path);
+    final contender = sqlite3.open(fixture.path);
+    final busy = isA<SqliteException>().having(
+      (error) => error.resultCode,
+      'SQLite result code',
+      5,
+    );
+    try {
+      expect(
+        reader.select('PRAGMA journal_mode').single.values.single,
+        'delete',
+      );
+      expect(reader.select('PRAGMA busy_timeout').single.values.single, 0);
+      reader.execute('BEGIN');
+      reader.select('SELECT * FROM ark_funding_operations');
+      // A SHARED reader blocks a DELETE-mode writer at commit, not BEGIN.
+      writer.execute('BEGIN IMMEDIATE');
+      writer.execute("UPDATE ark_funding_operations SET state='requested'");
+      expect(() => writer.execute('COMMIT'), throwsA(busy));
+      writer.execute('ROLLBACK');
+      final closure = await fixture.store.closeNeverPrepared(
+        expected: request,
+        admittedRevision: fundingStamp,
+      );
+      expect(
+        closure,
+        isA<Err<void, SyncFailure>>().having(
+          (result) => result.failure,
+          'failure',
+          isA<SyncStorageFailure>(),
+        ),
+      );
+      writer.execute('BEGIN IMMEDIATE');
+      expect(() => contender.execute('BEGIN IMMEDIATE'), throwsA(busy));
+      final reserve = await fixture.store.reserve(
+        key: fundingKey,
+        spend: UnsignedSpend(
+          revision: fundingStamp,
+          encoded: publicFundingPsbt,
+          inputs: decodeBitcoinPsbt(publicFundingPsbt).inputs,
+          owner: SpendOwner(protocol: 'ark', session: 'op'),
+        ),
+        context: request.context,
+      );
+      expect(
+        reserve,
+        isA<Err<void, SyncFailure>>().having(
+          (result) => result.failure,
+          'failure',
+          isA<SyncStorageFailure>(),
+        ),
+      );
+      writer.execute('ROLLBACK');
+      reader.execute('ROLLBACK');
+      expect([closure, reserve].whereType<Ok<void, SyncFailure>>(), isEmpty);
+      expect(
+        requestOk(await fixture.store.readUnpreparedRequest('op')),
+        request,
+      );
+      expect(sourceOk(await fixture.store.reservations()), isEmpty);
+      expect(
+        sourceOk(await fixture.store.pendingForAccount('public-account')),
+        'op',
+      );
+      await pinned(true);
+      sourceOk(
+        await fixture.store.closeNeverPrepared(
+          expected: request,
+          admittedRevision: fundingStamp,
+        ),
+      );
+    } finally {
+      reader.close();
+      writer.close();
+      contender.close();
+    }
+  });
+
   test(
-    'independent reserve and neverPrepared CAS have exactly one winner',
+    'independent reserve and neverPrepared CAS have at most one winner',
     () async {
-      await begin();
+      final request = await begin();
       final messages = ReceivePort();
       final stream = StreamIterator<dynamic>(messages);
       final exits = [ReceivePort(), ReceivePort()];
       final controls = <SendPort>[];
-      final wins = <bool>[];
+      final results = <String, String>{};
       for (var i = 0; i < 2; i++) {
         await Isolate.spawn(
           requestRace,
@@ -461,22 +556,151 @@ void main() {
         for (final control in controls) {
           control.send('go');
         }
-        while (wins.length < 2) {
+        while (results.length < 2) {
           expect(await stream.moveNext(), true);
-          if (stream.current case ['done', final bool success]) {
-            wins.add(success);
+          if (stream.current case [
+            'done',
+            final String role,
+            final String result,
+          ]) {
+            expect(
+              results.containsKey(role),
+              isFalse,
+              reason: 'Duplicate $role result',
+            );
+            results[role] = result;
           } else {
             fail('Race action failed before its result');
           }
         }
-        expect(wins.where((win) => win), hasLength(1));
-        final holds = sourceOk(await fixture.store.reservations());
-        expect(holds.length, lessThanOrEqualTo(1));
+        expect(results.keys, containsAll(['closure', 'reserve']));
         expect(
-          sourceOk(await fixture.store.pendingForAccount('public-account')) ==
-              null,
-          holds.isEmpty,
+          results.values.where((result) => result == 'ok').length,
+          lessThanOrEqualTo(1),
+          reason: 'Race results: $results',
         );
+        for (final entry in results.entries) {
+          expect(
+            entry.value,
+            anyOf('ok', 'SyncStorageFailure', 'SyncSpendRefusedFailure'),
+            reason: 'Unexpected ${entry.key} result: $results',
+          );
+        }
+        final winner = results.entries
+            .where((entry) => entry.value == 'ok')
+            .toList();
+        if (winner.isEmpty) {
+          expect(
+            results.values,
+            everyElement('SyncStorageFailure'),
+            reason:
+                'Zero winners must not hide an unexplained refusal: $results',
+          );
+        }
+        final reopened = sourceOk(
+          SqliteArkFundingReservations.open(fixture.path, foreground: false),
+        );
+        try {
+          final holds = sourceOk(await reopened.reservations());
+          final pending = sourceOk(
+            await reopened.pendingForAccount('public-account'),
+          );
+          final pins = await fingerprints(reopened);
+          final row = sqlite3.open(fixture.path);
+          try {
+            final operation = row
+                .select('SELECT * FROM ark_funding_operations')
+                .single;
+            final authority = row
+                .select('SELECT * FROM ark_funding_authority')
+                .single;
+            if (results['reserve'] == 'ok') {
+              final binding = sourceOk(await reopened.readBinding('op'));
+              expect(binding.operationId, request.operationId);
+              expect(binding.accountIdentity, request.accountIdentity);
+              expect(binding.sourceParent, request.sourceParent);
+              expect(binding.key, request.key);
+              expect(binding.revision, fundingStamp);
+              expect(binding.context, request.context);
+              expect(binding.unsignedPsbt, publicFundingPsbt);
+              expect(
+                binding.inputs,
+                decodeBitcoinPsbt(publicFundingPsbt).inputs,
+              );
+              expect(holds.map((hold) => hold.outpoint), binding.inputs);
+              expect(
+                holds.every(
+                  (hold) => hold.session == 'op' && hold.protocol == 'ark',
+                ),
+                isTrue,
+              );
+              expect(operation['state'], 'reserved');
+              expect(authority['settlement'], isNull);
+              expect(pending, 'op');
+              expect(pins, contains(Fingerprint('00112233')));
+            } else if (results['closure'] == 'ok') {
+              expect(operation['state'], 'tombstoned');
+              expect(operation['psbt'], isNull);
+              final receipt = jsonDecode(
+                authority['settlement'] as String,
+              ) as Map<String, dynamic>;
+              expect(receipt['kind'], 'neverPrepared');
+              expect(receipt['version'], 1);
+              expect(receipt['signingBefore'], 'never_started');
+              expect(receipt['closed'], isTrue);
+              expect(receipt['request'], {
+                'operation': request.operationId,
+                'account': request.accountIdentity,
+                'parent': request.sourceParent.hex,
+                'wallet': request.key.id,
+                'network': 'regtest',
+                'generation': request.generation,
+                'context': request.context,
+              });
+              expect(receipt['admitted'], {
+                'wallet': fundingStamp.key.id,
+                'network': 'regtest',
+                'generation': fundingStamp.generation,
+                'revision': fundingStamp.revision,
+              });
+              expect(holds, isEmpty);
+              expect(pending, isNull);
+              expect(pins, isNot(contains(Fingerprint('00112233'))));
+            } else {
+              expect(operation['state'], 'requested');
+              expect(operation['psbt'], isNull);
+              expect(authority['settlement'], isNull);
+              expect(holds, isEmpty);
+              expect(pending, 'op');
+              expect(pins, contains(Fingerprint('00112233')));
+              expect(
+                requestOk(await reopened.readUnpreparedRequest('op')),
+                request,
+              );
+            }
+          } finally {
+            row.close();
+          }
+          if (winner.isEmpty) {
+            sourceOk(
+              await reopened.closeNeverPrepared(
+                expected: request,
+                admittedRevision: fundingStamp,
+              ),
+            );
+            expect(
+              sourceOk(await reopened.pendingForAccount('public-account')),
+              isNull,
+            );
+            expect(sourceOk(await reopened.reservations()), isEmpty);
+            expect(
+              await fingerprints(reopened),
+              isNot(contains(Fingerprint('00112233'))),
+            );
+          }
+        } finally {
+          reopened.close();
+        }
       } finally {
         for (final control in controls) {
           control.send('stop');
